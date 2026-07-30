@@ -41,11 +41,16 @@ silencieusement.
 - Modifier la source canonique, jamais un dérivé éditable par accident.
 - Ne jamais modifier `docs/foundation/` localement.
 - Conserver Nimbus et sa gate de build.
+- Conserver `compose.yaml` et sa gate. `P19` impose que React, Quarkus et leurs
+  dépendances locales restent lançables ensemble par Docker Compose ; une
+  commande hôte est seulement un raccourci.
 - Ajouter chaque changement livré à `CHANGELOG.md`.
 - Ajouter une ADR pour chaque décision produit, sécurité, données, architecture
   ou exploitation coûteuse à renverser.
 - Utiliser `./scripts/verify.sh` et lui ajouter les gates applicatives quand le
   frontend et le backend existent.
+- Exécuter `python3 scripts/check_compose.py` et le smoke test Compose pour toute
+  modification du parcours local, des images ou des services.
 - Appliquer `P18` après chaque tranche validée : committer puis pousser
   immédiatement sur `main` si l'écriture directe est autorisée, sinon sur une
   branche dédiée au périmètre.

@@ -6,7 +6,7 @@ Ces contrôles sont dérivés des principes et profils. Ils ne constituent pas u
 
 ## Noyau commun
 
-Contrôles dérivés de `P02`, `P03`, `P04`, `P05`, `P07`, `P08`, `P09`, `P10`, `P17` et `P18`.
+Contrôles dérivés de `P02`, `P03`, `P04`, `P05`, `P07`, `P08`, `P09`, `P10`, `P17`, `P18` et `P19`.
 
 - [ ] Le résultat répond au problème demandé, pas à une extension implicite.
 - [ ] L'état actuel, la cible et les limites sont correctement nommés.
@@ -17,6 +17,7 @@ Contrôles dérivés de `P02`, `P03`, `P04`, `P05`, `P07`, `P08`, `P09`, `P10`, 
 - [ ] `CHANGELOG.md` décrit le changement livré et son impact observable.
 - [ ] La source canonique et les artefacts dérivés sont alignés.
 - [ ] La commande `verify` passe dans l'environnement pertinent.
+- [ ] `compose.yaml` existe à la racine et `scripts/check_compose.py` passe.
 - [ ] La documentation d'installation, exécution et vérification reste rejouable.
 - [ ] Les limites de validation sont indiquées.
 
@@ -96,6 +97,22 @@ Contrôles dérivés de `P08`, `P10`, `P11`, `P14`, `P15` et de `profiles/infras
 - [ ] Les sauvegardes sont hors site lorsque le risque l'exige.
 - [ ] Une restauration représentative a été prouvée.
 - [ ] La supervision externe complète la supervision hébergée avec le service.
+
+## Docker Compose et environnement local
+
+Contrôles dérivés de `P09`, `P10`, `P13` et `P19`.
+
+- [ ] `compose.yaml` contient tous les services et dépendances du parcours local intégré.
+- [ ] Un raccourci hôte éventuel ne constitue pas l'unique chemin documenté.
+- [ ] Chaque image externe est épinglée par digest ; un service construit localement possède une source et un contexte explicites.
+- [ ] Chaque service long possède un healthcheck représentatif.
+- [ ] Chaque commande finie sans healthcheck porte `foundation.lifecycle=job`.
+- [ ] `python3 scripts/check_compose.py` et `docker compose config` passent.
+- [ ] `docker compose up --build --wait` atteint un état sain pour tout projet qui possède des services.
+- [ ] Les URLs, ports ou parcours utiles sont sondés depuis l'environnement lancé.
+- [ ] `docker compose down` arrête proprement sans effacer les volumes par défaut.
+- [ ] Toute commande de reset cible explicitement les données supprimées.
+- [ ] La CI exécute la même commande `verify` et ne contourne pas le contrôle Compose.
 
 ## Expérience
 

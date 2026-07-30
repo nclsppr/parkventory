@@ -104,7 +104,7 @@ Ces cibles ne sont pas des résultats acquis.
 | Schéma de données | [`docs/architecture/domain-model.md`](docs/architecture/domain-model.md) et `backend/src/main/resources/db/migration/` | normative et opérationnelle | Migration V1 testée sur PostgreSQL 18.3 |
 | Sécurité et isolation | [`docs/architecture/security-and-tenancy.md`](docs/architecture/security-and-tenancy.md) | normative | Défense en profondeur |
 | Design system | [`DESIGN.md`](DESIGN.md) et `frontend/src/styles.css` | normative et opérationnelle | Tokens, composants et responsive alignés |
-| Configuration | `mise.toml`, `mise.lock`, `.env.example`, `compose.yaml` | opérationnelle | Runtimes et image PostgreSQL épinglés |
+| Configuration | `compose.yaml`, `mise.toml`, `mise.lock`, `.env.example` | opérationnelle | Compose porte le parcours intégré ; mise porte les raccourcis hôte |
 | Code livré | `frontend/` et `backend/` | opérationnelle locale | Prototype démo, pas flux F03/F04 |
 | Opérations | [`RUNBOOK.md`](RUNBOOK.md) | normative cible | Production non provisionnée |
 | Décisions | `docs/decisions/` | normative | ADR acceptées ou proposées |
@@ -137,9 +137,9 @@ Le détail et les compromis vivent dans
 | Composant | Rôle | Statut | Exécution | Version | Source | Preuve et date | Propriétaire |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Documentation Nimbus | Rendu des Markdown classés | Actuel | Build local | Nimbus 0.8.2 | `docs-nimbus/` | `./scripts/verify.sh`, 2026-07-30 après exécution | nclsppr |
-| Frontend React | Landing et application | Actuel, local et démo publique | Navigateur | React 19.2.8, Vite 8.1.5 | `frontend/` | 4 tests et builds racine/sous-chemin, 2026-07-30 | nclsppr |
-| API Java | Démo REST, validation, santé et OpenAPI | Actuel, local | JVM Java 25 | Quarkus 3.33.3 LTS | `backend/` | 4 tests Quarkus, 2026-07-30 | nclsppr |
-| PostgreSQL | Schéma et contraintes temporelles | Actuel, local | Compose et Testcontainers | PostgreSQL 18.3 | migration Flyway V1 | Migration appliquée sur PostgreSQL réel, 2026-07-30 | nclsppr |
+| Frontend React | Landing et application | Actuel, local et démo publique | Compose ou navigateur statique | React 19.2.8, Vite 8.1.5 | `frontend/` | 4 tests et builds racine/sous-chemin, 2026-07-30 | nclsppr |
+| API Java | Démo REST, validation, santé et OpenAPI | Actuel, local | Compose, Maven 3.9.16 et Java 25 | Quarkus 3.33.3 LTS | `backend/` | Tests Quarkus et smoke Compose, 2026-07-30 | nclsppr |
+| PostgreSQL | Schéma et contraintes temporelles | Actuel, local | Compose et Testcontainers | PostgreSQL 18.3 | migration Flyway V1 | Migration et santé vérifiées sur PostgreSQL réel, 2026-07-30 | nclsppr |
 | Livraison email | Magic links et notifications | Cible | Service externe derrière un port | Fournisseur non choisi | module `notifications` | Décision requise avant F03 | nclsppr |
 
 ### Flux principal
@@ -166,7 +166,7 @@ Le détail et les compromis vivent dans
 | Environnement | Plateforme | Configuration canonique | URL ou accès | Vérification |
 | --- | --- | --- | --- | --- |
 | Développement documentaire | macOS local | Dépôt et lockfile Nimbus | `127.0.0.1:4321` quand lancé | `./scripts/verify.sh` |
-| Développement applicatif | macOS local | `mise.toml`, `mise.lock`, `.env.example`, `compose.yaml` | `127.0.0.1:5173` et `127.0.0.1:8080` | `npm run dev`, tests et revue navigateur |
+| Développement applicatif | Docker Compose sur macOS ou Linux | `compose.yaml`, `.env.example` | `127.0.0.1:5173`, `127.0.0.1:8080` et `127.0.0.1:5434` | `npm run dev` et `npm run compose:verify` |
 | Démo publique | GitHub Pages | `.github/workflows/pages.yml`, base `/parkventory/`, données statiques | `https://nclsppr.github.io/parkventory/` | Tests frontend, build puis probes publics |
 | CI | GitHub Actions | `.github/workflows/verify.yml` | Exécuté à chaque push sur `main` | Même commande `verify` |
 | Production | Non provisionnée | Décision d'exploitation future | Aucune URL | Runbook et probes requis avant ouverture |
@@ -177,11 +177,13 @@ Le détail et les compromis vivent dans
 | --- | --- | --- |
 | Installer les runtimes | `mise install` | Node 24.18, Java 25.0.4 et Python 3.12.13 épinglés |
 | Installer l'application | `npm ci` | Dépendances frontend exactes du lockfile |
-| Démarrer l'application | `npm run dev` | PostgreSQL, Quarkus puis React sur les ports locaux documentés |
-| Arrêter et supprimer les données locales | `npm run db:reset` | Conteneur et volume PostgreSQL local retirés |
+| Démarrer l'application | `npm run dev` | PostgreSQL, Quarkus et React sains sous Compose sur les ports documentés |
+| Arrêter l'application | `npm run compose:down` | Conteneurs et réseau retirés, volumes conservés |
+| Supprimer la base locale | `npm run db:reset` | Seul le volume PostgreSQL de développement est retiré après arrêt |
+| Vérifier Compose | `npm run compose:verify` | Stack isolée saine, landing, santé et API accessibles via Vite |
 | Installer la documentation | `npm ci --prefix docs-nimbus` | Dépendances exactes du lockfile |
 | Développer la documentation | `npm run dev --prefix docs-nimbus` | Nimbus local sur `127.0.0.1:4321` |
-| Vérifier | `mise exec -- npm run verify` | Documentation, audit npm, React, Quarkus et migration PostgreSQL valides |
+| Vérifier | `mise exec -- npm run verify` | Documentation, Compose, audit npm, React, Quarkus et migration PostgreSQL valides |
 | Construire la documentation | `npm run build --prefix docs-nimbus` | Site statique dérivé dans `docs-nimbus/dist/` |
 | Construire la démo Pages | `VITE_BASE_PATH=/parkventory/ VITE_DEMO_MODE=true npm run frontend:build` | Frontend statique sous le chemin public, sans appel backend |
 

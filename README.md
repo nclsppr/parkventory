@@ -21,23 +21,25 @@ envoyé et aucune donnée n'est persistée.
 
 ## Démarrer en local
 
-Prérequis : [mise](https://mise.jdx.dev/) et Docker ou OrbStack démarré.
+Le graphe applicatif intégré exige Docker avec Docker Compose `2.20.0` ou plus
+récent, ou OrbStack compatible ; aucun runtime Java ou Node applicatif n'est
+lancé directement sur l'hôte. `npm run dev` sert de raccourci vers le script
+Compose et `mise` reste requis pour la gate hôte complète.
 
 ```bash
-mise install
-npm ci
 npm run dev
 ```
 
-La commande démarre PostgreSQL, attend la santé de Quarkus, puis lance Vite :
+La commande démarre PostgreSQL, Quarkus et Vite dans Compose, attend leurs
+healthchecks, puis suit les logs applicatifs :
 
 - landing : `http://127.0.0.1:5173/` ;
 - application : `http://127.0.0.1:5173/app` ;
 - santé Quarkus : `http://127.0.0.1:8080/q/health/ready` ;
 - Swagger UI : `http://127.0.0.1:8080/q/swagger-ui`.
 
-Un `Ctrl-C` arrête les processus et le conteneur PostgreSQL tout en conservant
-son volume. Pour supprimer volontairement les données locales :
+Un `Ctrl-C` exécute `docker compose down` et conserve les volumes. Pour supprimer
+volontairement uniquement la base locale :
 
 ```bash
 npm run db:reset
@@ -51,16 +53,19 @@ Avec Docker démarré :
 mise exec -- npm run verify
 ```
 
-Cette gate rejoue le catalogue et le build Nimbus, l'audit npm, les tests et le
-build React, puis les tests Quarkus contre un vrai PostgreSQL 18 éphémère avec
-la migration Flyway.
+Cette gate rejoue le catalogue et le build Nimbus, le contrôle Foundation de
+Compose, l'audit npm, les tests et le build React, les tests Quarkus contre un
+PostgreSQL éphémère, puis le parcours intégré PostgreSQL, Quarkus et Vite dans
+un projet Compose isolé.
 
 ## Périmètre actuel
 
 - React 19, TypeScript 7 et Vite 8 pour la landing et l'application responsive ;
 - Java 25 et Quarkus LTS pour `/api/v1`, SmallRye Health et OpenAPI ;
 - PostgreSQL 18 avec contraintes temporelles d'affectation et de réservation ;
-- Compose et runtimes épinglés par `mise.toml` / `mise.lock` ;
+- Compose pour PostgreSQL, Quarkus et Vite, avec images épinglées par digest,
+  healthchecks et smoke test ;
+- runtimes hôte épinglés par `mise.toml` / `mise.lock` ;
 - démo frontend statique publiée par le workflow GitHub Pages ;
 - images générées propres au projet, avec source et provenance documentées ;
 - aucun email réel, aucune authentification et aucun déploiement de production.

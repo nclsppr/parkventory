@@ -308,3 +308,49 @@ F02 reste `in_progress` : le client TypeScript OpenAPI est encore écrit à la
 main et `npm run dev` n'a pas été rejoué depuis le clone public propre. Les
 preuves Git, CI et Pages sont acquises ; elles ne prouvent ni authentification,
 ni persistance métier, ni isolation inter-tenant, ni production.
+
+## Extension : Foundation v0.5.2 et Compose intégral du 2026-07-30
+
+Cette unité adopte Project Foundation `v0.5.2` au commit immuable
+`708d7374f87060809a805c57abc2cf7e7b66c182`. Elle applique le nouvel invariant
+`P19` : Docker Compose est le chemin local intégré obligatoire et ne peut pas
+être remplacé par des processus React ou Quarkus lancés uniquement sur l'hôte.
+
+### Socle et enforcement
+
+| Contrôle | Résultat observé | Limite |
+| --- | --- | --- |
+| Publication Foundation | Tag annoté `v0.5.2`, run `main` `30525884714` et run tag `30525894423` réussis | Le tag n'est pas signé |
+| Snapshot Parkventory | Noyau Foundation et six profils identiques au SHA adopté | Les adaptateurs restent propres au projet |
+| Gate Compose | `scripts/check_compose.py` valide Docker Compose >= 2.20, les services, les digests, les healthchecks et le pack | Un mainteneur autorisé peut encore modifier simultanément code et workflow |
+| Intégration CI | Le workflow appelle directement le checker puis la gate canonique, qui le rejoue et exécute le smoke Compose | La protection de branche n'est pas activée |
+
+### Graphe local vérifié
+
+| Service | Image ou runtime | Santé et dépendances |
+| --- | --- | --- |
+| `postgres` | PostgreSQL 18.3 Alpine épinglé par digest | `pg_isready`, volume de développement, premier service prêt |
+| `backend` | Maven 3.9.16 et Temurin 25 épinglés par digest | Attend PostgreSQL, applique Flyway V1, expose la readiness Quarkus |
+| `frontend` | Node 24.18 épinglé par digest | Attend Quarkus, lance Vite et proxyfie `/api` et `/q` vers le backend |
+
+Le montage du dépôt frontend reste en lecture seule. Deux volumes Compose
+séparés masquent les répertoires `node_modules` racine et workspace afin que
+`npm ci` et le cache Vite n'écrivent jamais dans les sources hôte.
+
+### Validations locales
+
+| Commande ou contrôle | Résultat |
+| --- | --- |
+| `python3 scripts/check_compose.py` | Pack `critical`, Docker Compose 5.1.2 et trois services valides |
+| `docker compose config --quiet` | Configuration normalisée sans erreur |
+| `npm run compose:verify` | PostgreSQL, Quarkus et Vite healthy ; landing, readiness et contrat dashboard accessibles via Vite |
+| `mise exec -- npm run verify` | Gate complète verte : 45 fichiers Nimbus lintés, 4 tests React, build Vite, 4 tests Quarkus/Flyway et smoke Compose |
+| Nettoyage du smoke | Aucun conteneur ni volume du projet `parkventory-verify` laissé actif |
+
+Mailpit n'est ni utilisé ni simulé dans cette unité : aucun envoi d'email réel
+n'existe encore. Il reste la cible locale de F03 pour les liens magiques et
+notifications, et devra alors rejoindre le même graphe Compose avec healthcheck
+et image épinglée par digest.
+
+Les preuves de commit, push, CI Parkventory et redéploiement Pages seront
+consignées après leur observation distante ; elles ne sont pas anticipées ici.

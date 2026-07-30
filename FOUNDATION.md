@@ -7,8 +7,8 @@ Contrat d'adoption du socle commun par ce projet.
 | Champ | Valeur |
 | --- | --- |
 | Source | `https://github.com/nclsppr/project-foundation.git` |
-| Version lisible | `v0.4.0` |
-| Commit immuable | `7a5204a60eaf01cbaf38c86f56175751e36a0dad` |
+| Version lisible | `v0.5.2` |
+| Commit immuable | `708d7374f87060809a805c57abc2cf7e7b66c182` |
 | Pack adopté | `critical` |
 | Adoptée le | 2026-07-30 |
 | Adoptée par | nclsppr |
@@ -53,6 +53,10 @@ Aucune dérogation n'est enregistrée au 2026-07-30.
 le push direct sur `main` lorsqu'il est autorisé, sinon une branche dédiée ; une
 tranche terminée ne reste pas uniquement en local.
 
+`P19` ne peut pas être désactivé localement. `compose.yaml` contient le frontend
+React, le backend Quarkus et PostgreSQL ; le checker, le smoke test intégré et
+son appel CI direct refusent un parcours qui contourne Compose.
+
 ## Challenger le socle
 
 Le snapshot `docs/foundation/` est en lecture seule dans ce projet.
@@ -84,12 +88,13 @@ Les fichiers suivants partent de la baseline du socle puis deviennent locaux et
 éditables :
 
 - `scripts/check_markdown.py`
+- `scripts/check_compose.py`
 - `scripts/documentation_catalog.py`
 - `scripts/verify.sh`
 
-Ils contiennent les gates Foundation, Nimbus, React, Java, PostgreSQL et OpenAPI
-adaptées à Parkventory. Une mise à niveau compare leur baseline avec la nouvelle
-version avant toute fusion.
+Ils contiennent les gates Foundation, Nimbus, Compose, React, Java, PostgreSQL
+et OpenAPI adaptées à Parkventory. Une mise à niveau compare leur baseline avec
+la nouvelle version avant toute fusion.
 
 ## Reclassification et activation ultérieure
 

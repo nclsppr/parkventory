@@ -25,5 +25,10 @@ jobs:
         with:
           cache: true
 
+      - name: Check Docker Compose
+        run: |
+          docker compose version
+          python3 scripts/check_compose.py
+
       - name: Verify documentation and application
         run: ./scripts/verify.sh

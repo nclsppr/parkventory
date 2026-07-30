@@ -37,6 +37,8 @@ rapport avec le dépôt.
 - Commencer par le minimum exploitable, pas par l'architecture cible complète.
 - Préférer une dépendance en moins tant qu'un besoin concret ne justifie pas son coût.
 - Utiliser un gestionnaire de versions et des lockfiles.
+- Utiliser le gestionnaire de versions pour les outils hôte et Docker Compose,
+  imposé par `P19`, pour les services et dépendances exécutables.
 - Épingler les images et artefacts de production par version immuable ou digest.
 - Centraliser la configuration. Ne pas disperser de fallback de domaine, port, clé ou environnement dans le code.
 - Séparer clairement développement, build, CI et production.
@@ -55,6 +57,10 @@ reset     réinitialise uniquement l'état de développement documenté
 ```
 
 Les noms peuvent varier. La capacité ne doit pas dépendre d'un outil d'agent particulier.
+
+`dev`, `stop` et `reset` pilotent le `compose.yaml` canonique lorsqu'ils
+s'appliquent. `reset` nomme précisément les volumes ou données supprimés et ne
+devient jamais un alias implicite de `docker compose down --volumes`.
 
 ## D05. Qualité
 

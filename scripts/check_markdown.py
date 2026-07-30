@@ -23,12 +23,14 @@ if sys.version_info < (3, 9):
 
 ROOT = Path(__file__).resolve().parent.parent
 REQUIRED_PATHS = (
+    ".github/workflows/verify.yml",
     "README.md",
     "CHANGELOG.md",
     "FOUNDATION.md",
     "DOCUMENTATION.md",
     "DOCUMENTATION-CATALOG.md",
     "documentation.json",
+    "compose.yaml",
     "AGENTS.md",
     "docs-nimbus/AGENT.md",
     "docs-nimbus/.env.example",
@@ -43,7 +45,9 @@ REQUIRED_PATHS = (
     "docs/foundation/DEFAULTS.md",
     "docs/foundation/DEFINITION-OF-DONE.md",
     "scripts/check_markdown.py",
+    "scripts/check_compose.py",
     "scripts/documentation_catalog.py",
+    "scripts/verify_compose.sh",
     "scripts/verify.sh",
 )
 PACK_REQUIRED_PATHS = {
@@ -77,6 +81,18 @@ EXPLICIT_ANCHOR_PATTERN = re.compile(
 EXPLICIT_HEADING_ID_PATTERN = re.compile(r"\s*\{#([^}]+)\}\s*$")
 URI_SCHEME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
 ALLOWED_EXTERNAL_SCHEMES = ("http://", "https://", "mailto:", "tel:")
+REQUIRED_COMPOSE_WIRING = (
+    (
+        "scripts/verify.sh",
+        re.compile(
+            r'(?m)^\s*python3 "\$\{SCRIPT_DIR\}/check_compose\.py"\s*$'
+        ),
+    ),
+    (
+        ".github/workflows/verify.yml",
+        re.compile(r"(?m)^\s*python3 scripts/check_compose\.py\s*$"),
+    ),
+)
 
 
 def line_number(text: str, offset: int) -> int:
@@ -169,6 +185,11 @@ def check_structure(errors: list[str]) -> None:
     for relative in REQUIRED_PATHS:
         if not (ROOT / relative).is_file():
             errors.append(f"fichier requis absent : {relative}")
+
+    for relative, pattern in REQUIRED_COMPOSE_WIRING:
+        path = ROOT / relative
+        if path.is_file() and not pattern.search(path.read_text(encoding="utf-8")):
+            errors.append(f"gate Compose non câblée : {relative}")
 
     foundation = ROOT / "FOUNDATION.md"
     if not foundation.is_file():

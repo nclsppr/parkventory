@@ -181,3 +181,31 @@ présent sur la branche distante attendue et l'état final du worktree est connu
 La branche canonique est utilisée directement si sa politique le permet ; sinon
 la branche distante et le chemin de revue sont nommés. Les contrôles distants
 disponibles sont observés avant de déclarer la livraison terminée.
+
+## P19. Orchestrer l'environnement local avec Docker Compose
+
+**Règle.** Tout projet versionne un `compose.yaml` à sa racine et utilise Docker
+Compose comme chemin canonique d'exécution intégrée en local. Les applications,
+bases de données, files, intercepteurs de courriel, stockages, proxies et autres
+dépendances nécessaires au parcours local y sont déclarés. Une commande lancée
+directement sur l'hôte peut accélérer une boucle interne, mais ne remplace pas
+ce parcours commun. Un pack Minimal sans aucun processus local peut conserver
+`services: {}` ; un pack Standard, Full ou Critical déclare au moins un service.
+
+Les images externes sont épinglées par digest. Un service long possède un
+healthcheck ; une commande finie sans healthcheck porte explicitement le label
+`foundation.lifecycle=job`. Ce principe ne peut pas être désactivé par un
+default ou une dérogation locale. Une contrainte supérieure ou une plateforme
+sans Docker peut empêcher l'exécution, jamais supprimer le contrat versionné ni
+sa gate de CI ; le blocage exact est alors documenté.
+
+**Pourquoi.** Un ensemble de commandes hôte et de versions implicites produit
+des environnements différents selon la machine et laisse les dépendances
+réelles hors de la vérification. Compose fournit un contrat portable pour
+lancer, attendre, diagnostiquer et arrêter le même graphe de services.
+
+**Preuve minimale.** `scripts/check_compose.py` est appelé par `verify` et la CI,
+valide la configuration, les digests, les healthchecks et le pack. Pour tout
+projet qui possède un service, `docker compose up --build --wait` atteint un
+état sain, les sondes du parcours principal passent, puis `docker compose down`
+arrête l'environnement sans effacer les données par défaut.

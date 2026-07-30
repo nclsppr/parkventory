@@ -42,7 +42,7 @@ réversibles et gates reproductibles.
 ### Dépendances
 
 - Dépôt GitHub cloné.
-- Project Foundation `v0.4.0` publié et vérifié.
+- Project Foundation `v0.5.2` publié et vérifié.
 - Références visuelles fournies.
 
 ### Inclus
@@ -83,7 +83,7 @@ minimal qui prouve installation, santé et migration.
 
 - React + TypeScript + Vite ;
 - Java 25 + Quarkus 3.33 LTS et première frontière REST ;
-- PostgreSQL 18, Flyway et environnement local Compose ;
+- PostgreSQL 18, Flyway et environnement local Compose pour React, Quarkus et la base ;
 - tokens, logo de travail explicitement provisoire, responsive et accessibilité ;
 - OpenAPI minimal, client TypeScript typé et CI appelant `verify`.
 
