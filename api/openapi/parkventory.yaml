@@ -1,36 +1,132 @@
 openapi: 3.1.0
 info:
   title: Parkventory API
-  version: 0.1.0
+  version: 0.2.0
   description: >-
-    Contrat de la surface locale de démonstration. Les mutations sont conservées
-    en mémoire et ne constituent pas encore les parcours métier F03/F04.
+    Contrat de l’API locale persistante. L’identité par lien magique et Mailpit
+    sont des adaptateurs de développement ; la cible de production reste OIDC.
 servers:
-  - url: http://127.0.0.1:8080/api/v1
-    description: Quarkus local
+  - url: http://127.0.0.1:5173/api/v1
+    description: Même origine locale via le proxy Vite
 tags:
+  - name: Identity
   - name: Dashboard
+  - name: Spots
   - name: Sharing
   - name: Reservations
   - name: Invitations
 paths:
+  /auth/requests:
+    post:
+      tags: [Identity]
+      operationId: requestMagicLink
+      summary: Envoie un lien magique local dans Mailpit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MagicLinkRequest"
+      responses:
+        "202":
+          description: Demande acceptée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResponse"
+        "400":
+          description: Adresse absente, invalide ou personnelle
+  /auth/verify:
+    post:
+      tags: [Identity]
+      operationId: verifyMagicLink
+      summary: Consomme un lien et ouvre une session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string, minLength: 32, maxLength: 128 }
+      responses:
+        "200":
+          description: Session créée dans un cookie HttpOnly
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "410":
+          description: Lien invalide, expiré ou déjà consommé
+  /auth/session:
+    get:
+      tags: [Identity]
+      operationId: getSession
+      security:
+        - cookieSession: []
+      responses:
+        "200":
+          description: Session active
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "401":
+          description: Session absente, expirée ou révoquée
+    delete:
+      tags: [Identity]
+      operationId: logout
+      security:
+        - cookieSession: []
+      responses:
+        "200":
+          description: Session révoquée et cookie expiré
   /dashboard:
     get:
       tags: [Dashboard]
       operationId: getDashboard
-      summary: Charge le tableau de bord de démonstration
+      security:
+        - cookieSession: []
       responses:
         "200":
-          description: Tableau de bord courant
+          description: Données persistées du membre actif
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Dashboard"
+        "401":
+          description: Authentification requise
+  /spots:
+    post:
+      tags: [Spots]
+      operationId: declareAssignedSpot
+      security:
+        - cookieSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpotRequest"
+      responses:
+        "200":
+          description: Affectation créée ou déjà active
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResponse"
+        "409":
+          description: Place déjà affectée
   /shares:
     post:
       tags: [Sharing]
       operationId: shareSpot
-      summary: Simule la publication d'une disponibilité
+      security:
+        - cookieSession: []
       requestBody:
         required: true
         content:
@@ -39,40 +135,51 @@ paths:
               $ref: "#/components/schemas/ShareRequest"
       responses:
         "200":
-          description: Partage accepté dans la session locale
+          description: Disponibilité persistée
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ActionResponse"
         "400":
           description: Créneau invalide
+        "403":
+          description: Place non affectée au membre
+        "409":
+          description: Affectation absente ou offre chevauchante
   /availability/{availabilityId}/reservations:
     post:
       tags: [Reservations]
       operationId: reserveSpot
-      summary: Simule la réservation d'une disponibilité
+      security:
+        - cookieSession: []
       parameters:
         - name: availabilityId
           in: path
           required: true
-          schema:
-            type: string
+          schema: { type: string, format: uuid }
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 8, maxLength: 128 }
       responses:
         "200":
-          description: Réservation acceptée dans la session locale
+          description: Réservation confirmée ou résultat idempotent
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ActionResponse"
+        "400":
+          description: Clé d’idempotence invalide
         "404":
           description: Disponibilité inconnue
         "409":
-          description: Disponibilité déjà réservée
+          description: Disponibilité prise, expirée ou appartenant au membre
   /invitations:
     post:
       tags: [Invitations]
       operationId: inviteColleague
-      summary: Prépare une invitation de démonstration
+      security:
+        - cookieSession: []
       requestBody:
         required: true
         content:
@@ -81,22 +188,41 @@ paths:
               $ref: "#/components/schemas/InvitationRequest"
       responses:
         "200":
-          description: Invitation acceptée sans envoi d'email réel
+          description: Invitation persistée et email placé dans l’outbox
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ActionResponse"
         "400":
-          description: Adresse absente, invalide ou personnelle
+          description: Adresse absente, invalide, personnelle ou identique
 components:
+  securitySchemes:
+    cookieSession:
+      type: apiKey
+      in: cookie
+      name: parkventory_session
   schemas:
+    MagicLinkRequest:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email }
+    Session:
+      type: object
+      required: [authenticated, displayName, email, organizationName, role]
+      properties:
+        authenticated: { type: boolean, const: true }
+        displayName: { type: string }
+        email: { type: string, format: email }
+        organizationName: { type: string }
+        role: { type: string, enum: [MEMBER, ADMIN] }
     Dashboard:
       type: object
       required: [demo, user, organization, stats, availability, thanks]
       properties:
         demo:
           type: boolean
-          const: true
+          const: false
         user:
           $ref: "#/components/schemas/User"
         organization:
@@ -105,6 +231,7 @@ components:
           $ref: "#/components/schemas/Stats"
         availability:
           type: array
+          maxItems: 50
           items:
             $ref: "#/components/schemas/Availability"
         thanks:
@@ -113,12 +240,13 @@ components:
             $ref: "#/components/schemas/Thanks"
     User:
       type: object
-      required: [firstName, fullName, initials, assignedSpot]
+      required: [firstName, fullName, initials]
       properties:
         firstName: { type: string }
         fullName: { type: string }
         initials: { type: string }
-        assignedSpot: { type: string }
+        assignedSpot: { type: [string, "null"] }
+        assignedLevel: { type: [string, "null"] }
     Organization:
       type: object
       required: [name, sharedTotal]
@@ -136,7 +264,7 @@ components:
       type: object
       required: [id, dateLabel, timeLabel, spot, level, status]
       properties:
-        id: { type: string }
+        id: { type: string, format: uuid }
         dateLabel: { type: string }
         timeLabel: { type: string }
         spot: { type: string }
@@ -153,11 +281,17 @@ components:
         author: { type: string }
         message: { type: string }
         when: { type: string }
+    SpotRequest:
+      type: object
+      required: [label]
+      properties:
+        label: { type: string, minLength: 1, maxLength: 32 }
+        level: { type: [string, "null"], maxLength: 64 }
     ShareRequest:
       type: object
       required: [spot, date, from, to]
       properties:
-        spot: { type: string, minLength: 1 }
+        spot: { type: string, minLength: 1, maxLength: 32 }
         date: { type: string, format: date }
         from: { type: string, pattern: "^[0-2][0-9]:[0-5][0-9]$" }
         to: { type: string, pattern: "^[0-2][0-9]:[0-5][0-9]$" }

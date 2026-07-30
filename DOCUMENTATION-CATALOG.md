@@ -12,7 +12,7 @@ Moteur déclaré : `nimbus`.
 | Produit | `public` | 4 |
 | Architecture et sécurité | `internal` | 3 |
 | Questions de travail | `internal` | 1 |
-| Décisions | `internal` | 4 |
+| Décisions | `internal` | 5 |
 | Références visuelles | `reference` | 1 |
 | Socle vendorisé | `reference` | 9 |
 | Maintenance Nimbus | `reference` | 1 |
@@ -55,6 +55,7 @@ Moteur déclaré : `nimbus`.
 - [docs/decisions/adr-0002-monolithe-quarkus-postgresql.md](docs/decisions/adr-0002-monolithe-quarkus-postgresql.md)
 - [docs/decisions/adr-0003-authentication-et-isolation.md](docs/decisions/adr-0003-authentication-et-isolation.md)
 - [docs/decisions/adr-0004-integrite-temporelle-reservations.md](docs/decisions/adr-0004-integrite-temporelle-reservations.md)
+- [docs/decisions/adr-0005-adaptateur-identite-mailpit-local.md](docs/decisions/adr-0005-adaptateur-identite-mailpit-local.md)
 
 ## Références visuelles
 

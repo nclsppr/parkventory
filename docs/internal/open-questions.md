@@ -33,7 +33,7 @@ qui doit être tranché avant la phase nommée, sans bloquer la documentation F0
 | --- | --- | --- |
 | Hébergement frontend/API | Même origine, un conteneur JVM | Avant F05 |
 | PostgreSQL managé | Préféré pour sauvegarde et PITR | Avant F05 |
-| Fournisseur email | Port abstrait, Mailpit local | Avant F03 |
+| Fournisseur email | Mailpit `v1.30.6` local ; port Quarkus remplaçable | Fournisseur réel avant F05 |
 | Liste de domaines | Source versionnée et contestable | Pendant F03 |
 | Rétention de l'outbox | Courte après succès, longue pour audit agrégé | Avant F04 |
 | Native image Quarkus | Non au MVP | Seulement après mesure |

@@ -2,6 +2,7 @@ package com.parkventory.dashboard;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
@@ -9,7 +10,12 @@ public final class ApiModels {
     private ApiModels() {
     }
 
-    public record User(String firstName, String fullName, String initials, String assignedSpot) {
+    public record User(
+            String firstName,
+            String fullName,
+            String initials,
+            String assignedSpot,
+            String assignedLevel) {
     }
 
     public record Organization(String name, int sharedTotal) {
@@ -25,9 +31,6 @@ public final class ApiModels {
             String spot,
             String level,
             String status) {
-        Availability withStatus(String nextStatus) {
-            return new Availability(id, dateLabel, timeLabel, spot, level, nextStatus);
-        }
     }
 
     public record Thanks(String id, String initials, String author, String message, String when) {
@@ -42,8 +45,13 @@ public final class ApiModels {
             List<Thanks> thanks) {
     }
 
+    public record SpotRequest(
+            @NotBlank @Size(max = 32) String label,
+            @Size(max = 64) String level) {
+    }
+
     public record ShareRequest(
-            @NotBlank String spot,
+            @NotBlank @Size(max = 32) String spot,
             @NotBlank String date,
             @NotBlank String from,
             @NotBlank String to) {

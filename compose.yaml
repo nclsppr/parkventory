@@ -20,6 +20,27 @@ services:
     labels:
       foundation.lifecycle: service
 
+  mailpit:
+    image: axllent/mailpit:v1.30.6@sha256:7f33095f80e901f6ad08028f06ca284aa58fe84942be5496008d041d3b9f4d4d
+    environment:
+      MP_DATABASE: /data/mailpit.db
+      MP_MAX_MESSAGES: 500
+      MP_MAX_AGE: 7d
+      MP_DISABLE_VERSION_CHECK: "true"
+    ports:
+      - "${PARKVENTORY_MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${PARKVENTORY_MAILPIT_UI_PORT:-8025}:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 3s
+    volumes:
+      - parkventory-mailpit:/data
+    labels:
+      foundation.lifecycle: service
+
   backend:
     image: maven:3.9.16-eclipse-temurin-25@sha256:7e461cec477077c1d9e50b13df8aef9018764410f4c4cd7c34803f10c4c99e4c
     working_dir: /workspace/backend
@@ -32,10 +53,15 @@ services:
       PARKVENTORY_DB_USER: ${PARKVENTORY_DB_USER:-parkventory}
       PARKVENTORY_DB_PASSWORD: ${PARKVENTORY_DB_PASSWORD:-parkventory-local-only}
       PARKVENTORY_JDBC_URL: jdbc:postgresql://postgres:5432/${PARKVENTORY_DB_NAME:-parkventory}
+      PARKVENTORY_SMTP_HOST: mailpit
+      PARKVENTORY_SMTP_PORT: 1025
+      PARKVENTORY_WEB_BASE_URL: http://127.0.0.1:${PARKVENTORY_WEB_PORT:-5173}
     ports:
       - "${PARKVENTORY_API_PORT:-8080}:8080"
     depends_on:
       postgres:
+        condition: service_healthy
+      mailpit:
         condition: service_healthy
     healthcheck:
       test:
@@ -107,6 +133,7 @@ services:
 
 volumes:
   parkventory-postgres:
+  parkventory-mailpit:
   parkventory-maven-cache:
   parkventory-backend-target:
   parkventory-node-modules:

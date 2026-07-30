@@ -7,6 +7,18 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Ajouté
 
+- adaptateur d’identité local par lien magique à usage unique, sessions
+  `HttpOnly` et rattachement invitation/domaine persistés dans PostgreSQL ;
+- Mailpit `v1.30.6` intégré à Docker Compose pour les liens de connexion,
+  invitations et notifications de réservation ;
+- API Quarkus persistante pour déclarer une place, publier une disponibilité,
+  réserver avec idempotence et inviter un collègue ;
+- outbox transactionnelle et worker Quarkus avec reprise bornée pour les emails
+  métier ;
+- migration Flyway V2 pour les liens magiques, sessions et l’exclusion des
+  offres qui se chevauchent ;
+- tests d’intégration PostgreSQL du parcours autonome, du rejeu de lien, de
+  l’invitation exacte et des conflits d’affectation/réservation ;
 - adoption de Project Foundation `v0.5.2` et de l'invariant `P19` ;
 - parcours local intégré PostgreSQL, Quarkus et Vite entièrement piloté par
   Docker Compose avec images par digest et healthchecks ;
@@ -38,9 +50,10 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Limites
 
-- les mutations API locales restent en mémoire ; la démo publique utilise des
-  données statiques, sans authentification ni email réel ;
+- le frontend local n’est pas encore branché sur le nouveau parcours
+  authentifié ; la démo publique reste statique, sans compte ni email ;
 - aucun hébergement ou domaine de production n'est livré ;
 - les droits de publication des JPEG et le master vectoriel du logo restent à
   confirmer ;
-- le fournisseur d'email et l'infrastructure de production ne sont pas choisis.
+- le fournisseur OIDC, le fournisseur d'email et l'infrastructure de production
+  ne sont pas choisis ; Mailpit est réservé au développement.
