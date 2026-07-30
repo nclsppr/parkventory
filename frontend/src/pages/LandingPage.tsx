@@ -1,0 +1,233 @@
+import { FormEvent, useState } from "react";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  CalendarCheck,
+  CarFront,
+  CheckCircle2,
+  Menu,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  Users,
+  X,
+} from "lucide-react";
+import { DashboardPreview } from "../components/DashboardPreview";
+import { Logo } from "../components/Logo";
+
+const personalDomains = ["gmail.com", "outlook.com", "hotmail.com", "yahoo.com", "icloud.com"];
+
+export function LandingPage() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [registrationMessage, setRegistrationMessage] = useState<string | null>(null);
+
+  const handleRegistration = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const domain = email.trim().toLowerCase().split("@")[1];
+
+    if (!domain || personalDomains.includes(domain)) {
+      setRegistrationMessage("Utilisez une adresse professionnelle pour rejoindre votre espace.");
+      return;
+    }
+
+    setRegistrationMessage(
+      "Adresse reconnue. Dans cette démo locale, vous pouvez ouvrir directement l’application.",
+    );
+  };
+
+  return (
+    <div className="landing-page">
+      <a className="skip-link" href="#contenu">Aller au contenu</a>
+      <header className="landing-header">
+        <a className="landing-brand" href="/" aria-label="Parkventory, accueil">
+          <Logo />
+        </a>
+        <nav className="landing-nav" aria-label="Navigation principale">
+          <a href="#fonctionnement">Comment ça marche</a>
+          <a href="#equipes">Pour les équipes</a>
+          <a href="#securite">Sécurité</a>
+        </nav>
+        <div className="landing-actions">
+          <a className="text-link" href="/app">Se connecter</a>
+          <a className="button button-primary button-small" href="#commencer">
+            Commencer <ArrowUpRight aria-hidden="true" />
+          </a>
+        </div>
+        <button
+          className="mobile-menu-button"
+          type="button"
+          aria-expanded={menuOpen}
+          aria-controls="mobile-navigation"
+          aria-label={menuOpen ? "Fermer le menu" : "Ouvrir le menu"}
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          {menuOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
+        </button>
+        {menuOpen && (
+          <nav id="mobile-navigation" className="mobile-navigation" aria-label="Navigation mobile">
+            <a href="#fonctionnement" onClick={() => setMenuOpen(false)}>Comment ça marche</a>
+            <a href="#equipes" onClick={() => setMenuOpen(false)}>Pour les équipes</a>
+            <a href="#securite" onClick={() => setMenuOpen(false)}>Sécurité</a>
+            <a href="/app">Ouvrir l’application</a>
+          </nav>
+        )}
+      </header>
+
+      <main id="contenu">
+        <section className="hero-section" aria-labelledby="hero-title">
+          <div className="hero-parking-texture" aria-hidden="true" />
+          <div className="hero-copy">
+            <p className="eyebrow">Le parking partagé, simplement.</p>
+            <h1 id="hero-title">
+              Partagez votre place.<br />
+              <span>Gagnez du temps.</span>
+            </h1>
+            <p className="hero-summary">
+              Quand vous êtes absent, rendez votre place disponible à vos collègues.
+              Quand vous en avez besoin, réservez en quelques secondes.
+            </p>
+            <div className="hero-actions">
+              <a className="button button-primary" href="/app?intent=share">
+                <CalendarCheck aria-hidden="true" /> Partager ma place
+              </a>
+              <a className="button button-secondary" href="/app?intent=find">
+                <Search aria-hidden="true" /> Voir les disponibilités
+              </a>
+            </div>
+            <p className="hero-note">
+              <CheckCircle2 aria-hidden="true" /> Aucun administrateur requis pour démarrer
+            </p>
+          </div>
+          <div className="hero-product">
+            <DashboardPreview />
+          </div>
+        </section>
+
+        <section className="benefit-strip" aria-label="Bénéfices principaux">
+          <article>
+            <CalendarCheck aria-hidden="true" />
+            <div><h2>Simple à partager</h2><p>Indiquez votre absence, votre place fait le reste.</p></div>
+          </article>
+          <article>
+            <ShieldCheck aria-hidden="true" />
+            <div><h2>Fiable à réserver</h2><p>Une disponibilité, une réservation, aucun doublon.</p></div>
+          </article>
+          <article>
+            <Users aria-hidden="true" />
+            <div><h2>Pensé pour les équipes</h2><p>Moins de recherche, plus de fluidité au quotidien.</p></div>
+          </article>
+        </section>
+
+        <section className="process-section" id="fonctionnement" aria-labelledby="process-title">
+          <div className="section-heading process-heading">
+            <div>
+              <p className="section-index">01 / Comment ça marche</p>
+              <h2 id="process-title">Une place libre.<br />Un collègue dépanné.</h2>
+              <p>Parkventory transforme une absence en opportunité, sans ajouter de gestion au quotidien.</p>
+            </div>
+            <a className="special-link" href="/app">
+              Découvrir l’application <ArrowRight aria-hidden="true" />
+            </a>
+          </div>
+          <ol className="process-steps">
+            <li>
+              <span className="step-number">01</span>
+              <CalendarCheck aria-hidden="true" />
+              <div><h3>Indiquez votre absence</h3><p>Choisissez une journée ou une plage horaire.</p></div>
+            </li>
+            <li>
+              <span className="step-number">02</span>
+              <CarFront aria-hidden="true" />
+              <div><h3>La place devient disponible</h3><p>Elle apparaît uniquement aux collègues de votre espace.</p></div>
+            </li>
+            <li>
+              <span className="step-number">03</span>
+              <Users aria-hidden="true" />
+              <div><h3>Un collègue la réserve</h3><p>Vous êtes informé, sans échange manuel à organiser.</p></div>
+            </li>
+          </ol>
+          <div className="process-visual" role="img" aria-label="Parking vu du ciel avec une place disponible en vert et une place sélectionnée en bleu">
+            <div className="process-visual-callout">
+              <Sparkles aria-hidden="true" />
+              <span><strong>27</strong> places partagées cette semaine</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="teams-section" id="equipes" aria-labelledby="teams-title">
+          <div className="teams-kicker"><Users aria-hidden="true" /> Communauté d’abord</div>
+          <div className="teams-copy">
+            <h2 id="teams-title">Commencez entre collègues.<br />Structurez quand vous en avez besoin.</h2>
+            <p>
+              Une adresse professionnelle vérifiée suffit pour rejoindre votre espace.
+              Les administrateurs restent optionnels et peuvent être nommés plus tard.
+            </p>
+          </div>
+          <div className="teams-list">
+            <article><span>01</span><h3>Sans déploiement</h3><p>Pas de projet IT préalable pour tester l’usage.</p></article>
+            <article><span>02</span><h3>Sans surveillance</h3><p>Chacun gère uniquement ses partages et réservations.</p></article>
+            <article><span>03</span><h3>Évolutif</h3><p>Sites, places personnalisées et plan arrivent quand ils deviennent utiles.</p></article>
+          </div>
+        </section>
+
+        <section className="security-section" id="securite" aria-labelledby="security-title">
+          <div className="security-visual" aria-hidden="true">
+            <ShieldCheck />
+            <span className="security-line security-line-one" />
+            <span className="security-line security-line-two" />
+            <span className="security-dot security-dot-one" />
+            <span className="security-dot security-dot-two" />
+          </div>
+          <div className="security-copy">
+            <p className="section-index">02 / Confiance</p>
+            <h2 id="security-title">Votre entreprise reste votre frontière.</h2>
+            <p>
+              L’adresse professionnelle sert à rejoindre le bon espace. Les disponibilités,
+              membres et réservations ne traversent jamais les organisations.
+            </p>
+            <ul>
+              <li><CheckCircle2 aria-hidden="true" /> Vérification de l’adresse avant toute adhésion</li>
+              <li><CheckCircle2 aria-hidden="true" /> Données minimales, aucun motif d’absence collecté</li>
+              <li><CheckCircle2 aria-hidden="true" /> Administration optionnelle et auditée</li>
+            </ul>
+          </div>
+        </section>
+
+        <section className="start-section" id="commencer" aria-labelledby="start-title">
+          <div>
+            <p className="section-index">Prêt à partager ?</p>
+            <h2 id="start-title">Votre prochaine place libre peut déjà aider quelqu’un.</h2>
+          </div>
+          <form className="registration-form" onSubmit={handleRegistration} noValidate>
+            <label htmlFor="professional-email">Adresse e-mail professionnelle</label>
+            <div className="registration-control">
+              <input
+                id="professional-email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                placeholder="vous@entreprise.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                aria-describedby="registration-help registration-message"
+                required
+              />
+              <button className="button button-primary" type="submit">
+                Rejoindre Parkventory <ArrowUpRight aria-hidden="true" />
+              </button>
+            </div>
+            <p id="registration-help">Démo locale : aucun e-mail ne sera envoyé.</p>
+            {registrationMessage && <p id="registration-message" className="registration-message" role="status">{registrationMessage}</p>}
+          </form>
+        </section>
+      </main>
+
+      <footer className="landing-footer">
+        <Logo />
+        <p>Le parking partagé, simplement.</p>
+        <div><a href="/app">Application</a><a href="#securite">Confidentialité</a><span>© 2026</span></div>
+      </footer>
+    </div>
+  );
+}

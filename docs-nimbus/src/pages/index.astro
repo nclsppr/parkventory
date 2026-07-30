@@ -1,0 +1,46 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Header from "../components/Header.astro";
+import { config } from "virtual:nimbus/config";
+
+const basePath = import.meta.env.BASE_URL.endsWith("/")
+  ? import.meta.env.BASE_URL
+  : `${import.meta.env.BASE_URL}/`;
+const documentationHref = `${basePath}overview/`;
+---
+
+<BaseLayout title={config.title} description={config.description}>
+  <div class="relative flex min-h-screen flex-col overflow-hidden">
+    <div
+      aria-hidden="true"
+      class="pointer-events-none absolute inset-x-0 top-14 h-px bg-linear-to-r from-transparent via-primary to-transparent opacity-70"
+    >
+    </div>
+    <Header />
+    <main class="relative mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-6 py-24">
+      <div
+        aria-hidden="true"
+        class="absolute -right-48 top-1/2 size-96 -translate-y-1/2 rounded-full bg-primary opacity-[0.06] blur-3xl"
+      >
+      </div>
+      <p class="mb-3 font-mono text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+        Socle produit et technique
+      </p>
+      <h1
+        class="text-foreground leading-tight"
+        style="font-size: var(--nb-h1-size); font-weight: var(--nb-h1-weight); letter-spacing: var(--nb-h1-tracking);"
+      >
+        {config.title}
+      </h1>
+      <p class="mt-3 max-w-xl text-[1.0625rem] leading-relaxed text-muted-foreground">
+        {config.description}
+      </p>
+      <a
+        href={documentationHref}
+        class="mt-8 w-fit rounded-lg border border-primary bg-primary px-4 py-3 font-semibold text-primary-foreground no-underline transition-colors hover:bg-primary-hover"
+      >
+        Explorer la documentation
+      </a>
+    </main>
+  </div>
+</BaseLayout>

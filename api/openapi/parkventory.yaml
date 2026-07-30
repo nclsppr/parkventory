@@ -1,0 +1,174 @@
+openapi: 3.1.0
+info:
+  title: Parkventory API
+  version: 0.1.0
+  description: >-
+    Contrat de la surface locale de démonstration. Les mutations sont conservées
+    en mémoire et ne constituent pas encore les parcours métier F03/F04.
+servers:
+  - url: http://127.0.0.1:8080/api/v1
+    description: Quarkus local
+tags:
+  - name: Dashboard
+  - name: Sharing
+  - name: Reservations
+  - name: Invitations
+paths:
+  /dashboard:
+    get:
+      tags: [Dashboard]
+      operationId: getDashboard
+      summary: Charge le tableau de bord de démonstration
+      responses:
+        "200":
+          description: Tableau de bord courant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+  /shares:
+    post:
+      tags: [Sharing]
+      operationId: shareSpot
+      summary: Simule la publication d'une disponibilité
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShareRequest"
+      responses:
+        "200":
+          description: Partage accepté dans la session locale
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResponse"
+        "400":
+          description: Créneau invalide
+  /availability/{availabilityId}/reservations:
+    post:
+      tags: [Reservations]
+      operationId: reserveSpot
+      summary: Simule la réservation d'une disponibilité
+      parameters:
+        - name: availabilityId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Réservation acceptée dans la session locale
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResponse"
+        "404":
+          description: Disponibilité inconnue
+        "409":
+          description: Disponibilité déjà réservée
+  /invitations:
+    post:
+      tags: [Invitations]
+      operationId: inviteColleague
+      summary: Prépare une invitation de démonstration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvitationRequest"
+      responses:
+        "200":
+          description: Invitation acceptée sans envoi d'email réel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResponse"
+        "400":
+          description: Adresse absente, invalide ou personnelle
+components:
+  schemas:
+    Dashboard:
+      type: object
+      required: [demo, user, organization, stats, availability, thanks]
+      properties:
+        demo:
+          type: boolean
+          const: true
+        user:
+          $ref: "#/components/schemas/User"
+        organization:
+          $ref: "#/components/schemas/Organization"
+        stats:
+          $ref: "#/components/schemas/Stats"
+        availability:
+          type: array
+          items:
+            $ref: "#/components/schemas/Availability"
+        thanks:
+          type: array
+          items:
+            $ref: "#/components/schemas/Thanks"
+    User:
+      type: object
+      required: [firstName, fullName, initials, assignedSpot]
+      properties:
+        firstName: { type: string }
+        fullName: { type: string }
+        initials: { type: string }
+        assignedSpot: { type: string }
+    Organization:
+      type: object
+      required: [name, sharedTotal]
+      properties:
+        name: { type: string }
+        sharedTotal: { type: integer, minimum: 0 }
+    Stats:
+      type: object
+      required: [shares, reservations, availableSpots]
+      properties:
+        shares: { type: integer, minimum: 0 }
+        reservations: { type: integer, minimum: 0 }
+        availableSpots: { type: integer, minimum: 0 }
+    Availability:
+      type: object
+      required: [id, dateLabel, timeLabel, spot, level, status]
+      properties:
+        id: { type: string }
+        dateLabel: { type: string }
+        timeLabel: { type: string }
+        spot: { type: string }
+        level: { type: string }
+        status:
+          type: string
+          enum: [AVAILABLE, RESERVED, UNAVAILABLE]
+    Thanks:
+      type: object
+      required: [id, initials, author, message, when]
+      properties:
+        id: { type: string }
+        initials: { type: string }
+        author: { type: string }
+        message: { type: string }
+        when: { type: string }
+    ShareRequest:
+      type: object
+      required: [spot, date, from, to]
+      properties:
+        spot: { type: string, minLength: 1 }
+        date: { type: string, format: date }
+        from: { type: string, pattern: "^[0-2][0-9]:[0-5][0-9]$" }
+        to: { type: string, pattern: "^[0-2][0-9]:[0-5][0-9]$" }
+    InvitationRequest:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email }
+    ActionResponse:
+      type: object
+      required: [accepted, message]
+      properties:
+        accepted: { type: boolean }
+        message: { type: string }

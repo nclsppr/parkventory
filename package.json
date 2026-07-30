@@ -1,0 +1,25 @@
+{
+  "name": "parkventory",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Partage de places de parking entre collègues.",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "./scripts/dev.sh",
+    "dev:frontend": "npm run dev --workspace @parkventory/frontend",
+    "dev:backend": "cd backend && mise exec -- ./mvnw quarkus:dev",
+    "db:up": "docker compose up -d --wait postgres",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down --volumes",
+    "frontend:build": "npm run build --workspace @parkventory/frontend",
+    "frontend:test": "npm run test --workspace @parkventory/frontend",
+    "backend:test": "cd backend && mise exec -- ./mvnw verify",
+    "docs:build": "npm run build --prefix docs-nimbus",
+    "verify": "./scripts/verify.sh"
+  }
+}
