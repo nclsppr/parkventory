@@ -631,5 +631,17 @@ local borné.
 | Safe area Safari | Meta viewport, calculs `env(safe-area-inset-*)`, cible 44 px et ordre DOM contrôlés | Un iPhone Safari réel reste requis avant F05 |
 | `mise exec -- npm run verify` | 36 Markdown, Nimbus, audit npm, 15 tests React, build Pages, 3 tests Quarkus/PostgreSQL et smoke Compose complet réussis | Exécution locale, pas encore le run CI du commit final |
 
-Le commit, le push, les runs GitHub Actions et les probes Pages sont consignés
-après leur observation ; aucune preuve distante n'est anticipée ici.
+Le commit, le push, les runs GitHub Actions et les probes Pages ci-dessous ont
+été consignés seulement après leur observation.
+
+### Preuves distantes et publication
+
+| Contrôle | Résultat observé |
+| --- | --- |
+| Tranche d'interface | Commit `25d3197a05d97f6baf9b8c7115ab9f2f3a5f7ece` poussé directement sur `main` |
+| Signal CI traité | Le premier run Pages `30547692642` a expiré sur l'attente de mutation puis rechargement d'une place ; l'attente ciblée a été bornée à trois secondes dans `835515af5534d0366940a876ba756f923bcaa7ed`, sans relâcher les autres tests |
+| GitHub Actions Verify final | Run `30548090051` réussi sur `835515a`, avec documentation, audit, React, Quarkus/PostgreSQL et smoke Compose |
+| GitHub Pages final | Run `30548089705` réussi sur `835515a`, jobs build et déploiement verts |
+| Routes publiques | Landing, `/app/`, `/app/partager/`, `/app/trouver/` et `/auth/callback/` répondent HTTP 200 ; `/app/inconnue/` répond HTTP 404 avec le shell courant |
+| Assets publics | JavaScript et CSS finaux, SVG canonique, GSAP et ScrollTrigger différés répondent HTTP 200 ; le bundle principal référence explicitement les deux chunks motion |
+| Frontière de preuve | La géométrie safe-area est publiée et contrôlée par le code, le build et Chromium ; le focus sous Dynamic Island doit encore être observé sur un iPhone Safari réel avant F05 |
