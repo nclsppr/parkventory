@@ -23,7 +23,7 @@ lorsqu'elle améliore un usage déjà validé.
 | Ordre | ID | Phase | Résultat utilisateur ou opérationnel | État macro | Critère de sortie | Preuve observée | Sortie le |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | F01 | Cadrage et socle | Le produit peut être compris et repris sans invention | `done` | Foundation, ADR, docs et Nimbus vérifiés | Snapshot identique ; `verify` vert ; rendu desktop/mobile revu | 2026-07-30 |
-| 2 | F02 | Surface et squelette exécutable | La landing et l'app shell fonctionnent sur une stack reproductible | `in_progress` | React, API santé, PostgreSQL, CI et design tokens démarrent ensemble | Build/tests locaux verts ; publication et CI en cours | |
+| 2 | F02 | Surface et squelette exécutable | La landing et l'app shell fonctionnent sur une stack reproductible | `in_progress` | React, API santé, PostgreSQL, CI et design tokens démarrent ensemble | Builds/tests, CI, clone propre et démo Pages verts ; client généré et démarrage depuis clone à prouver | |
 | 3 | F03 | Identité et communauté | Un email pro vérifié rejoint ou crée une organisation sans admin | `planned` | Magic link, session et isolation inter-tenant testés | | |
 | 4 | F04 | Partager et réserver | Une place assignée devient réservable sans double booking | `planned` | Parcours vertical E2E et concurrence PostgreSQL prouvés | | |
 | 5 | F05 | Pilote fiable | Des collègues utilisent le flux sur mobile et desktop | `planned` | Notifications, accessibilité, observabilité et pilote contrôlé | | |

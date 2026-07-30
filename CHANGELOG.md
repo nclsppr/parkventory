@@ -34,10 +34,8 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Limites
 
-- les mutations API restent en mémoire et les données affichées sont une
-  démonstration locale, sans authentification ni email réel ;
-- le workflow CI est présent mais sa première exécution reste à observer après
-  la publication initiale ;
+- les mutations API locales restent en mémoire ; la démo publique utilise des
+  données statiques, sans authentification ni email réel ;
 - aucun hébergement ou domaine de production n'est livré ;
 - les droits de publication des JPEG et le master vectoriel du logo restent à
   confirmer ;

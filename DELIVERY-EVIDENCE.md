@@ -258,3 +258,53 @@ et le dérivé WebP Parkventory font partie de l'unité publiable.
 Les preuves de push, de CI et de clone propre ne sont pas anticipées dans ce
 commit. Elles seront ajoutées après observation depuis le remote afin de ne pas
 présenter une action future comme déjà réussie.
+
+## Extension : push initial, CI et démo GitHub Pages du 2026-07-30
+
+Cette extension ferme les preuves distantes laissées ouvertes par l'unité
+précédente. Elle ne transforme pas la démo statique en environnement de
+production et ne clôt pas F02.
+
+### Git et clone public
+
+| Contrôle | Résultat observé | Preuve |
+| --- | --- | --- |
+| Publication initiale | Commit `5ee0f90d3d1e49edc2937f3ba81be1e24a82fedf` poussé directement sur `main` | `origin/main` identique après push |
+| Protection de branche | Aucun ruleset ni protection observé avant le push | API GitHub interrogée le 2026-07-30 |
+| CI initiale | Run `30516904650` réussi | Gate canonique complète sur Ubuntu 24.04 |
+| Clone propre | Clone public isolé au SHA `5ee0f90`, runtimes et dépendances réinstallés | `mise exec -- npm run verify` réussi ; répertoire temporaire retiré après contrôle |
+
+### Publication Pages
+
+| Champ | Valeur observée |
+| --- | --- |
+| Autorité | Demande explicite d'activer GitHub Pages |
+| Configuration | Site Pages créé avec `build_type: workflow`, HTTPS forcé |
+| Commit applicatif | `372810f9f9044df56e436f9e080e77c33ca55339` |
+| Workflow Pages | Run `30517358844`, jobs `build` et `deploy` réussis |
+| Workflow de vérification | Run `30517358828` réussi sur le même SHA |
+| Landing | `https://nclsppr.github.io/parkventory/`, HTTP 200 |
+| Application | `https://nclsppr.github.io/parkventory/app/`, HTTP 200 après redirection canonique |
+
+Le build public fixe `VITE_BASE_PATH=/parkventory/` et
+`VITE_DEMO_MODE=true`, copie le shell React pour `/app/` et le fallback 404,
+puis publie uniquement `frontend/dist`. Les cinq JPEG de référence restent
+ignorés et absents de l'artefact ; seules les créations originales Parkventory
+sont servies.
+
+### Contrôles publics
+
+| Contrôle | Observation | Limite |
+| --- | --- | --- |
+| HTML et assets | Landing, application, JavaScript, CSS et image utilisent le préfixe `/parkventory/` | Probe HTTP, pas mesure de performance réseau |
+| Navigation | Le lien « Se connecter » ouvre le dashboard public | Route statique, pas de session réelle |
+| Signalement | Landing et dashboard affichent explicitement « Démo publique » | L'utilisateur doit conserver ce contexte |
+| Console | Aucune erreur ni alerte sur le dashboard public inspecté | Une session navigateur et un viewport desktop |
+| Mutations | Le client court-circuite les appels API et répond localement | Aucun partage, réservation ou email réellement créé |
+
+### État après preuve
+
+F02 reste `in_progress` : le client TypeScript OpenAPI est encore écrit à la
+main et `npm run dev` n'a pas été rejoué depuis le clone public propre. Les
+preuves Git, CI et Pages sont acquises ; elles ne prouvent ni authentification,
+ni persistance métier, ni isolation inter-tenant, ni production.
