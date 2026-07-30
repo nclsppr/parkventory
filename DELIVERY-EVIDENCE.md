@@ -496,6 +496,17 @@ le SVG fourni.
 | Navigateur | Landing, connexion, dashboard et documentation revus à 1 440 × 1 000 et 390 × 844 sans débordement horizontal |
 | `mise exec -- npm run verify` | Gate complète réussie : documentation, audit npm, 7 tests React, 3 tests Quarkus/PostgreSQL et parcours Compose avec Mailpit |
 
+### Preuves distantes
+
+| Contrôle | Résultat observé |
+| --- | --- |
+| Commit et push | `c748d3212e5285e410b1d56975958b1398efed8e` poussé sur `main` |
+| GitHub Actions Verify | Run `30536319811` réussi, incluant la gate complète et le smoke Compose |
+| GitHub Pages | Run `30536319671` réussi, jobs build et déploiement verts |
+| Probes publiques | Landing et `/app/` répondent HTTP 200 ; le favicon cible `/parkventory/parkventory-logo-transparent.svg` |
+| Intégrité publique | Le SVG servi porte le SHA-256 canonique `f145d51082b3e934a23a80096494809ab1a3b6c96f6ba64ebca1ef0597089316` |
+| Revue publique | Landing et dashboard contrôlés à 390 × 844, logo visible et aucun débordement horizontal |
+
 ### Limites exactes
 
 - le SVG fourni contient le symbole seul : le mot `Parkventory` reste du texte

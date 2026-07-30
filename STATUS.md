@@ -10,7 +10,7 @@ Snapshot de l'état réellement vérifié. Il ne remplace ni le contrat stable d
 | Vérifié le | 2026-07-30 |
 | Par | Codex |
 | Branche | `main` |
-| Commits applicatifs | `e069d04a70c62c814345947dfb6e26fb0d890070` — backend persistant et Mailpit ; `9f7b9bef3e85815c40a48af914e0130dc6a6665c` — frontend local réel |
+| Commits applicatifs | `e069d04a70c62c814345947dfb6e26fb0d890070` — backend persistant et Mailpit ; `9f7b9bef3e85815c40a48af914e0130dc6a6665c` — frontend local réel ; `c748d3212e5285e410b1d56975958b1398efed8e` — logo SVG canonique |
 | Environnement | Local macOS, OrbStack 29.4.0 ; CI GitHub Actions Ubuntu |
 | Version livrée | F02, F03 et F04 partielles ; démo publique GitHub Pages séparée |
 
@@ -53,8 +53,8 @@ graphe local intégré.
 | PostgreSQL | Schéma multi-tenant, sessions, outbox, audit, idempotence et exclusions GiST | Flyway V1 + V2 et relecture après mutations | RLS et rôle applicatif non propriétaire non livrés |
 | Notifications | Invitation et réservation écrites avec l'outbox puis livrées avec reprise bornée | Messages observés dans Mailpit | Délivrabilité externe non prouvée |
 | Environnement | Quatre services Compose, images par digest, healthchecks et volumes | Checker indépendant, smoke complet et stack locale saine | Docker ou OrbStack requis |
-| Démo Pages | Landing et app statiques sous `/parkventory/` | Run Pages `30532444836`, routes publiques HTTP 200 | Aucun compte, email ou stockage distant |
-| CI | Gate Foundation, docs, audit, React, Quarkus et smoke Compose | Run Verify `30532444607` réussi sur `9f7b9be` | Aucune gate de production |
+| Démo Pages | Landing et app statiques sous `/parkventory/` | Run Pages `30536319671`, routes publiques HTTP 200 et logo au hash canonique | Aucun compte, email ou stockage distant |
+| CI | Gate Foundation, docs, audit, React, Quarkus et smoke Compose | Run Verify `30536319811` réussi sur `c748d32` | Aucune gate de production |
 
 ## État opérationnel
 
@@ -78,7 +78,7 @@ livraison. `npm run compose:down` l'arrête en conservant les volumes.
 | --- | --- | --- | --- |
 | 2026-07-30 | `npm run brand:check` | Trois copies SVG exactes et dérivé PNG conformes au master | Détecte un fichier absent ou divergent |
 | 2026-07-30 | `npm run frontend:test` | 7 tests réussis | Inclut le master SVG, l'absence de repli démo et la consommation unique sous `StrictMode` |
-| 2026-07-30 | build Pages du frontend | Build Vite réussi sous `/parkventory/`, JS initial 72,14 Ko gzip | Build local de la démo, pas encore le déploiement de cette unité |
+| 2026-07-30 | build Pages du frontend | Build Vite réussi sous `/parkventory/`, JS initial 72,14 Ko gzip | Déployé par le run Pages `30536319671` |
 | 2026-07-30 | Build et revue Nimbus | 47 pages générées, header/favicons et carte Open Graph avec le logo | Rendu local desktop/mobile |
 | 2026-07-30 | Parcours navigateur du logo | Landing, connexion, dashboard et documentation à 1 440 px et 390 px | Aucun débordement horizontal, master visible aux tailles prévues |
 | 2026-07-30 | `mise exec -- ./mvnw verify` dans `backend/` | 3 tests réussis sur PostgreSQL 18.3 | Identité, sessions, tenant, métier, conflits et outbox |
@@ -86,8 +86,8 @@ livraison. `npm run compose:down` l'arrête en conservant les volumes.
 | 2026-07-30 | `mise exec -- npm run verify` | Gate complète réussie | 36 Markdown catalogués, Nimbus vert, audit npm sans vulnérabilité, 7 tests React, 3 tests Quarkus et smoke Compose |
 | 2026-07-30 | Parcours navigateur local | Lien Mailpit, session, `UI-30`, partage, collègue, réservation et notification observés | Trois adresses synthétiques `.test`, aucune donnée réelle |
 | 2026-07-30 | Console navigateur | Aucune erreur ou alerte | Landing et application desktop locales |
-| 2026-07-30 | GitHub Actions Verify `30532444607` | Réussi sur `9f7b9be` | CI distante, pas déploiement backend |
-| 2026-07-30 | GitHub Pages `30532444836` | Build et déploiement réussis | Démo statique uniquement |
+| 2026-07-30 | GitHub Actions Verify `30536319811` | Réussi sur `c748d32` | CI distante, pas déploiement backend |
+| 2026-07-30 | GitHub Pages `30536319671` | Build et déploiement réussis ; landing et app contrôlées | Démo statique uniquement |
 
 ## Blocages externes
 
