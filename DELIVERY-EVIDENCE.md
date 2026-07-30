@@ -352,5 +352,16 @@ n'existe encore. Il reste la cible locale de F03 pour les liens magiques et
 notifications, et devra alors rejoindre le même graphe Compose avec healthcheck
 et image épinglée par digest.
 
-Les preuves de commit, push, CI Parkventory et redéploiement Pages seront
-consignées après leur observation distante ; elles ne sont pas anticipées ici.
+### Preuves distantes Parkventory
+
+| Contrôle | Résultat observé |
+| --- | --- |
+| Commit et push | `b3d908b5f54d19ef6229393568cdb984216e83c8` poussé directement sur `main`, branche non protégée et sans ruleset observé |
+| CI | Run `30526141976` réussi ; contrôle Compose direct puis gate complète, incluant le smoke des trois services |
+| Pages | Run `30526141993` réussi, jobs build et deploy verts |
+| Probes | `https://nclsppr.github.io/parkventory/` et `/app/` répondent HTTP 200 |
+
+Les workflows signalent la dépréciation de Node.js 20 dans certaines actions
+tierces, que GitHub force actuellement sous Node.js 24. Cet avertissement ne
+rend pas les runs rouges, mais devra être résolu par une mise à jour épinglée
+des actions concernées.

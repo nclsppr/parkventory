@@ -10,7 +10,7 @@ Snapshot de l'état réellement vérifié. Il ne remplace ni le contrat stable d
 | Vérifié le | 2026-07-30 |
 | Par | Codex |
 | Branche | `main` |
-| Commit | `372810f9f9044df56e436f9e080e77c33ca55339` — artefact applicatif Pages vérifié |
+| Commit | `b3d908b5f54d19ef6229393568cdb984216e83c8` — Compose obligatoire et artefact Pages vérifiés |
 | Environnement | Local macOS, OrbStack 29.4.0 |
 | Version livrée | F01 documentaire et prototype F02 local avec démo publique GitHub Pages |
 
@@ -51,8 +51,8 @@ clone propre.
 | PostgreSQL | Schéma multi-tenant, outbox, audit, idempotence et contraintes temporelles | Flyway V1 appliquée sur PostgreSQL 18.3 réel | API démo non branchée sur ces tables |
 | Environnement | Vite, Quarkus et PostgreSQL réunis dans Compose ; outils hôte épinglés | Trois services sains, images OCI par digest, smoke du proxy API | Docker/OrbStack requis |
 | Illustration | Master PNG original et WebP navigateur de 459 190 octets | Hashes et provenance dans le registre | Pas un master vectoriel de marque |
-| CI | Workflow Ubuntu appelant la gate canonique | Runs `30516904650` et `30517358828` réussis | Aucune gate de production |
-| Démo Pages | Landing et app statiques sous `/parkventory/` | Run `30517358844`, HTTP 200 et revue navigateur publique | Aucun backend, compte, email ou stockage distant |
+| CI | Checker Compose direct puis gate canonique sur Ubuntu | Run `30526141976` réussi sur `b3d908b` | Aucune gate de production |
+| Démo Pages | Landing et app statiques sous `/parkventory/` | Run `30526141993` et deux routes HTTP 200 | Aucun backend, compte, email ou stockage distant |
 
 ## État opérationnel
 
@@ -63,7 +63,7 @@ clone propre.
 | API | `http://127.0.0.1:8080/api/v1` pendant `npm run dev` | Quarkus 3.33.3 | Santé prête et interactions fonctionnelles | 2026-07-30 |
 | PostgreSQL | `127.0.0.1:5434` en local | Image 18.3 épinglée par digest | Healthy, Flyway V1 | 2026-07-30 |
 | Documentation Nimbus | `http://127.0.0.1:4321` quand lancée | `docs-nimbus/dist/`, dérivé ignoré | Build et lint locaux | 2026-07-30 |
-| Démo publique | `https://nclsppr.github.io/parkventory/` et `/app/` | Commit applicatif `372810f` | HTTP 200, navigation et console vérifiées | 2026-07-30 |
+| Démo publique | `https://nclsppr.github.io/parkventory/` et `/app/` | Commit applicatif `b3d908b` | Deux routes HTTP 200 après le run Pages `30526141993` | 2026-07-30 |
 | Production | Aucune URL | Aucun artefact publié | Non provisionnée | 2026-07-30 |
 
 ## Validations récentes
@@ -85,6 +85,8 @@ clone propre.
 | 2026-07-30 | Clone public propre de `main` au SHA `5ee0f90` | Répertoire temporaire isolé | Installation et `mise exec -- npm run verify` réussies | `npm run dev` non rejoué dans ce clone |
 | 2026-07-30 | GitHub Pages `30517358844` et probes publics | HTTPS et navigateur | Build/déploiement verts, deux routes HTTP 200, aucune erreur console | Démo statique uniquement |
 | 2026-07-30 | Comparaison avec Project Foundation `v0.5.2` | Snapshot local | Noyau et six profils identiques au SHA épinglé | Tag amont annoté mais non signé |
+| 2026-07-30 | GitHub Actions `30526141976` | Ubuntu 24.04 et Docker Compose | Checker indépendant et gate complète réussis en 2 min 18 s | Avertissement de dépréciation Node 20 dans des actions tierces |
+| 2026-07-30 | GitHub Pages `30526141993` et probes publics | HTTPS | Build et déploiement réussis ; landing et `/app/` répondent HTTP 200 | Frontend statique sans backend |
 
 ## Blocages externes
 
