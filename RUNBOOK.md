@@ -31,9 +31,9 @@ et les commandes canoniques ne sont pas décidés et testés.
 
 | Élément | Valeur observée | Preuve | Vérifié le |
 | --- | --- | --- | --- |
-| Version, SHA ou digest | Aucun artefact applicatif | `STATUS.md` et état Git | 2026-07-30 |
+| Version, SHA ou digest | Application locale aux commits `e069d04` et `9f7b9be` ; aucun artefact de production | `STATUS.md` et état Git | 2026-07-30 |
 | Configuration chargée | Aucune configuration de production | Arborescence du dépôt | 2026-07-30 |
-| Santé et dépendances | Aucun service en exécution | Aucun endpoint ni URL | 2026-07-30 |
+| Santé et dépendances | Stack locale Compose à quatre services vérifiée ; aucune URL de production | `npm run compose:verify` | 2026-07-30 |
 
 ### Cible
 

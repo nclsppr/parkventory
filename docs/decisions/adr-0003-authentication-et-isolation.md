@@ -65,7 +65,8 @@ mais contredit la self-registration.
 Adopter l'option B.
 
 - Quarkus OIDC en `web-app` et Authorization Code Flow.
-- Fournisseur OIDC capable de passwordless email, à sélectionner avant F03.
+- Fournisseur OIDC capable de passwordless email, à sélectionner avant F05 ou
+  toute ouverture externe.
 - PKCE, nonce, état et validation de l'issuer/audience.
 - Cookie de session `HttpOnly`, `Secure` et SameSite approprié.
 - Compte interne lié au couple issuer + subject.

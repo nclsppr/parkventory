@@ -7,7 +7,7 @@
 | Nom | Parkventory |
 | Propriétaire | nclsppr |
 | Classe | Critique |
-| Surface de production | Aucune ; prototype local et démo statique publique au 2026-07-30 |
+| Surface de production | Aucune ; application locale persistante et démo statique publique au 2026-07-30 |
 | Socle adopté | [`FOUNDATION.md`](FOUNDATION.md) |
 
 ## Problème
@@ -37,9 +37,9 @@ réservation.
 
 | Preuve | Baseline connue | Cible | Source | Échéance |
 | --- | --- | --- | --- | --- |
-| Parcours autonome complet | Aucun produit livré | Une entreprise pilote exécute inscription, partage et réservation sans opérateur | Test E2E de la phase F04 | Sortie F04 |
-| Intégrité d'une réservation concurrente | Aucun test | Deux demandes simultanées produisent un succès et un conflit explicite | Test d'intégration PostgreSQL | Sortie F04 |
-| Isolation des organisations | Aucun test | Zéro lecture ou mutation inter-tenant dans la matrice d'autorisation | Tests d'intégration et RLS | Sortie F03 |
+| Parcours autonome complet | Parcours local Compose et navigateur vérifié | Une entreprise pilote exécute inscription, partage et réservation sans opérateur | Test E2E de la phase F04 | Sortie F04 |
+| Intégrité d'une réservation concurrente | Contraintes GiST et conflits séquentiels testés | Deux demandes simultanées produisent un succès et un conflit explicite | Test d'intégration PostgreSQL | Sortie F04 |
+| Isolation des organisations | Tenant chargé côté serveur et clés composites en place | Zéro lecture ou mutation inter-tenant dans la matrice d'autorisation | Tests d'intégration et RLS | Sortie F03 |
 | Accessibilité du parcours critique | Aucune interface | WCAG 2.2 AA, clavier et mobile vérifiés | Matrice de `DESIGN.md` | Sortie F05 |
 | Documentation reproductible | Socle vierge | `./scripts/verify.sh` vert depuis un clone propre | Preuve de livraison | Chaque livraison |
 
@@ -100,19 +100,19 @@ Ces cibles ne sont pas des résultats acquis.
 | Roadmap | `ROADMAP.md` | normative | Autorité de séquencement |
 | Historique | `CHANGELOG.md` | historique | Changements livrés |
 | Architecture | [`docs/architecture/overview.md`](docs/architecture/overview.md) | normative | Cible, pas état livré |
-| Contrat API | `api/openapi/parkventory.yaml` | normative cible | Créé avec le backend |
-| Schéma de données | [`docs/architecture/domain-model.md`](docs/architecture/domain-model.md) et `backend/src/main/resources/db/migration/` | normative et opérationnelle | Migration V1 testée sur PostgreSQL 18.3 |
+| Contrat API | `api/openapi/parkventory.yaml` | normative actuelle | Authentification locale et parcours métier versionnés |
+| Schéma de données | [`docs/architecture/domain-model.md`](docs/architecture/domain-model.md) et `backend/src/main/resources/db/migration/` | normative et opérationnelle | Migrations V1 et V2 testées sur PostgreSQL 18.3 |
 | Sécurité et isolation | [`docs/architecture/security-and-tenancy.md`](docs/architecture/security-and-tenancy.md) | normative | Défense en profondeur |
 | Design system | [`DESIGN.md`](DESIGN.md) et `frontend/src/styles.css` | normative et opérationnelle | Tokens, composants et responsive alignés |
 | Configuration | `compose.yaml`, `mise.toml`, `mise.lock`, `.env.example` | opérationnelle | Compose porte le parcours intégré ; mise porte les raccourcis hôte |
-| Code livré | `frontend/` et `backend/` | opérationnelle locale | Prototype démo, pas flux F03/F04 |
+| Code livré | `frontend/` et `backend/` | opérationnelle locale | Flux F03/F04 partiels et persistants ; pas une production |
 | Opérations | [`RUNBOOK.md`](RUNBOOK.md) | normative cible | Production non provisionnée |
 | Décisions | `docs/decisions/` | normative | ADR acceptées ou proposées |
 | Documentation | `DOCUMENTATION.md`, `documentation.json`, `docs-nimbus/` et catalogue | normative et dérivée | Markdown canonique |
 | Références visuelles | [`docs/references/visual-sources.md`](docs/references/visual-sources.md) | référence | JPEG non publiables sans droits |
 | Artefacts générés | Catalogue Nimbus, site Nimbus, futur client TypeScript et futurs SVG | dérivée | Sources et commandes à conserver |
 | Archives | Aucune | historique | Ne pas créer sans motif |
-| Démonstration locale | Données API portant `demo: true` | expérimentale intégrée et signalée | Retirée ou remplacée par les parcours réels avant pilote |
+| Démonstration publique | Données statiques portant `demo: true` sur GitHub Pages | expérimentale et signalée | Séparée du parcours local réel |
 
 ## Architecture
 
@@ -137,10 +137,11 @@ Le détail et les compromis vivent dans
 | Composant | Rôle | Statut | Exécution | Version | Source | Preuve et date | Propriétaire |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Documentation Nimbus | Rendu des Markdown classés | Actuel | Build local | Nimbus 0.8.2 | `docs-nimbus/` | `./scripts/verify.sh`, 2026-07-30 après exécution | nclsppr |
-| Frontend React | Landing et application | Actuel, local et démo publique | Compose ou navigateur statique | React 19.2.8, Vite 8.1.5 | `frontend/` | 4 tests et builds racine/sous-chemin, 2026-07-30 | nclsppr |
-| API Java | Démo REST, validation, santé et OpenAPI | Actuel, local | Compose, Maven 3.9.16 et Java 25 | Quarkus 3.33.3 LTS | `backend/` | Tests Quarkus et smoke Compose, 2026-07-30 | nclsppr |
-| PostgreSQL | Schéma et contraintes temporelles | Actuel, local | Compose et Testcontainers | PostgreSQL 18.3 | migration Flyway V1 | Migration et santé vérifiées sur PostgreSQL réel, 2026-07-30 | nclsppr |
-| Livraison email | Magic links et notifications | Cible | Service externe derrière un port | Fournisseur non choisi | module `notifications` | Décision requise avant F03 | nclsppr |
+| Frontend React | Landing, authentification et application | Actuel, réel en local et démo publique | Compose ou navigateur statique | React 19.2.8, Vite 8.1.5 | `frontend/` | 6 tests, builds et parcours navigateur, 2026-07-30 | nclsppr |
+| API Java | Identité locale, métier, validation, santé et OpenAPI | Actuel, local | Compose, Maven 3.9.16 et Java 25 | Quarkus 3.33.3 LTS | `backend/` | Tests PostgreSQL et smoke Compose, 2026-07-30 | nclsppr |
+| PostgreSQL | Identité, sessions, métier, outbox et contraintes | Actuel, local | Compose et Testcontainers | PostgreSQL 18.3 | migrations Flyway V1 et V2 | Migration et parcours persisté vérifiés, 2026-07-30 | nclsppr |
+| Mailpit | Liens magiques, invitations et notifications locales | Actuel, local uniquement | Compose | Mailpit 1.30.6 | `compose.yaml` | Healthcheck, API et navigateur, 2026-07-30 | nclsppr |
+| Livraison email de production | Magic links et notifications | Cible | Service externe derrière un port | Fournisseur non choisi | module `notifications` | Décision requise avant F05 | nclsppr |
 
 ### Flux principal
 
@@ -166,7 +167,7 @@ Le détail et les compromis vivent dans
 | Environnement | Plateforme | Configuration canonique | URL ou accès | Vérification |
 | --- | --- | --- | --- | --- |
 | Développement documentaire | macOS local | Dépôt et lockfile Nimbus | `127.0.0.1:4321` quand lancé | `./scripts/verify.sh` |
-| Développement applicatif | Docker Compose sur macOS ou Linux | `compose.yaml`, `.env.example` | `127.0.0.1:5173`, `127.0.0.1:8080` et `127.0.0.1:5434` | `npm run dev` et `npm run compose:verify` |
+| Développement applicatif | Docker Compose sur macOS ou Linux | `compose.yaml`, `.env.example` | Web `5173`, API `8080`, Mailpit `8025`/`1025`, PostgreSQL `5434` | `npm run dev` et `npm run compose:verify` |
 | Démo publique | GitHub Pages | `.github/workflows/pages.yml`, base `/parkventory/`, données statiques | `https://nclsppr.github.io/parkventory/` | Tests frontend, build puis probes publics |
 | CI | GitHub Actions | `.github/workflows/verify.yml` | Exécuté à chaque push sur `main` | Même commande `verify` |
 | Production | Non provisionnée | Décision d'exploitation future | Aucune URL | Runbook et probes requis avant ouverture |
@@ -177,10 +178,10 @@ Le détail et les compromis vivent dans
 | --- | --- | --- |
 | Installer les runtimes | `mise install` | Node 24.18, Java 25.0.4 et Python 3.12.13 épinglés |
 | Installer l'application | `npm ci` | Dépendances frontend exactes du lockfile |
-| Démarrer l'application | `npm run dev` | PostgreSQL, Quarkus et React sains sous Compose sur les ports documentés |
+| Démarrer l'application | `npm run dev` | PostgreSQL, Mailpit, Quarkus et React sains sous Compose sur les ports documentés |
 | Arrêter l'application | `npm run compose:down` | Conteneurs et réseau retirés, volumes conservés |
 | Supprimer la base locale | `npm run db:reset` | Seul le volume PostgreSQL de développement est retiré après arrêt |
-| Vérifier Compose | `npm run compose:verify` | Stack isolée saine, landing, santé et API accessibles via Vite |
+| Vérifier Compose | `npm run compose:verify` | Stack isolée saine et parcours identité, partage, réservation, notification et invitation persisté |
 | Installer la documentation | `npm ci --prefix docs-nimbus` | Dépendances exactes du lockfile |
 | Développer la documentation | `npm run dev --prefix docs-nimbus` | Nimbus local sur `127.0.0.1:4321` |
 | Vérifier | `mise exec -- npm run verify` | Documentation, Compose, audit npm, React, Quarkus et migration PostgreSQL valides |
@@ -201,8 +202,10 @@ qu'une cible de production n'est pas explicitement décidée et autorisée.
 - Secrets : injection par environnement ou gestionnaire de secrets, jamais Git.
 - Authentification : lien magique à usage unique puis session serveur.
 - Autorisation : backend et base, jamais la seule interface.
-- Isolation : `organization_id`, clés composites et PostgreSQL RLS.
-- Rétention : durée exacte à décider avant F03 ; suppression et export requis.
+- Isolation actuelle : `organization_id`, clés composites et filtres serveur ;
+  PostgreSQL RLS reste la défense cible avant pilote.
+- Rétention : durée exacte à décider avant pilote ; suppression et export
+  requis.
 - Sauvegarde : stratégie et restauration isolée obligatoires avant production.
 - Logs : identifiants corrélables pseudonymisés, aucun token ni email complet.
 

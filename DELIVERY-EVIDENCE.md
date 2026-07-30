@@ -365,3 +365,99 @@ Les workflows signalent la dépréciation de Node.js 20 dans certaines actions
 tierces, que GitHub force actuellement sous Node.js 24. Cet avertissement ne
 rend pas les runs rouges, mais devra être résolu par une mise à jour épinglée
 des actions concernées.
+
+## Extension : identité, persistance et emails locaux du 2026-07-30
+
+Cette extension remplace les limites historiques « mutations en mémoire » et
+« aucun email » des prototypes précédents. Elle prouve un environnement local
+fonctionnel ; elle ne constitue pas une preuve de production.
+
+### Unités Git
+
+| Unité | Commit poussé sur `main` | Contenu |
+| --- | --- | --- |
+| Backend et données | `e069d04a70c62c814345947dfb6e26fb0d890070` | Mailpit, Flyway V2, identité locale, sessions, API persistante, outbox et smoke |
+| Frontend réel | `9f7b9bef3e85815c40a48af914e0130dc6a6665c` | Connexion, callback, dashboard PostgreSQL, mutations réelles et états explicites |
+
+Les workflows Verify `30531390825` et `30532444607`, ainsi que Pages
+`30531390795` et `30532444836`, ont réussi sur ces deux unités.
+
+### Graphe Compose vérifié
+
+| Service | Responsabilité | État observé |
+| --- | --- | --- |
+| `postgres` | Identités, sessions, organisations, places, offres, réservations, outbox et audit | Healthy, migrations V1 et V2 |
+| `mailpit` | SMTP local et lecture des liens, invitations et notifications | Healthy, stockage local persistant |
+| `backend` | Java 25 / Quarkus 3.33.3 LTS, API et worker d'outbox | Readiness `UP` |
+| `frontend` | React/Vite et proxy même origine vers `/api` et `/q` | Healthy sur `127.0.0.1:5173` |
+
+Les quatre images externes sont épinglées par digest et les quatre services
+portent un healthcheck. Le smoke utilise des ports aléatoires et des volumes
+isolés, puis retire uniquement son propre projet Compose.
+
+### Parcours automatisé
+
+`npm run compose:verify` :
+
+1. demande un lien pour un propriétaire synthétique en `.test` ;
+2. lit le message avec l'API Mailpit et consomme le jeton ;
+3. vérifie le cookie de session ;
+4. déclare et partage `A-24` ;
+5. connecte un collègue du même domaine ;
+6. réserve avec une clé d'idempotence ;
+7. relit le statut `RESERVED` depuis PostgreSQL ;
+8. observe la notification du propriétaire ;
+9. invite une adresse synthétique externe et observe l'invitation.
+
+### Parcours navigateur
+
+Le 2026-07-30, le navigateur a reproduit le flux sur la stack persistante :
+
+- demande et réception d'un lien dans Mailpit ;
+- création de l'espace communautaire seulement après validation ;
+- déclaration de `UI-30` au niveau de test ;
+- publication du créneau du lendemain ;
+- authentification d'un collègue du même domaine ;
+- visibilité puis réservation de `UI-30` ;
+- compteurs et statut relus après chaque mutation ;
+- invitation et notification de réservation reçues dans Mailpit ;
+- aucune erreur ou alerte console observée.
+
+La revue a révélé que les effets doublés de React `StrictMode` vérifiaient deux
+fois le même jeton à usage unique. Le frontend déduplique désormais la promesse
+de vérification ; un test rend ce comportement non régressif. Un lien frais a
+ensuite conduit une seule fois jusqu'à `/app`.
+
+### Gate canonique après documentation
+
+| Contrôle | Résultat observé |
+| --- | --- |
+| Catalogue et Markdown | 36 sources maintenues classées, liens valides |
+| Nimbus | 4 tests, 98 fichiers sans diagnostic, 45 pages générées, 46 fichiers lintés |
+| Audit npm | 0 vulnérabilité rapportée |
+| React | 6 tests réussis et build Vite réussi |
+| Quarkus | 3 tests réussis, build JVM réussi, Flyway V1 et V2 sur PostgreSQL 18.3 |
+| Compose | Quatre services sains et parcours identité, partage, réservation, notification et invitation réussi |
+| Commande globale | `mise exec -- npm run verify` réussie le 2026-07-30 |
+
+### Limites exactes
+
+- GitHub Pages reste une démo statique sans backend.
+- Mailpit est limité au développement et ne prouve aucune délivrabilité.
+- L'adaptateur local ne remplace pas OIDC, PKCE, cookie `Secure` ou protection
+  CSRF complète.
+- RLS, matrice inter-tenant, rate limiting, concurrence réellement parallèle,
+  annulation et heure d'été restent ouverts.
+- Aucun service de production, domaine, sauvegarde ou restauration n'est
+  provisionné.
+
+### État laissé au propriétaire
+
+La stack de développement est laissée active avec ses volumes :
+
+- `http://127.0.0.1:5173/` ;
+- `http://127.0.0.1:5173/app` ;
+- `http://127.0.0.1:8025/` ;
+- `http://127.0.0.1:8080/q/swagger-ui`.
+
+`npm run compose:down` arrête les conteneurs sans supprimer les données.

@@ -24,8 +24,8 @@ lorsqu'elle améliore un usage déjà validé.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | F01 | Cadrage et socle | Le produit peut être compris et repris sans invention | `done` | Foundation, ADR, docs et Nimbus vérifiés | Snapshot identique ; `verify` vert ; rendu desktop/mobile revu | 2026-07-30 |
 | 2 | F02 | Surface et squelette exécutable | La landing et l'app shell fonctionnent sur une stack reproductible | `in_progress` | React, API santé, PostgreSQL, CI et design tokens démarrent ensemble | Builds/tests, CI, clone propre et démo Pages verts ; client généré et démarrage depuis clone à prouver | |
-| 3 | F03 | Identité et communauté | Un email pro vérifié rejoint ou crée une organisation sans admin | `planned` | Magic link, session et isolation inter-tenant testés | | |
-| 4 | F04 | Partager et réserver | Une place assignée devient réservable sans double booking | `planned` | Parcours vertical E2E et concurrence PostgreSQL prouvés | | |
+| 3 | F03 | Identité et communauté | Un email pro vérifié rejoint ou crée une organisation sans admin | `in_progress` | Magic link, session et isolation inter-tenant testés | Adaptateur local, rejeu, session, invitation exacte et unicité de domaine vérifiés ; matrice tenant/RLS et OIDC de production ouverts | |
+| 4 | F04 | Partager et réserver | Une place assignée devient réservable sans double booking | `in_progress` | Parcours vertical E2E et concurrence PostgreSQL prouvés | Déclaration, offre, réservation idempotente, outbox et E2E local vérifiés ; concurrence réelle, annulation et DST ouverts | |
 | 5 | F05 | Pilote fiable | Des collègues utilisent le flux sur mobile et desktop | `planned` | Notifications, accessibilité, observabilité et pilote contrôlé | | |
 | 6 | F06 | Administration optionnelle | Une organisation peut nommer des admins et enrichir son inventaire | `planned` | Premier admin prouvé, rôles auditables, aucun admin requis au quotidien | | |
 | 7 | F07 | Plan de parking | Les places peuvent être localisées sur un plan versionné | `planned` | Placement accessible, versionné et utile sur un site pilote | | |
@@ -114,6 +114,10 @@ création concurrente d'un domaine unique et matrice inter-tenant testée.
 
 Exclusions : administration, SSO et domaines personnels.
 
+État observé : le parcours local Mailpit est fonctionnel et persistant. Il ne
+clôt pas F03 tant que la matrice inter-tenant, RLS, l'anti-abus et l'adaptateur
+OIDC de production ne sont pas prouvés.
+
 ## Phase F04 : partager et réserver
 
 Objectif : déclarer une place assignée, publier un intervalle, le rechercher et
@@ -124,6 +128,10 @@ succès ; annulation, fuseaux, heure d'été et idempotence sont testés ; le fl
 E2E fonctionne sans administrateur.
 
 Exclusions : récurrence complexe, carte et gamification.
+
+État observé : le parcours vertical fonctionne dans Compose et dans le
+navigateur. F04 reste ouverte pour le test réellement concurrent, l'annulation,
+les fuseaux et les changements d'heure.
 
 ## Phase F05 : pilote fiable
 

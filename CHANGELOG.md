@@ -26,8 +26,8 @@ la source du diff technique et les ADR expliquent les décisions importantes.
   chargement, erreur et première place, avec déduplication du jeton sous
   `StrictMode` ;
 - adoption de Project Foundation `v0.5.2` et de l'invariant `P19` ;
-- parcours local intégré PostgreSQL, Quarkus et Vite entièrement piloté par
-  Docker Compose avec images par digest et healthchecks ;
+- parcours local intégré PostgreSQL, Mailpit, Quarkus et Vite entièrement
+  piloté par Docker Compose avec images par digest et healthchecks ;
 - checker Compose, smoke test isolé et gate CI contre les contournements ;
 - adoption de Project Foundation `v0.4.0` en pack critique avec l'invariant
   `P18` et les profils web,

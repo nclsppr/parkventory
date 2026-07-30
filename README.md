@@ -6,9 +6,9 @@ administrateur soit nécessaire au démarrage.
 
 Le dépôt contient désormais une landing page et un tableau de bord React,
 une API locale Java 25 / Quarkus 3.33.3 LTS et un schéma PostgreSQL 18 migré
-par Flyway. Les données et mutations visibles sont explicitement signalées
-comme une démonstration : l'authentification et la persistance métier
-arriveront dans les phases suivantes.
+par Flyway. En local, l'authentification par lien magique, les sessions, les
+places, les partages, les réservations, les invitations et les notifications
+sont réellement branchés sur PostgreSQL et Mailpit.
 
 ## Voir la démo publique
 
@@ -30,13 +30,26 @@ Compose et `mise` reste requis pour la gate hôte complète.
 npm run dev
 ```
 
-La commande démarre PostgreSQL, Quarkus et Vite dans Compose, attend leurs
+La commande démarre PostgreSQL, Mailpit, Quarkus et Vite dans Compose, attend leurs
 healthchecks, puis suit les logs applicatifs :
 
 - landing : `http://127.0.0.1:5173/` ;
 - application : `http://127.0.0.1:5173/app` ;
+- boîte de réception Mailpit : `http://127.0.0.1:8025/` ;
 - santé Quarkus : `http://127.0.0.1:8080/q/health/ready` ;
 - Swagger UI : `http://127.0.0.1:8080/q/swagger-ui`.
+
+Pour exercer le parcours :
+
+1. saisir une adresse professionnelle de test, par exemple
+   `alex@entreprise.test` ;
+2. ouvrir l'e-mail dans Mailpit et suivre le lien à usage unique ;
+3. déclarer une place puis la partager ;
+4. se déconnecter et recommencer avec une seconde adresse du même domaine pour
+   réserver la place.
+
+Les comptes, sessions et données métier restent dans les volumes locaux
+Compose. Aucun e-mail ne quitte la machine.
 
 Un `Ctrl-C` exécute `docker compose down` et conserve les volumes. Pour supprimer
 volontairement uniquement la base locale :
@@ -55,20 +68,26 @@ mise exec -- npm run verify
 
 Cette gate rejoue le catalogue et le build Nimbus, le contrôle Foundation de
 Compose, l'audit npm, les tests et le build React, les tests Quarkus contre un
-PostgreSQL éphémère, puis le parcours intégré PostgreSQL, Quarkus et Vite dans
-un projet Compose isolé.
+PostgreSQL éphémère, puis le parcours intégré PostgreSQL, Mailpit, Quarkus et
+Vite dans un projet Compose isolé.
 
 ## Périmètre actuel
 
 - React 19, TypeScript 7 et Vite 8 pour la landing et l'application responsive ;
 - Java 25 et Quarkus LTS pour `/api/v1`, SmallRye Health et OpenAPI ;
 - PostgreSQL 18 avec contraintes temporelles d'affectation et de réservation ;
-- Compose pour PostgreSQL, Quarkus et Vite, avec images épinglées par digest,
-  healthchecks et smoke test ;
+- authentification locale par lien magique, cookie de session `HttpOnly` et
+  rattachement communautaire par invitation exacte ou domaine ;
+- API persistante pour déclarer, partager, réserver et inviter, avec
+  idempotence et outbox transactionnelle ;
+- Mailpit pour capturer en local les liens, invitations et notifications ;
+- Compose pour PostgreSQL, Mailpit, Quarkus et Vite, avec images épinglées par
+  digest, healthchecks et smoke test ;
 - runtimes hôte épinglés par `mise.toml` / `mise.lock` ;
 - démo frontend statique publiée par le workflow GitHub Pages ;
 - images générées propres au projet, avec source et provenance documentées ;
-- aucun email réel, aucune authentification et aucun déploiement de production.
+- aucun fournisseur OIDC ou email de production et aucun déploiement de
+  production.
 
 ## Documentation essentielle
 

@@ -36,6 +36,15 @@ Le fournisseur exact n'est pas encore choisi. Il doit permettre export,
 suppression, région adaptée, rotation des clés et retrait sans perdre les
 comptes internes.
 
+### État local actuel
+
+Le parcours Compose utilise temporairement l'adaptateur accepté par
+[`ADR-0005`](../decisions/adr-0005-adaptateur-identite-mailpit-local.md) :
+jeton aléatoire de 256 bits, hash SHA-256 en base, consommation atomique,
+session de sept jours en cookie `HttpOnly` et Mailpit. Il exerce les frontières
+applicatives mais ne prouve pas OIDC, `Secure`, PKCE, rate limiting, protection
+CSRF complète ou délivrabilité.
+
 ## Tenant métier
 
 Une organisation Parkventory n'est pas un tenant OIDC. Un seul fournisseur
@@ -134,7 +143,7 @@ Catégories :
 - audit de gouvernance ;
 - événements de notification.
 
-Avant F03, une décision doit fixer :
+Avant un pilote réel, une décision doit fixer :
 
 - durée d'une session ;
 - rétention des invitations et demandes de connexion ;

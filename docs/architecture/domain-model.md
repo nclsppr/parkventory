@@ -1,8 +1,8 @@
 # Modèle de domaine
 
-Ce document décrit les agrégats et invariants cibles. Les migrations Flyway
-deviendront la source exécutable du schéma dès F02 ; toute divergence sera
-signalée et corrigée.
+Ce document décrit les agrégats et invariants cibles. Les migrations Flyway V1
+et V2 sont la source exécutable du schéma local ; toute divergence est signalée
+et corrigée.
 
 ## Vue d'ensemble
 
@@ -135,7 +135,9 @@ EXCLUDE USING gist (
 WHERE (status IN ('HELD', 'CONFIRMED'));
 ```
 
-La migration réelle adaptera types et noms, puis sera testée sur PostgreSQL 18.
+La migration V1 applique cette contrainte sur PostgreSQL 18. La migration V2
+ajoute la même protection aux offres publiées, ainsi que les liens magiques et
+sessions locales.
 
 ## Idempotence
 

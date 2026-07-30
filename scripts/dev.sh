@@ -23,12 +23,13 @@ docker info >/dev/null 2>&1 || {
   exit 1
 }
 
-echo "Démarrage de PostgreSQL, Quarkus et Vite avec Docker Compose"
+echo "Démarrage de PostgreSQL, Mailpit, Quarkus et Vite avec Docker Compose"
 docker compose --project-directory "${PROJECT_ROOT}" up --build -d --wait
 
 echo "Parkventory est prêt :"
 echo "  landing : http://127.0.0.1:${PARKVENTORY_WEB_PORT:-5173}/"
 echo "  application : http://127.0.0.1:${PARKVENTORY_WEB_PORT:-5173}/app"
+echo "  Mailpit : http://127.0.0.1:${PARKVENTORY_MAILPIT_UI_PORT:-8025}/"
 echo "  API : http://127.0.0.1:${PARKVENTORY_API_PORT:-8080}/api/v1/dashboard"
 echo "  Swagger UI : http://127.0.0.1:${PARKVENTORY_API_PORT:-8080}/q/swagger-ui"
 echo "Arrêtez avec Ctrl-C ; les volumes de développement seront conservés."

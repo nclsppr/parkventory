@@ -1,7 +1,7 @@
 # ADR-0005 : adaptateur d’identité et Mailpit pour le développement local
 
 - Statut : accepté
-- Statut d'implémentation : partiel
+- Statut d'implémentation : implémenté et vérifié en local
 - Date : 2026-07-30
 - Dernière vérification : Mailpit `v1.30.6` et Quarkus Mailer testés le 2026-07-30
 - Propriétaire : nclsppr
@@ -75,8 +75,10 @@ un cookie sécurisé avant ouverture.
 - migration Flyway V2 sur PostgreSQL 18 réel ;
 - tests Quarkus du lien, du rejeu, de l’invitation exacte, de la session, du
   partage, de l’idempotence et de la réservation ;
-- smoke Compose du parcours dans Mailpit à ajouter avant de déclarer la tranche
-  locale terminée ;
+- smoke Compose du parcours complet dans Mailpit, de l'identité jusqu'à la
+  notification de réservation et l'invitation ;
+- parcours navigateur React avec session `HttpOnly`, données PostgreSQL et
+  déduplication de la vérification sous `StrictMode` ;
 - sélection OIDC, RLS et durcissement anti-abus restent des critères ouverts de
   F03.
 

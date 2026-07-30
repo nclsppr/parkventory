@@ -137,11 +137,20 @@ vérifié. Quarkus utilise Authorization Code Flow, PKCE et un cookie de session
 chiffré. L'organisation Parkventory n'est pas un tenant OIDC : c'est une
 frontière métier interne, ce qui évite une configuration OIDC par entreprise.
 
-Le fournisseur précis reste à décider avant F03 selon coût, région, export,
-délivrabilité, sécurité et procédure de retrait.
+Le fournisseur précis reste à décider avant F05 ou toute ouverture externe,
+selon coût, région, export, délivrabilité, sécurité et procédure de retrait.
 
 Le détail vit dans [`security-and-tenancy.md`](security-and-tenancy.md) et
 [`ADR-0003`](../decisions/adr-0003-authentication-et-isolation.md).
+
+### Adaptateur local livré
+
+Le développement n'attend pas ce choix externe. Sous Docker Compose, Quarkus
+émet un lien à usage unique vers Mailpit, ne persiste que son hash, établit une
+session serveur `HttpOnly` et résout invitation, domaine, organisation et
+membership dans PostgreSQL. Cette variante HTTP de boucle locale est bornée au
+développement et documentée dans
+[`ADR-0005`](../decisions/adr-0005-adaptateur-identite-mailpit-local.md).
 
 ## Notifications
 
@@ -153,7 +162,8 @@ Quarkus :
 3. marque succès ou prochain essai ;
 4. place un échec terminal en diagnostic sans annuler la mutation métier.
 
-Aucun broker n'est nécessaire au MVP.
+Aucun broker n'est nécessaire au MVP. Le worker et l'outbox sont exercés en
+local avec Mailpit ; le fournisseur de production reste interchangeable.
 
 ## Observabilité
 
