@@ -27,6 +27,8 @@ la source du diff technique et les ADR expliquent les décisions importantes.
   d'exclusion temporelle ;
 - environnement reproductible mise/Compose, gate complète et workflow GitHub
   Actions épinglé ;
+- publication du frontend en démo statique sur GitHub Pages, avec routage sous
+  `/parkventory/`, fallback des routes et actions locales sans requête backend ;
 - illustration de parking originale générée pour le projet, master PNG,
   dérivé WebP et provenance.
 

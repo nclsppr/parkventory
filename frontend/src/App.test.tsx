@@ -2,6 +2,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
+import { relativePathname } from "./config";
 
 afterEach(() => {
   cleanup();
@@ -11,6 +12,11 @@ afterEach(() => {
 });
 
 describe("Parkventory", () => {
+  it("résout les routes sous le chemin GitHub Pages", () => {
+    expect(relativePathname("/parkventory/", "/parkventory/")).toBe("/");
+    expect(relativePathname("/parkventory/app", "/parkventory/")).toBe("/app");
+  });
+
   it("présente la promesse et les actions principales sur la landing", () => {
     window.history.replaceState({}, "", "/");
     render(<App />);

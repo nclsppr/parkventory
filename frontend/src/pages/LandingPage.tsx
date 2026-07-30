@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { DashboardPreview } from "../components/DashboardPreview";
 import { Logo } from "../components/Logo";
+import { appUrl, demoContext, demoLabel, homeUrl } from "../config";
 
 const personalDomains = ["gmail.com", "outlook.com", "hotmail.com", "yahoo.com", "icloud.com"];
 
@@ -32,7 +33,7 @@ export function LandingPage() {
     }
 
     setRegistrationMessage(
-      "Adresse reconnue. Dans cette démo locale, vous pouvez ouvrir directement l’application.",
+      `Adresse reconnue. Dans cette ${demoContext}, vous pouvez ouvrir directement l’application.`,
     );
   };
 
@@ -40,7 +41,7 @@ export function LandingPage() {
     <div className="landing-page">
       <a className="skip-link" href="#contenu">Aller au contenu</a>
       <header className="landing-header">
-        <a className="landing-brand" href="/" aria-label="Parkventory, accueil">
+        <a className="landing-brand" href={homeUrl} aria-label="Parkventory, accueil">
           <Logo />
         </a>
         <nav className="landing-nav" aria-label="Navigation principale">
@@ -49,7 +50,7 @@ export function LandingPage() {
           <a href="#securite">Sécurité</a>
         </nav>
         <div className="landing-actions">
-          <a className="text-link" href="/app">Se connecter</a>
+          <a className="text-link" href={appUrl}>Se connecter</a>
           <a className="button button-primary button-small" href="#commencer">
             Commencer <ArrowUpRight aria-hidden="true" />
           </a>
@@ -69,7 +70,7 @@ export function LandingPage() {
             <a href="#fonctionnement" onClick={() => setMenuOpen(false)}>Comment ça marche</a>
             <a href="#equipes" onClick={() => setMenuOpen(false)}>Pour les équipes</a>
             <a href="#securite" onClick={() => setMenuOpen(false)}>Sécurité</a>
-            <a href="/app">Ouvrir l’application</a>
+            <a href={appUrl}>Ouvrir l’application</a>
           </nav>
         )}
       </header>
@@ -88,10 +89,10 @@ export function LandingPage() {
               Quand vous en avez besoin, réservez en quelques secondes.
             </p>
             <div className="hero-actions">
-              <a className="button button-primary" href="/app?intent=share">
+              <a className="button button-primary" href={`${appUrl}?intent=share`}>
                 <CalendarCheck aria-hidden="true" /> Partager ma place
               </a>
-              <a className="button button-secondary" href="/app?intent=find">
+              <a className="button button-secondary" href={`${appUrl}?intent=find`}>
                 <Search aria-hidden="true" /> Voir les disponibilités
               </a>
             </div>
@@ -126,7 +127,7 @@ export function LandingPage() {
               <h2 id="process-title">Une place libre.<br />Un collègue dépanné.</h2>
               <p>Parkventory transforme une absence en opportunité, sans ajouter de gestion au quotidien.</p>
             </div>
-            <a className="special-link" href="/app">
+            <a className="special-link" href={appUrl}>
               Découvrir l’application <ArrowRight aria-hidden="true" />
             </a>
           </div>
@@ -217,7 +218,7 @@ export function LandingPage() {
                 Rejoindre Parkventory <ArrowUpRight aria-hidden="true" />
               </button>
             </div>
-            <p id="registration-help">Démo locale : aucun e-mail ne sera envoyé.</p>
+            <p id="registration-help">{demoLabel} : aucun e-mail ne sera envoyé.</p>
             {registrationMessage && <p id="registration-message" className="registration-message" role="status">{registrationMessage}</p>}
           </form>
         </section>
@@ -226,7 +227,7 @@ export function LandingPage() {
       <footer className="landing-footer">
         <Logo />
         <p>Le parking partagé, simplement.</p>
-        <div><a href="/app">Application</a><a href="#securite">Confidentialité</a><span>© 2026</span></div>
+        <div><a href={appUrl}>Application</a><a href="#securite">Confidentialité</a><span>© 2026</span></div>
       </footer>
     </div>
   );

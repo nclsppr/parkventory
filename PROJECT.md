@@ -7,7 +7,7 @@
 | Nom | Parkventory |
 | Propriétaire | nclsppr |
 | Classe | Critique |
-| Surface de production | Aucune ; prototype local uniquement au 2026-07-30 |
+| Surface de production | Aucune ; prototype local et démo statique publique au 2026-07-30 |
 | Socle adopté | [`FOUNDATION.md`](FOUNDATION.md) |
 
 ## Problème
@@ -137,7 +137,7 @@ Le détail et les compromis vivent dans
 | Composant | Rôle | Statut | Exécution | Version | Source | Preuve et date | Propriétaire |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Documentation Nimbus | Rendu des Markdown classés | Actuel | Build local | Nimbus 0.8.2 | `docs-nimbus/` | `./scripts/verify.sh`, 2026-07-30 après exécution | nclsppr |
-| Frontend React | Landing et application | Actuel, local | Navigateur | React 19.2.8, Vite 8.1.5 | `frontend/` | 3 tests et build, 2026-07-30 | nclsppr |
+| Frontend React | Landing et application | Actuel, local et démo publique | Navigateur | React 19.2.8, Vite 8.1.5 | `frontend/` | 4 tests et builds racine/sous-chemin, 2026-07-30 | nclsppr |
 | API Java | Démo REST, validation, santé et OpenAPI | Actuel, local | JVM Java 25 | Quarkus 3.33.3 LTS | `backend/` | 4 tests Quarkus, 2026-07-30 | nclsppr |
 | PostgreSQL | Schéma et contraintes temporelles | Actuel, local | Compose et Testcontainers | PostgreSQL 18.3 | migration Flyway V1 | Migration appliquée sur PostgreSQL réel, 2026-07-30 | nclsppr |
 | Livraison email | Magic links et notifications | Cible | Service externe derrière un port | Fournisseur non choisi | module `notifications` | Décision requise avant F03 | nclsppr |
@@ -167,7 +167,8 @@ Le détail et les compromis vivent dans
 | --- | --- | --- | --- | --- |
 | Développement documentaire | macOS local | Dépôt et lockfile Nimbus | `127.0.0.1:4321` quand lancé | `./scripts/verify.sh` |
 | Développement applicatif | macOS local | `mise.toml`, `mise.lock`, `.env.example`, `compose.yaml` | `127.0.0.1:5173` et `127.0.0.1:8080` | `npm run dev`, tests et revue navigateur |
-| CI | Workflow configuré, non observé à distance | `.github/workflows/verify.yml` | GitHub Actions après push | Même commande `verify` |
+| Démo publique | GitHub Pages | `.github/workflows/pages.yml`, base `/parkventory/`, données statiques | `https://nclsppr.github.io/parkventory/` | Tests frontend, build puis probes publics |
+| CI | GitHub Actions | `.github/workflows/verify.yml` | Exécuté à chaque push sur `main` | Même commande `verify` |
 | Production | Non provisionnée | Décision d'exploitation future | Aucune URL | Runbook et probes requis avant ouverture |
 
 ## Commandes canoniques actuelles
@@ -182,10 +183,12 @@ Le détail et les compromis vivent dans
 | Développer la documentation | `npm run dev --prefix docs-nimbus` | Nimbus local sur `127.0.0.1:4321` |
 | Vérifier | `mise exec -- npm run verify` | Documentation, audit npm, React, Quarkus et migration PostgreSQL valides |
 | Construire la documentation | `npm run build --prefix docs-nimbus` | Site statique dérivé dans `docs-nimbus/dist/` |
+| Construire la démo Pages | `VITE_BASE_PATH=/parkventory/ VITE_DEMO_MODE=true npm run frontend:build` | Frontend statique sous le chemin public, sans appel backend |
 
-Les commandes utilisent uniquement les services locaux autorisés. Aucune
-commande de déploiement n'existe tant qu'une cible de production n'est pas
-explicitement décidée et autorisée.
+Les commandes manuelles utilisent uniquement les services locaux autorisés.
+La démo GitHub Pages est déployée automatiquement depuis `main`; elle ne
+constitue pas une cible de production. Aucun déploiement backend n'existe tant
+qu'une cible de production n'est pas explicitement décidée et autorisée.
 
 ## Données, sécurité et confidentialité
 

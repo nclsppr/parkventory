@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
+import { relativePathname } from "./config";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LandingPage } from "./pages/LandingPage";
 
 function currentPath() {
-  return window.location.pathname.replace(/\/+$/, "") || "/";
+  return relativePathname(window.location.pathname);
 }
 
 export default function App() {

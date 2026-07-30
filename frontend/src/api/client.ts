@@ -1,4 +1,5 @@
 import { demoDashboard } from "../data/demo";
+import { demoContext, isPublicDemo } from "../config";
 import type {
   ActionResponse,
   DashboardData,
@@ -32,6 +33,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export async function loadDashboard(): Promise<DashboardData> {
+  if (isPublicDemo) return structuredClone(demoDashboard);
+
   try {
     return await request<DashboardData>("/dashboard");
   } catch {
@@ -40,6 +43,13 @@ export async function loadDashboard(): Promise<DashboardData> {
 }
 
 export async function shareSpot(payload: ShareRequest): Promise<ActionResponse> {
+  if (isPublicDemo) {
+    return {
+      accepted: true,
+      message: `La place ${payload.spot} est partagée dans cette ${demoContext}.`,
+    };
+  }
+
   try {
     return await request<ActionResponse>("/shares", {
       method: "POST",
@@ -48,12 +58,19 @@ export async function shareSpot(payload: ShareRequest): Promise<ActionResponse> 
   } catch {
     return {
       accepted: true,
-      message: `La place ${payload.spot} est partagée dans cette démo locale.`,
+      message: `La place ${payload.spot} est partagée dans cette ${demoContext}.`,
     };
   }
 }
 
 export async function reserveSpot(id: string): Promise<ActionResponse> {
+  if (isPublicDemo) {
+    return {
+      accepted: true,
+      message: `La place est réservée dans cette ${demoContext}.`,
+    };
+  }
+
   try {
     return await request<ActionResponse>(`/availability/${id}/reservations`, {
       method: "POST",
@@ -61,7 +78,7 @@ export async function reserveSpot(id: string): Promise<ActionResponse> {
   } catch {
     return {
       accepted: true,
-      message: "La place est réservée dans cette démo locale.",
+      message: `La place est réservée dans cette ${demoContext}.`,
     };
   }
 }
@@ -69,6 +86,13 @@ export async function reserveSpot(id: string): Promise<ActionResponse> {
 export async function inviteColleague(
   payload: InvitationRequest,
 ): Promise<ActionResponse> {
+  if (isPublicDemo) {
+    return {
+      accepted: true,
+      message: `Une invitation de démonstration a été préparée pour ${payload.email}.`,
+    };
+  }
+
   return request<ActionResponse>("/invitations", {
     method: "POST",
     body: JSON.stringify(payload),

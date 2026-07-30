@@ -24,6 +24,7 @@ import {
 import { inviteColleague, loadDashboard, reserveSpot, shareSpot } from "../api/client";
 import { Logo } from "../components/Logo";
 import { Toast } from "../components/Toast";
+import { demoContext, demoLabel, homeUrl } from "../config";
 import { demoDashboard } from "../data/demo";
 import type { AvailabilityItem, DashboardData } from "../types";
 
@@ -44,8 +45,8 @@ function scrollToTarget(target: string) {
 
 function DemoStatus({ loading }: { loading: boolean }) {
   return (
-    <span className="demo-status" title="Les données affichées servent uniquement à la démonstration locale">
-      <i /> {loading ? "Connexion…" : "Démo locale"}
+    <span className="demo-status" title={`Les données affichées servent uniquement à la ${demoContext}`}>
+      <i /> {loading ? "Connexion…" : demoLabel}
     </span>
   );
 }
@@ -203,7 +204,7 @@ export function DashboardPage() {
       <a className="skip-link" href="#dashboard-content">Aller au contenu</a>
       <aside className={`app-sidebar ${sidebarOpen ? "app-sidebar-open" : ""}`} aria-label="Navigation de l’application">
         <div className="sidebar-heading">
-          <a href="/" aria-label="Revenir au site Parkventory"><Logo /></a>
+          <a href={homeUrl} aria-label="Revenir au site Parkventory"><Logo /></a>
           <button type="button" className="sidebar-close" onClick={() => setSidebarOpen(false)} aria-label="Fermer la navigation"><X /></button>
         </div>
         <nav>
@@ -233,7 +234,7 @@ export function DashboardPage() {
       <main className="app-main" id="dashboard-content">
         <div className="app-topbar">
           <button className="mobile-sidebar-trigger" type="button" onClick={() => setSidebarOpen(true)} aria-label="Ouvrir la navigation"><Menu /></button>
-          <a className="mobile-app-logo" href="/"><Logo compact /></a>
+          <a className="mobile-app-logo" href={homeUrl}><Logo compact /></a>
           <DemoStatus loading={loading} />
         </div>
 
@@ -333,7 +334,7 @@ export function DashboardPage() {
               <input id="invite-email" type="email" placeholder="collegue@entreprise.com" value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} aria-describedby="invite-message" required />
               <button className="button button-primary" type="submit" disabled={inviteBusy}>{inviteBusy ? "Envoi…" : "Envoyer"}<Send aria-hidden="true" /></button>
             </div>
-            <p id="invite-message" className="invite-message" role={inviteMessage ? "status" : undefined}>{inviteMessage ?? "Aucun e-mail réel n’est envoyé depuis la démo locale."}</p>
+            <p id="invite-message" className="invite-message" role={inviteMessage ? "status" : undefined}>{inviteMessage ?? `Aucun e-mail réel n’est envoyé depuis la ${demoContext}.`}</p>
           </form>
         </section>
 
