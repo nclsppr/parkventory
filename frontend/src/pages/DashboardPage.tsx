@@ -369,7 +369,7 @@ export function DashboardPage({
       <main className="app-main" id="dashboard-content">
         <div className="app-topbar">
           <button className="mobile-sidebar-trigger" type="button" onClick={() => setSidebarOpen(true)} aria-label="Ouvrir la navigation"><Menu /></button>
-          <a className="mobile-app-logo" href={homeUrl}><Logo compact /></a>
+          <a className="mobile-app-logo" href={homeUrl} aria-label="Revenir au site Parkventory"><Logo compact /></a>
           <EnvironmentStatus loading={loading} />
         </div>
 

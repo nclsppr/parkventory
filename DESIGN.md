@@ -171,7 +171,7 @@ essentiel ne descend sous 14 px ; les champs restent à 16 px sur mobile.
 | Famille | Fonction | Style | Format cible | Provenance |
 | --- | --- | --- | --- | --- |
 | Parking aérien | Narration et identité | Noir, ivoire, trame, accents acide/glacier | AVIF/WebP avec fallback | Référence JPEG fournie |
-| Logo | Identité | `P` et grille de quatre places, une place glacier | SVG validé puis PNG/favicons dérivés | Référence JPEG fournie |
+| Logo | Identité | `P` et grille de quatre places, une place glacier | SVG canonique transparent | SVG fourni par le propriétaire du projet |
 | Icônes | Information | Trait simple, géométrie cohérente | SVG code-native | Bibliothèque à décider |
 | Portraits | Information optionnelle | Réels ou avatars non trompeurs | AVIF/WebP | Consentement et droits requis |
 
@@ -183,10 +183,15 @@ Références conservées hors publication Nimbus :
 - `docs/assets/references/parking-texture-reference.jpg` ;
 - `docs/assets/references/logo-reference.jpg`.
 
-Le logo JPEG n'est pas un master : il contient fond, halo et compression, sans
-wordmark stable. La reconstruction future doit définir symbole, lockup
-horizontal, monochrome et favicon, sans vectoriser les artefacts. Aucun
-changement arbitraire de géométrie ou de couleur n'est autorisé sans validation.
+Le master du symbole est
+`assets/brand/parkventory-logo-transparent.svg` : `554 × 560`, fond transparent,
+vert `#C8F814`, glacier `#14C9D3` et SHA-256
+`f145d51082b3e934a23a80096494809ab1a3b6c96f6ba64ebca1ef0597089316`.
+Il est utilisé sans altération de géométrie ni recoloration. Le lockup produit
+associe ce symbole exact au mot `Parkventory` rendu en texte ; le fichier ne
+contient pas de wordmark vectoriel ni de variante monochrome. Les copies
+publiques et le dérivé raster Open Graph sont produits par
+`npm run brand:sync` puis contrôlés par `npm run brand:check`.
 
 L'asset servi par le prototype est `frontend/public/images/parking-halftone.webp`.
 Il s'agit d'une création originale générée pour le projet, non d'une

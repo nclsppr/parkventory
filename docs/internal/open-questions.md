@@ -44,8 +44,6 @@ qui doit être tranché avant la phase nommée, sans bloquer la documentation F0
 | Question | État actuel | Action |
 | --- | --- | --- |
 | Droits des cinq JPEG | Fournis pour référence, publication non confirmée | Confirmer origine et licence |
-| Géométrie finale du logo | JPEG compressé avec halo | Recréer un SVG après validation |
-| Wordmark et casse | Variantes contradictoires dans les références | Fixer `Parkventory` et un lockup |
 | Police de marque | Geist ou Inter proposées | Tester lisibilité et licence en F02 |
 | Photographie parking finale | Référence uniquement | Produire ou licencier un asset avec provenance |
 

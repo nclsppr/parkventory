@@ -104,13 +104,14 @@ Ces cibles ne sont pas des résultats acquis.
 | Schéma de données | [`docs/architecture/domain-model.md`](docs/architecture/domain-model.md) et `backend/src/main/resources/db/migration/` | normative et opérationnelle | Migrations V1 et V2 testées sur PostgreSQL 18.3 |
 | Sécurité et isolation | [`docs/architecture/security-and-tenancy.md`](docs/architecture/security-and-tenancy.md) | normative | Défense en profondeur |
 | Design system | [`DESIGN.md`](DESIGN.md) et `frontend/src/styles.css` | normative et opérationnelle | Tokens, composants et responsive alignés |
+| Identité de marque | `assets/brand/parkventory-logo-transparent.svg` | normative | Master du symbole ; copies publiques synchronisées et contrôlées |
 | Configuration | `compose.yaml`, `mise.toml`, `mise.lock`, `.env.example` | opérationnelle | Compose porte le parcours intégré ; mise porte les raccourcis hôte |
 | Code livré | `frontend/` et `backend/` | opérationnelle locale | Flux F03/F04 partiels et persistants ; pas une production |
 | Opérations | [`RUNBOOK.md`](RUNBOOK.md) | normative cible | Production non provisionnée |
 | Décisions | `docs/decisions/` | normative | ADR acceptées ou proposées |
 | Documentation | `DOCUMENTATION.md`, `documentation.json`, `docs-nimbus/` et catalogue | normative et dérivée | Markdown canonique |
 | Références visuelles | [`docs/references/visual-sources.md`](docs/references/visual-sources.md) | référence | JPEG non publiables sans droits |
-| Artefacts générés | Catalogue Nimbus, site Nimbus, futur client TypeScript et futurs SVG | dérivée | Sources et commandes à conserver |
+| Artefacts générés | Catalogue Nimbus, site Nimbus, copies publiques du logo et futur client TypeScript | dérivée | Sources et commandes à conserver |
 | Archives | Aucune | historique | Ne pas créer sans motif |
 | Démonstration publique | Données statiques portant `demo: true` sur GitHub Pages | expérimentale et signalée | Séparée du parcours local réel |
 
@@ -137,7 +138,7 @@ Le détail et les compromis vivent dans
 | Composant | Rôle | Statut | Exécution | Version | Source | Preuve et date | Propriétaire |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Documentation Nimbus | Rendu des Markdown classés | Actuel | Build local | Nimbus 0.8.2 | `docs-nimbus/` | `./scripts/verify.sh`, 2026-07-30 après exécution | nclsppr |
-| Frontend React | Landing, authentification et application | Actuel, réel en local et démo publique | Compose ou navigateur statique | React 19.2.8, Vite 8.1.5 | `frontend/` | 6 tests, builds et parcours navigateur, 2026-07-30 | nclsppr |
+| Frontend React | Landing, authentification et application | Actuel, réel en local et démo publique | Compose ou navigateur statique | React 19.2.8, Vite 8.1.5 | `frontend/` | 7 tests, builds et parcours navigateur, 2026-07-30 | nclsppr |
 | API Java | Identité locale, métier, validation, santé et OpenAPI | Actuel, local | Compose, Maven 3.9.16 et Java 25 | Quarkus 3.33.3 LTS | `backend/` | Tests PostgreSQL et smoke Compose, 2026-07-30 | nclsppr |
 | PostgreSQL | Identité, sessions, métier, outbox et contraintes | Actuel, local | Compose et Testcontainers | PostgreSQL 18.3 | migrations Flyway V1 et V2 | Migration et parcours persisté vérifiés, 2026-07-30 | nclsppr |
 | Mailpit | Liens magiques, invitations et notifications locales | Actuel, local uniquement | Compose | Mailpit 1.30.6 | `compose.yaml` | Healthcheck, API et navigateur, 2026-07-30 | nclsppr |
@@ -184,6 +185,8 @@ Le détail et les compromis vivent dans
 | Vérifier Compose | `npm run compose:verify` | Stack isolée saine et parcours identité, partage, réservation, notification et invitation persisté |
 | Installer la documentation | `npm ci --prefix docs-nimbus` | Dépendances exactes du lockfile |
 | Développer la documentation | `npm run dev --prefix docs-nimbus` | Nimbus local sur `127.0.0.1:4321` |
+| Synchroniser le logo | `npm run brand:sync` | Trois copies SVG exactes et un dérivé PNG Open Graph régénérés |
+| Vérifier le logo | `npm run brand:check` | Aucun dérivé public manquant ou divergent |
 | Vérifier | `mise exec -- npm run verify` | Documentation, Compose, audit npm, React, Quarkus et migration PostgreSQL valides |
 | Construire la documentation | `npm run build --prefix docs-nimbus` | Site statique dérivé dans `docs-nimbus/dist/` |
 | Construire la démo Pages | `VITE_BASE_PATH=/parkventory/ VITE_DEMO_MODE=true npm run frontend:build` | Frontend statique sous le chemin public, sans appel backend |

@@ -114,13 +114,11 @@ svg {
 }
 
 .brand-mark {
+  display: block;
   width: 40px;
-  height: 40px;
+  height: auto;
   flex: 0 0 auto;
-}
-
-.logo-cyan {
-  fill: var(--cyan);
+  object-fit: contain;
 }
 
 .brand-wordmark {
@@ -415,8 +413,9 @@ svg {
 }
 
 .preview-logo {
+  display: block;
   width: 36px;
-  color: var(--green);
+  height: auto;
   margin-bottom: 12px;
 }
 

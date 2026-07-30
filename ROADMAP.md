@@ -84,7 +84,7 @@ minimal qui prouve installation, santé et migration.
 - React + TypeScript + Vite ;
 - Java 25 + Quarkus 3.33 LTS et première frontière REST ;
 - PostgreSQL 18, Flyway et environnement local Compose pour React, Quarkus et la base ;
-- tokens, logo de travail explicitement provisoire, responsive et accessibilité ;
+- tokens, master SVG du logo fourni et contrôlé, responsive et accessibilité ;
 - OpenAPI minimal, client TypeScript typé et CI appelant `verify`.
 
 ### Exclu

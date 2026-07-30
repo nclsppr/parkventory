@@ -12,6 +12,10 @@
 import type { OGImageOptions } from "astro-og-canvas";
 
 export const ogCardConfig = {
+  logo: {
+    path: "./public/parkventory-logo-transparent.png",
+    size: [72],
+  },
   bgGradient: [
     [11, 11, 12],
     [26, 26, 28],

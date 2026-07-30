@@ -461,3 +461,47 @@ La stack de développement est laissée active avec ses volumes :
 - `http://127.0.0.1:8080/q/swagger-ui`.
 
 `npm run compose:down` arrête les conteneurs sans supprimer les données.
+
+## Extension : master SVG du logo du 2026-07-30
+
+Cette unité remplace les reconstructions provisoires du symbole par le SVG
+transparent fourni explicitement pour Parkventory. Elle ne modifie ni la
+géométrie, ni les couleurs du master.
+
+### Source et dérivés
+
+| Artefact | Preuve |
+| --- | --- |
+| Master | `assets/brand/parkventory-logo-transparent.svg`, 554 × 560, SHA-256 `f145d51082b3e934a23a80096494809ab1a3b6c96f6ba64ebca1ef0597089316` |
+| Copies SVG | Frontend nommé, favicon frontend et favicon Nimbus byte-identiques au master |
+| Dérivé raster | PNG 256 × 259, SHA-256 `7a003de1e8274bf80ce045045e2e303372007c4fde3dd64296091e078720fbfb`, réservé aux cartes Open Graph |
+| Reproductibilité | `npm run brand:sync` avec Sharp `0.35.3` ; `npm run brand:check` dans la gate globale |
+
+Le composant React partagé couvre les headers, footers, écrans
+d'authentification, états du dashboard, sidebar, barre mobile et aperçu produit.
+Nimbus utilise le même SVG dans son header et comme favicon. Le PNG n'est créé
+que parce que le moteur CanvasKit d'`astro-og-canvas` ne décode pas directement
+le SVG fourni.
+
+### Validations locales
+
+| Contrôle | Résultat observé |
+| --- | --- |
+| XML et hashes | Quatre SVG valides ; master et copies au même SHA-256 |
+| `npm run brand:check` | Tous les dérivés correspondent au master |
+| `npm run frontend:test` | 7 tests réussis, dont variantes complète et compacte du logo |
+| Build Pages | Base `/parkventory/`, favicon et URL du logo correctement préfixés ; build réussi |
+| Nimbus | 4 tests, 98 fichiers sans diagnostic, 47 pages générées et 46 fichiers lintés |
+| Carte Open Graph | Logo visible dans le PNG 1 200 × 630 généré |
+| Navigateur | Landing, connexion, dashboard et documentation revus à 1 440 × 1 000 et 390 × 844 sans débordement horizontal |
+| `mise exec -- npm run verify` | Gate complète réussie : documentation, audit npm, 7 tests React, 3 tests Quarkus/PostgreSQL et parcours Compose avec Mailpit |
+
+### Limites exactes
+
+- le SVG fourni contient le symbole seul : le mot `Parkventory` reste du texte
+  accessible dans les lockups ;
+- aucune variante monochrome ou wordmark vectoriel n'a été fourni ;
+- la provenance juridique externe n'a pas été auditée indépendamment ; cette
+  unité s'appuie sur l'instruction explicite du propriétaire du projet ;
+- les cinq JPEG historiques conservent leur statut de références non
+  publiables sans confirmation distincte.

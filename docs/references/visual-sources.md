@@ -49,7 +49,36 @@ réelle ne les justifie pas.
 
 ## Logo
 
-Le JPEG du logo :
+Le SVG transparent fourni le 2026-07-30 est désormais le master canonique du
+symbole :
+
+| Source | Dimensions | SHA-256 | Couleurs | Statut |
+| --- | ---: | --- | --- | --- |
+| `assets/brand/parkventory-logo-transparent.svg` | 554 × 560 | `f145d51082b3e934a23a80096494809ab1a3b6c96f6ba64ebca1ef0597089316` | `#C8F814`, `#14C9D3` | Fourni par le propriétaire du projet et autorisé pour l'intégration Parkventory |
+
+Le master ne contient que le symbole. Les lockups associent ce fichier exact
+au mot `Parkventory` en texte accessible. Il ne doit être ni redessiné, ni
+recoloré, ni injecté plusieurs fois inline : ses IDs internes doivent rester
+isolés dans le document image.
+
+Les copies SVG de publication sont byte-identiques au master. Le PNG est son
+dérivé raster déterministe, nécessaire parce que le moteur Open Graph de
+Nimbus ne décode pas le SVG :
+
+| Copie | Consommateur |
+| --- | --- |
+| `frontend/public/parkventory-logo-transparent.svg` | Huit emplacements React via le composant partagé `Logo` |
+| `frontend/public/favicon.svg` | Favicon de la landing et de l'application |
+| `docs-nimbus/public/favicon.svg` | Header et favicon Nimbus |
+| `docs-nimbus/public/parkventory-logo-transparent.png` | Cartes Open Graph Nimbus générées en PNG |
+
+`npm run brand:sync` régénère les dérivés avec Sharp `0.35.3` et
+`npm run brand:check` refuse toute dérive ; cette dernière commande est appelée
+par la gate globale. Le retrait consiste à supprimer le master et ses quatre
+dérivés, puis les consommateurs du composant React, du header Nimbus et de la
+configuration Open Graph.
+
+Le JPEG historique reste une référence uniquement. Il :
 
 - comporte un fond noir et un halo ;
 - présente des artefacts de compression ;
@@ -57,9 +86,9 @@ Le JPEG du logo :
 - ne fournit ni monochrome, ni petite taille, ni zone de protection ;
 - n'est pas un SVG exploitable comme master.
 
-La future reconstruction doit partir de la géométrie approuvée, pas d'une
-vectorisation automatique du halo. Les dérivés seront inventoriés avec source,
-outil, version, dimensions, consommateurs et procédure de retrait.
+La provenance juridique externe du SVG n'a pas été auditée indépendamment ;
+l'autorisation d'intégration vient de l'instruction explicite du propriétaire
+du projet dans cette livraison.
 
 ## Procédure avant publication
 

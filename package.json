@@ -19,6 +19,8 @@
     "db:up": "docker compose up -d --wait postgres",
     "db:down": "docker compose stop postgres",
     "db:reset": "./scripts/reset_database.sh",
+    "brand:sync": "node scripts/sync_brand_assets.mjs",
+    "brand:check": "node scripts/sync_brand_assets.mjs --check",
     "frontend:build": "npm run build --workspace @parkventory/frontend",
     "frontend:test": "npm run test --workspace @parkventory/frontend",
     "backend:test": "cd backend && mise exec -- ./mvnw verify",

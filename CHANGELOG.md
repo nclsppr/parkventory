@@ -7,6 +7,9 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Ajouté
 
+- master SVG transparent fourni pour le symbole Parkventory, utilisé dans tous
+  les lockups React, les favicons, le header et les cartes Open Graph Nimbus,
+  avec synchronisation déterministe et gate anti-dérive ;
 - adaptateur d’identité local par lien magique à usage unique, sessions
   `HttpOnly` et rattachement invitation/domaine persistés dans PostgreSQL ;
 - Mailpit `v1.30.6` intégré à Docker Compose pour les liens de connexion,
@@ -58,7 +61,7 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 - la démo GitHub Pages reste volontairement statique, sans compte ni email ;
 - aucun hébergement ou domaine de production n'est livré ;
-- les droits de publication des JPEG et le master vectoriel du logo restent à
-  confirmer ;
+- les droits de publication des cinq JPEG restent à confirmer ; le SVG fourni
+  ne contient ni wordmark vectoriel ni variante monochrome ;
 - le fournisseur OIDC, le fournisseur d'email et l'infrastructure de production
   ne sont pas choisis ; Mailpit est réservé au développement.
