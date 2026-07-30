@@ -7,6 +7,9 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Ajouté
 
+- attente CI ciblée et bornée pour le parcours d’affectation d’une place, qui
+  couvre sa mutation puis le rechargement du tableau de bord sans modifier les
+  délais de toute la suite de tests ;
 - transitions narratives de la landing avec révélations uniques, progression
   de lecture, profondeur légère du hero, étapes synchronisées au scroll et
   micro-interactions limitées aux pointeurs compatibles ;

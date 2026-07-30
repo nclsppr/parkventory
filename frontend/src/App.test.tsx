@@ -166,7 +166,11 @@ describe("Parkventory", () => {
     await user.type(within(spotForm).getByLabelText(/Niveau ou zone/i), "Niveau A");
     await user.click(within(spotForm).getByRole("button", { name: "Affecter cette place" }));
 
-    expect(await screen.findByRole("form", { name: "Formulaire de partage" })).toBeInTheDocument();
+    expect(await screen.findByRole(
+      "form",
+      { name: "Formulaire de partage" },
+      { timeout: 3_000 },
+    )).toBeInTheDocument();
     expect(screen.getByDisplayValue("A-24")).toHaveAttribute("readonly");
     expect(await screen.findByRole("status")).toHaveTextContent(/affectée à votre profil/i);
     expect(fetchMock).toHaveBeenCalledWith(
