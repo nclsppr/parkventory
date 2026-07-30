@@ -1,4 +1,4 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, PointerEvent as ReactPointerEvent, useRef, useState } from "react";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -16,14 +16,36 @@ import { DashboardPreview } from "../components/DashboardPreview";
 import { Logo } from "../components/Logo";
 import { requestMagicLink } from "../api/client";
 import { appUrl, demoLabel, findUrl, homeUrl, isPublicDemo, shareUrl } from "../config";
+import { useLandingMotion } from "../hooks/useLandingMotion";
 
 const personalDomains = ["gmail.com", "outlook.com", "hotmail.com", "yahoo.com", "icloud.com"];
 
 export function LandingPage() {
+  const landingRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [registrationMessage, setRegistrationMessage] = useState<string | null>(null);
   const [registrationBusy, setRegistrationBusy] = useState(false);
+
+  useLandingMotion(landingRef);
+
+  const handlePreviewPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const x = Math.min(1, Math.max(0, (event.clientX - bounds.left) / bounds.width));
+    const y = Math.min(1, Math.max(0, (event.clientY - bounds.top) / bounds.height));
+    event.currentTarget.style.setProperty("--preview-pointer-x", `${x * 100}%`);
+    event.currentTarget.style.setProperty("--preview-pointer-y", `${y * 100}%`);
+    event.currentTarget.style.setProperty("--preview-rotate-x", `${(0.5 - y) * 3.5}deg`);
+    event.currentTarget.style.setProperty("--preview-rotate-y", `${(x - 0.5) * 4.5}deg`);
+  };
+
+  const resetPreviewPointer = (event: ReactPointerEvent<HTMLDivElement>) => {
+    event.currentTarget.style.setProperty("--preview-pointer-x", "50%");
+    event.currentTarget.style.setProperty("--preview-pointer-y", "50%");
+    event.currentTarget.style.setProperty("--preview-rotate-x", "0deg");
+    event.currentTarget.style.setProperty("--preview-rotate-y", "0deg");
+  };
 
   const handleRegistration = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -51,7 +73,7 @@ export function LandingPage() {
   };
 
   return (
-    <div className="landing-page">
+    <div className="landing-page" ref={landingRef}>
       <a className="skip-link" href="#contenu">Aller au contenu</a>
       <header className="landing-header">
         <a className="landing-brand" href={homeUrl} aria-label="Parkventory, accueil">
@@ -86,12 +108,15 @@ export function LandingPage() {
             <a href={appUrl}>Ouvrir l’application</a>
           </nav>
         )}
+        <span className="landing-progress" aria-hidden="true">
+          <span className="landing-progress-bar" />
+        </span>
       </header>
 
       <main id="contenu">
         <section className="hero-section" aria-labelledby="hero-title">
           <div className="hero-parking-texture" aria-hidden="true" />
-          <div className="hero-copy">
+          <div className="hero-copy" data-reveal>
             <p className="eyebrow">Le parking partagé, simplement.</p>
             <h1 id="hero-title">
               Partagez votre place.<br />
@@ -113,28 +138,48 @@ export function LandingPage() {
               <CheckCircle2 aria-hidden="true" /> Aucun administrateur requis pour démarrer
             </p>
           </div>
-          <div className="hero-product">
-            <DashboardPreview />
+          <div
+            className="hero-product"
+            data-reveal="scale"
+            onPointerMove={handlePreviewPointerMove}
+            onPointerLeave={resetPreviewPointer}
+          >
+            <div className="hero-product-frame">
+              <DashboardPreview />
+            </div>
           </div>
         </section>
 
         <section className="benefit-strip" aria-label="Bénéfices principaux">
-          <article>
+          <article data-reveal>
             <CalendarCheck aria-hidden="true" />
             <div><h2>Simple à partager</h2><p>Indiquez votre absence, votre place fait le reste.</p></div>
           </article>
-          <article>
+          <article data-reveal>
             <ShieldCheck aria-hidden="true" />
             <div><h2>Fiable à réserver</h2><p>Une disponibilité, une réservation, aucun doublon.</p></div>
           </article>
-          <article>
+          <article data-reveal>
             <Users aria-hidden="true" />
             <div><h2>Pensé pour les équipes</h2><p>Moins de recherche, plus de fluidité au quotidien.</p></div>
           </article>
         </section>
 
+        <div className="landing-signal" aria-hidden="true">
+          <div className="landing-signal-track">
+            {[0, 1].map((group) => (
+              <div className="landing-signal-group" key={group}>
+                <span>Partager</span><i />
+                <span>Rendre disponible</span><i />
+                <span>Réserver</span><i />
+                <span>Recommencer</span><i />
+              </div>
+            ))}
+          </div>
+        </div>
+
         <section className="process-section" id="fonctionnement" aria-labelledby="process-title">
-          <div className="section-heading process-heading">
+          <div className="section-heading process-heading" data-reveal>
             <div>
               <p className="section-index">01 / Comment ça marche</p>
               <h2 id="process-title">Une place libre.<br />Un collègue dépanné.</h2>
@@ -144,7 +189,7 @@ export function LandingPage() {
               Découvrir l’application <ArrowRight aria-hidden="true" />
             </a>
           </div>
-          <ol className="process-steps">
+          <ol className="process-steps" data-reveal>
             <li>
               <span className="step-number">01</span>
               <CalendarCheck aria-hidden="true" />
@@ -161,17 +206,17 @@ export function LandingPage() {
               <div><h3>Un collègue la réserve</h3><p>Vous êtes informé, sans échange manuel à organiser.</p></div>
             </li>
           </ol>
-          <div className="process-visual" role="img" aria-label="Parking vu du ciel avec une place disponible en vert et une place sélectionnée en bleu">
+          <div className="process-visual" data-reveal="scale" role="img" aria-label="Parking vu du ciel avec une place disponible en vert et une place sélectionnée en bleu">
             <div className="process-visual-callout">
               <Sparkles aria-hidden="true" />
-              <span><strong>27</strong> places partagées cette semaine</span>
+              <span><strong>Libre</strong> devient visible à l’équipe</span>
             </div>
           </div>
         </section>
 
         <section className="teams-section" id="equipes" aria-labelledby="teams-title">
-          <div className="teams-kicker"><Users aria-hidden="true" /> Communauté d’abord</div>
-          <div className="teams-copy">
+          <div className="teams-kicker" data-reveal><Users aria-hidden="true" /> Communauté d’abord</div>
+          <div className="teams-copy" data-reveal>
             <h2 id="teams-title">Commencez entre collègues.<br />Structurez quand vous en avez besoin.</h2>
             <p>
               Une adresse professionnelle vérifiée suffit pour rejoindre votre espace.
@@ -179,21 +224,21 @@ export function LandingPage() {
             </p>
           </div>
           <div className="teams-list">
-            <article><span>01</span><h3>Sans déploiement</h3><p>Pas de projet IT préalable pour tester l’usage.</p></article>
-            <article><span>02</span><h3>Sans surveillance</h3><p>Chacun gère uniquement ses partages et réservations.</p></article>
-            <article><span>03</span><h3>Évolutif</h3><p>Sites, places personnalisées et plan arrivent quand ils deviennent utiles.</p></article>
+            <article data-reveal><span>01</span><h3>Sans déploiement</h3><p>Pas de projet IT préalable pour tester l’usage.</p></article>
+            <article data-reveal><span>02</span><h3>Sans surveillance</h3><p>Chacun gère uniquement ses partages et réservations.</p></article>
+            <article data-reveal><span>03</span><h3>Évolutif</h3><p>Sites, places personnalisées et plan arrivent quand ils deviennent utiles.</p></article>
           </div>
         </section>
 
         <section className="security-section" id="securite" aria-labelledby="security-title">
-          <div className="security-visual" aria-hidden="true">
+          <div className="security-visual" data-reveal="scale" aria-hidden="true">
             <ShieldCheck />
             <span className="security-line security-line-one" />
             <span className="security-line security-line-two" />
             <span className="security-dot security-dot-one" />
             <span className="security-dot security-dot-two" />
           </div>
-          <div className="security-copy">
+          <div className="security-copy" data-reveal>
             <p className="section-index">02 / Confiance</p>
             <h2 id="security-title">Votre entreprise reste votre frontière.</h2>
             <p>
@@ -209,11 +254,11 @@ export function LandingPage() {
         </section>
 
         <section className="start-section" id="commencer" aria-labelledby="start-title">
-          <div>
+          <div data-reveal>
             <p className="section-index">Prêt à partager ?</p>
             <h2 id="start-title">Votre prochaine place libre peut déjà aider quelqu’un.</h2>
           </div>
-          <form className="registration-form" onSubmit={handleRegistration} noValidate>
+          <form className="registration-form" data-reveal onSubmit={handleRegistration} noValidate>
             <label htmlFor="professional-email">Adresse e-mail professionnelle</label>
             <div className="registration-control">
               <input

@@ -4,7 +4,7 @@ import { ParkingGrid } from "./ParkingGrid";
 
 export function DashboardPreview() {
   return (
-    <div className="dashboard-preview" aria-label="Aperçu de l’application Parkventory">
+    <div className="dashboard-preview" aria-label="Aperçu de démonstration de l’application Parkventory">
       <div className="preview-rail" aria-hidden="true">
         <LogoMark className="preview-logo" />
         <span className="preview-nav-active">
@@ -16,10 +16,10 @@ export function DashboardPreview() {
       <div className="preview-content">
         <div className="preview-heading">
           <div>
-            <p>Bonjour, Nicolas <span aria-hidden="true">👋</span></p>
+            <p>Bonjour, Nicolas</p>
             <span>Voici les disponibilités du jour.</span>
           </div>
-          <span className="preview-site">Siège principal</span>
+          <span className="preview-site">Aperçu démo</span>
         </div>
         <div className="preview-stats">
           <div>

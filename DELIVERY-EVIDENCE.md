@@ -569,3 +569,67 @@ Réservations : cette destination sera ajoutée avec sa propre route.
 | GitHub Pages | Run `30542280043` réussi, build et déploiement verts |
 | Probes publiques | Landing, `/app/`, `/app/partager/`, `/app/trouver/` et `/auth/callback/` répondent HTTP 200 |
 | Route inconnue | `/route-inconnue/` répond HTTP 404 et charge le shell 404 dédié |
+
+## Extension : narration et interactions de la landing du 2026-07-30
+
+Cette tranche améliore uniquement la landing et son accès clavier. Elle ne
+modifie ni l'API, ni les données, ni les routes produit.
+
+### Besoin et choix
+
+Les transitions précédentes reposaient uniquement sur des états de survol
+isolés : le passage entre le hero, les bénéfices et le fonctionnement manquait
+de continuité. `IntersectionObserver` et CSS restent utilisés pour les
+révélations simples. GSAP avec ScrollTrigger est ajouté pour le scrubbing de la
+progression, la profondeur du hero et la séquence des étapes, opérations dont
+une implémentation locale complète aurait dupliqué gestion responsive,
+rafraîchissement et nettoyage.
+
+Le consommateur unique est `frontend/src/hooks/useLandingMotion.ts`, sous la
+responsabilité de nclsppr. L'ajout ne justifie pas d'ADR : il ne structure pas
+plusieurs modules, ne modifie aucun contrat ni donnée et possède un retrait
+local borné.
+
+### Gate de dépendance
+
+| Dimension | Observation datée |
+| --- | --- |
+| Classe | Dépendance runtime navigateur, facultative pour comprendre et utiliser la landing |
+| Identité et origine | Package officiel `gsap` GreenSock, [release `3.13.0`](https://github.com/greensock/GSAP/releases/tag/3.13.0) et [installation officielle](https://gsap.com/docs/v3/Installation/) recoupées le 2026-07-30 |
+| Version et intégrité | `3.13.0` exacte ; tarball npm verrouillé par `sha512-QL7MJ2WMjm1PHWsoFrAQH/J8wUeqZvMtHO58qdekHpCfhvhSL4gSiz6vJf5EeMP0LOn3ZCprL2ki/gjED8ghVw==` |
+| Licence | Le manifeste du package déclare la licence Standard « no charge » ; la release officielle 3.13 annonce la gratuité, y compris commerciale. Compatible avec l'usage actuel, à réexaminer si le produit ou la licence change |
+| Transitifs et scripts | Aucun package transitif, aucun script d'installation déclaré par GSAP, aucune permission ou binaire supplémentaire |
+| Données et réseau | Aucune donnée lue, stockée ou transmise ; aucun secret, cookie, endpoint, quota ou sous-traitant ajouté |
+| Vulnérabilités | `npm audit --json` retourne zéro résultat sur 172 dépendances le 2026-07-30 ; ce résultat ne prédit pas les vulnérabilités futures |
+| Coût mesuré | Bundle initial 75,69 Ko gzip ; chunks différés GSAP 27,28 Ko et ScrollTrigger 17,41 Ko gzip, chargés uniquement sur la landing avec mouvement normal |
+| Mode dégradé | Les contenus sont rendus avant animation. Sans GSAP, `IntersectionObserver` conserve les révélations ; sans observateur ou avec mouvement réduit, tout reste visible immédiatement |
+| Mise à jour | Réexaminer version, licence, audit et poids à chaque changement de GSAP et avant F05 |
+| Retrait | Supprimer le bloc GSAP de `useLandingMotion`, conserver les révélations CSS/observateur, exécuter `npm uninstall gsap --workspace @parkventory/frontend`, reconstruire et rejouer la matrice visuelle |
+
+### Résultat d'interface observé
+
+- progression de lecture dans le header sticky ;
+- transition typographique continue entre partage, disponibilité et réservation ;
+- révélations uniques des sections et profondeur légère de l'aperçu produit ;
+- repère éditorial épinglé et trois étapes synchronisées sur grand écran ;
+- micro-interactions de cartes, liens, boutons et formulaire limitées aux
+  pointeurs compatibles ;
+- compteur illustratif non prouvé retiré et aperçu clairement nommé « démo » ;
+- `viewport-fit=cover`, header et lien « Aller au contenu » positionnés avec
+  les safe areas hautes et latérales de Safari.
+
+### Contrôles locaux
+
+| Contrôle | Résultat observé | Limite |
+| --- | --- | --- |
+| `npm run frontend:test` | 15 tests réussis, dont lien d'évitement et statut démo | Ne calcule pas la géométrie CSS |
+| `npm run frontend:build` | TypeScript et Vite réussis ; chunks différés mesurés | Mesure locale, pas réseau 4G |
+| Compose | Service frontend recréé, `npm ci` dans son volume puis santé rétablie | Stack de développement, pas production |
+| Desktop 1 440 × 900 | Hero, bento, bandeau, ancre compensée, progression et séquence des étapes sans débordement | Chromium local |
+| Mobile 390 × 844 | Hero, menu, ancre, fermeture du menu, séparateurs verticaux et largeur égale au viewport | Safe area réelle non simulée |
+| Mobile 320 × 568 | Titre contenu, CTA de 48 px, menu de 44 px et largeur égale au viewport | Hauteur volontairement scrollable |
+| Safe area Safari | Meta viewport, calculs `env(safe-area-inset-*)`, cible 44 px et ordre DOM contrôlés | Un iPhone Safari réel reste requis avant F05 |
+| `mise exec -- npm run verify` | 36 Markdown, Nimbus, audit npm, 15 tests React, build Pages, 3 tests Quarkus/PostgreSQL et smoke Compose complet réussis | Exécution locale, pas encore le run CI du commit final |
+
+Le commit, le push, les runs GitHub Actions et les probes Pages sont consignés
+après leur observation ; aucune preuve distante n'est anticipée ici.

@@ -144,6 +144,17 @@ Le détail et les compromis vivent dans
 | Mailpit | Liens magiques, invitations et notifications locales | Actuel, local uniquement | Compose | Mailpit 1.30.6 | `compose.yaml` | Healthcheck, API et navigateur, 2026-07-30 | nclsppr |
 | Livraison email de production | Magic links et notifications | Cible | Service externe derrière un port | Fournisseur non choisi | module `notifications` | Décision requise avant F05 | nclsppr |
 
+### Dépendance de mouvement de la landing
+
+| Dépendance | Classe et consommateur | Besoin couvert | Version et origine | Données et permissions | Dégradation, retrait et réexamen | Propriétaire |
+| --- | --- | --- | --- | --- | --- | --- |
+| GSAP avec ScrollTrigger | Runtime navigateur optionnel, uniquement `useLandingMotion` | Synchroniser progression, profondeur et récit au scroll sans recalculer le layout dans React | `3.13.0` exact, package `gsap` officiel GreenSock, lock npm avec intégrité SHA-512 | Aucune donnée lue ou transmise, aucun secret, aucun appel réseau applicatif | Import différé ; sans package chargé, les contenus et révélations `IntersectionObserver` restent utilisables. Retrait : supprimer les imports et les animations GSAP, puis `npm uninstall gsap`. Réexamen à chaque mise à jour et avant F05 | nclsppr |
+
+L'API Web Animation et le CSS seuls suffisent aux révélations simples, mais ne
+portent pas de façon homogène le scrubbing, le pinning borné et leur nettoyage
+responsive. La dépendance reste confinée à une page, sans ADR : elle ne modifie
+ni contrat, ni données, ni autre module, et son retrait est local.
+
 ### Flux principal
 
 1. L'utilisateur demande un lien magique sans révéler si l'adresse existe.

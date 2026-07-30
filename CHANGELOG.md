@@ -7,6 +7,15 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Ajouté
 
+- transitions narratives de la landing avec révélations uniques, progression
+  de lecture, profondeur légère du hero, étapes synchronisées au scroll et
+  micro-interactions limitées aux pointeurs compatibles ;
+- header public sticky, ancres compensées et lien « Aller au contenu » compatible
+  avec les safe areas Safari et la Dynamic Island ;
+- GSAP `3.13.0` chargé en différé uniquement sur la landing, avec mouvement
+  réduit, fallback `IntersectionObserver` et procédure de retrait documentée ;
+- aperçu produit explicitement signalé comme démonstration et remplacement du
+  compteur illustratif non prouvé par un état qualitatif ;
 - routes produit dédiées `/app/partager` et `/app/trouver`, reliées à un shell
   applicatif commun et accessibles depuis les navigations desktop et mobile ;
 - parcours de partage concentré sur l'intervalle d'absence, avec fuseau,

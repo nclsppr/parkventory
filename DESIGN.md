@@ -146,6 +146,13 @@ essentiel ne descend sous 14 px ; les champs restent à 16 px sur mobile.
 - Feedback utile en 120 à 220 ms pour contrôles et panneaux.
 - Les transitions de page ne dépassent pas 320 ms.
 - Animer `opacity` et `transform`, pas les grandes propriétés de layout.
+- Sur la landing, les révélations de section jouent une seule fois à partir de
+  16 % de visibilité ; le contenu reste rendu si l'observateur ou GSAP manque.
+- Le grand écran peut épingler uniquement le repère éditorial du processus et
+  superposer légèrement ses trois étapes. Aucun pinning ne s'applique sous
+  1 051 px.
+- La progression du header, la profondeur du hero et le bandeau de cycle sont
+  décoratifs : ils ne portent aucune information absente du texte.
 - Une place nouvellement disponible peut recevoir une impulsion unique.
 - La photographie tramée peut se révéler progressivement sur la landing, sans
   masquer le contenu ni retarder le LCP.
@@ -157,6 +164,9 @@ essentiel ne descend sous 14 px ; les champs restent à 16 px sur mobile.
 
 - Niveau visé : WCAG 2.2 AA.
 - Focus : anneau glacier ou acide de 2 px avec offset visible.
+- Le lien « Aller au contenu » est une cible de 44 px positionnée après
+  `safe-area-inset-top` et les marges latérales de l'écran ; le viewport utilise
+  `viewport-fit=cover` pour Safari iPhone.
 - Navigation clavier complète et ordre conforme à la lecture.
 - Cibles tactiles d'au moins 44 × 44 px.
 - Disponibilité doublée par libellé, motif ou icône.
@@ -205,6 +215,8 @@ consommateurs sont consignés dans `docs/references/visual-sources.md`.
 - Total images au-dessus de la ligne de flottaison : 550 Ko maximum.
 - JavaScript initial de l'application : cible 180 Ko gzip hors polyfills,
   à mesurer en F02.
+- Les enrichissements GSAP de la landing sont chargés en deux chunks différés ;
+  leur échec ne masque ni le hero, ni les sections, ni les actions.
 - LCP : cible inférieure à 2,5 s sur mobile milieu de gamme et réseau 4G simulé.
 - CLS : cible inférieure à 0,1.
 - Les images réservent leurs dimensions et les enrichissements hors écran sont

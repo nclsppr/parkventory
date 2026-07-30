@@ -78,7 +78,9 @@ describe("Parkventory", () => {
     expect(screen.getByRole("heading", { name: /Partagez votre place/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Partager ma place/i })).toHaveAttribute("href", "/app/partager");
     expect(screen.getByRole("link", { name: /Voir les disponibilités/i })).toHaveAttribute("href", "/app/trouver");
+    expect(screen.getByRole("link", { name: "Aller au contenu" })).toHaveAttribute("href", "#contenu");
     expect(screen.getByText("Aucun administrateur requis pour démarrer")).toBeInTheDocument();
+    expect(screen.getByText("Aperçu démo")).toBeInTheDocument();
   });
 
   it("demande un vrai lien local depuis la landing", async () => {

@@ -34,6 +34,12 @@ valide puis résume l'absence avant publication ; le second affiche l'agenda
 PostgreSQL à sept jours et sépare sélection de la place et confirmation de la
 réservation.
 
+La landing dispose maintenant d'un récit au scroll progressif et dégradable :
+les sections se révèlent une fois, le repère du processus et ses étapes utilisent
+GSAP uniquement sur grand écran, et le contenu reste visible sans ce runtime.
+Le header sticky, ses ancres et le lien d'évitement tiennent compte des safe
+areas Safari ; l'aperçu produit porte explicitement son statut de démonstration.
+
 Project Foundation `v0.5.2` au commit
 `708d7374f87060809a805c57abc2cf7e7b66c182` est adopté en pack `critical`.
 `P18` impose commit et push des tranches validées ; `P19` impose Compose comme
@@ -86,6 +92,10 @@ livraison. `npm run compose:down` l'arrête en conservant les volumes.
 | --- | --- | --- | --- |
 | 2026-07-30 | `npm run brand:check` | Trois copies SVG exactes et dérivé PNG conformes au master | Détecte un fichier absent ou divergent |
 | 2026-07-30 | `npm run frontend:test` | 15 tests réussis | Routes exactes, liens directs, navigation partagée, compatibilité des anciens intents, partage et réservation réels |
+| 2026-07-30 | `npm run frontend:build` après revue motion | Build Vite réussi ; JavaScript initial 75,69 Ko gzip, GSAP 27,28 Ko gzip et ScrollTrigger 17,41 Ko gzip en chunks différés | Reste sous le budget initial de 180 Ko gzip ; ne mesure pas le LCP réseau |
+| 2026-07-30 | Revue landing desktop et mobile | 1 440 × 900, 390 × 844 et 320 × 568 sans débordement ; ancres sous header, menu mobile, cibles 44 px et séparateurs vérifiés | Chromium local ; iPhone Safari réel reste requis avant pilote |
+| 2026-07-30 | Profil dependency-change pour GSAP `3.13.0` | Version exacte, intégrité npm, origine GreenSock, licence, absence de transitive et retrait consignés ; audit npm à zéro résultat | Le scan est daté et ne garantit pas l'absence future de vulnérabilité |
+| 2026-07-30 | `mise exec -- npm run verify` après revue motion | Gate complète réussie | 36 Markdown, Nimbus, audit, 15 tests React, build Pages, 3 tests Quarkus/PostgreSQL et parcours Compose complet |
 | 2026-07-30 | `npm run pages:build` | Build Vite réussi sous `/parkventory/`, JS initial 74,57 Ko gzip et cinq entrées HTML contrôlées | Artefact local prêt à déployer |
 | 2026-07-30 | Build et revue Nimbus | 47 pages générées, header/favicons et carte Open Graph avec le logo | Rendu local desktop/mobile |
 | 2026-07-30 | Parcours navigateur du logo | Landing, connexion, dashboard et documentation à 1 440 px et 390 px | Aucun débordement horizontal, master visible aux tailles prévues |
