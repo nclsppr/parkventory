@@ -1,10 +1,11 @@
 export const baseUrl = import.meta.env.BASE_URL;
 export const homeUrl = baseUrl;
 export const appUrl = `${baseUrl}app`;
+export const authCallbackUrl = `${baseUrl}auth/callback`;
 
 export const isPublicDemo = import.meta.env.VITE_DEMO_MODE === "true";
-export const demoLabel = isPublicDemo ? "Démo publique" : "Démo locale";
-export const demoContext = isPublicDemo ? "démo publique" : "démo locale";
+export const demoLabel = isPublicDemo ? "Démo publique" : "Environnement local";
+export const demoContext = isPublicDemo ? "démo publique" : "environnement local";
 
 export function relativePathname(pathname: string, base = baseUrl) {
   const normalizedBase = base === "/" ? "" : base.replace(/\/+$/, "");

@@ -7,6 +7,7 @@ export const demoDashboard: DashboardData = {
     fullName: "Nicolas D.",
     initials: "ND",
     assignedSpot: "A-24",
+    assignedLevel: "Niveau A",
   },
   organization: {
     name: "Victor Buck Services",

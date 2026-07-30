@@ -165,6 +165,16 @@ svg {
   transform: none;
 }
 
+.spin {
+  animation: spin 900ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .button-primary {
   background: var(--green);
   color: #071000;
@@ -1063,6 +1073,245 @@ svg {
   color: var(--green);
 }
 
+/* Authentification locale */
+.auth-page,
+.dashboard-state {
+  position: relative;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 110px 24px 70px;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.auth-backdrop {
+  position: absolute;
+  inset: 0;
+  opacity: 0.48;
+  background:
+    radial-gradient(circle at 66% 30%, rgba(200, 249, 19, 0.12), transparent 23%),
+    linear-gradient(90deg, rgba(3, 5, 4, 0.92), rgba(3, 5, 4, 0.55)),
+    url("/images/parking-halftone.webp") center / cover;
+  mask-image: linear-gradient(to bottom, black, rgba(0, 0, 0, 0.3));
+}
+
+.auth-brand {
+  position: absolute;
+  z-index: 2;
+  top: 28px;
+  left: max(24px, calc((100vw - 1180px) / 2));
+  text-decoration: none;
+}
+
+.auth-panel {
+  position: relative;
+  z-index: 1;
+  width: min(560px, 100%);
+  padding: clamp(28px, 5vw, 54px);
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.035), transparent 50%),
+    rgba(7, 10, 8, 0.96);
+  box-shadow: 0 38px 100px rgba(0, 0, 0, 0.55);
+}
+
+.auth-icon {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 28px;
+  border: 1px solid rgba(200, 249, 19, 0.45);
+  border-radius: 50%;
+  background: rgba(200, 249, 19, 0.08);
+  color: var(--green);
+}
+
+.auth-icon svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 1.7;
+}
+
+.auth-icon-success {
+  box-shadow: 0 0 32px rgba(200, 249, 19, 0.13);
+}
+
+.auth-icon-error {
+  border-color: rgba(255, 116, 109, 0.45);
+  background: rgba(255, 116, 109, 0.08);
+  color: var(--danger);
+}
+
+.auth-panel h1 {
+  max-width: 470px;
+  margin: 12px 0 16px;
+  font-size: clamp(38px, 6vw, 62px);
+  line-height: 0.98;
+  letter-spacing: -0.065em;
+}
+
+.auth-intro {
+  max-width: 470px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.auth-panel form {
+  display: grid;
+  gap: 10px;
+  margin-top: 30px;
+}
+
+.auth-panel label {
+  color: #cbd1ca;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.auth-panel input {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 15px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  outline: 0;
+  background: #080b09;
+  color: var(--text);
+  font-size: 16px;
+}
+
+.auth-panel input:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px rgba(21, 201, 213, 0.09);
+}
+
+.auth-panel form .button {
+  margin-top: 4px;
+}
+
+.auth-message {
+  min-height: 45px;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 16px;
+  padding: 12px 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.018);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.auth-message svg {
+  width: 17px;
+  flex: 0 0 auto;
+  color: var(--green);
+}
+
+.auth-message-success {
+  border-color: rgba(200, 249, 19, 0.28);
+  color: #dce5d8;
+}
+
+.auth-mailpit-link {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.auth-trust {
+  display: flex;
+  gap: 9px;
+  margin: 22px 0 0;
+  color: var(--muted-2);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.auth-trust svg {
+  width: 17px;
+  flex: 0 0 auto;
+  color: var(--cyan);
+}
+
+.auth-callback-panel {
+  text-align: center;
+}
+
+.auth-callback-panel .auth-icon {
+  margin-inline: auto;
+}
+
+.auth-callback-panel .auth-intro {
+  margin-inline: auto;
+}
+
+.auth-callback-panel > .button {
+  margin-top: 28px;
+}
+
+.auth-home-link {
+  position: absolute;
+  z-index: 2;
+  bottom: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.auth-home-link:hover {
+  color: var(--green);
+}
+
+.auth-home-link svg {
+  width: 15px;
+}
+
+.auth-loading {
+  position: relative;
+  z-index: 1;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.dashboard-state {
+  align-content: center;
+  gap: 18px;
+  text-align: center;
+}
+
+.dashboard-state > .brand-lockup {
+  margin-bottom: 30px;
+}
+
+.dashboard-state > svg {
+  width: 34px;
+  height: 34px;
+  color: var(--green);
+}
+
+.dashboard-state h1 {
+  margin: 0;
+  font-size: clamp(30px, 5vw, 54px);
+  letter-spacing: -0.055em;
+}
+
+.dashboard-state p {
+  max-width: 560px;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
 /* Application */
 .app-shell {
   min-height: 100vh;
@@ -1126,6 +1375,37 @@ svg {
   text-align: left;
   cursor: pointer;
   transition: color 150ms ease, background-color 150ms ease;
+}
+
+.sidebar-logout {
+  width: calc(100% - 24px);
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 12px 0;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sidebar-logout:hover {
+  background: var(--surface-hover);
+  color: var(--danger);
+}
+
+.sidebar-logout:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.sidebar-logout svg {
+  width: 18px;
 }
 
 .app-sidebar nav button svg,
@@ -1269,6 +1549,55 @@ svg {
   border-radius: 50%;
   background: var(--green);
   box-shadow: 0 0 9px rgba(200, 249, 19, 0.7);
+}
+
+.live-data-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  border: 1px solid rgba(21, 201, 213, 0.25);
+  border-radius: 999px;
+  background: rgba(21, 201, 213, 0.055);
+  color: var(--cyan);
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.live-data-label i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 10px rgba(21, 201, 213, 0.65);
+}
+
+.dashboard-error {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  margin: 10px 0 16px;
+  padding: 11px 13px;
+  border: 1px solid rgba(255, 116, 109, 0.35);
+  border-radius: 8px;
+  background: rgba(255, 116, 109, 0.07);
+  color: #ffd3d0;
+  font-size: 11px;
+}
+
+.dashboard-error svg {
+  width: 17px;
+  color: var(--danger);
+}
+
+.dashboard-error button {
+  border: 0;
+  background: none;
+  color: var(--text);
+  font-size: 11px;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .dashboard-header {
@@ -1488,6 +1817,18 @@ svg {
   box-shadow: 0 0 0 3px rgba(21, 201, 213, 0.08);
 }
 
+.form-grid input[readonly] {
+  color: var(--green);
+  cursor: default;
+}
+
+.optional-label {
+  margin-inline-start: 4px;
+  color: var(--muted-2);
+  font-size: 8px;
+  font-weight: 500;
+}
+
 .form-grid input::-webkit-calendar-picker-indicator {
   filter: invert(1);
   opacity: 0.65;
@@ -1651,6 +1992,11 @@ svg {
   background: var(--cyan);
 }
 
+.visual-spot-second {
+  top: 19%;
+  left: 63%;
+}
+
 .visual-spot-third {
   top: 53%;
   left: 51%;
@@ -1784,6 +2130,25 @@ svg {
   box-shadow: 0 0 11px rgba(21, 201, 213, 0.5);
 }
 
+.status-unavailable {
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--muted);
+}
+
+.status-unavailable i {
+  background: var(--muted-2);
+  box-shadow: none;
+}
+
+.availability-empty-row td {
+  height: 124px;
+  padding: 24px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+  text-align: center;
+}
+
 .availability-table td:last-child {
   text-align: right;
 }
@@ -1886,6 +2251,37 @@ svg {
   margin-top: 8px;
   color: var(--muted-2);
   font-size: 8px;
+}
+
+.thanks-empty {
+  min-height: 108px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 8px;
+  color: var(--muted);
+}
+
+.thanks-empty > svg {
+  width: 25px;
+  flex: 0 0 auto;
+  color: var(--muted-2);
+}
+
+.thanks-empty p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.thanks-empty span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted-2);
+  font-size: 9px;
 }
 
 .invite-card > label {

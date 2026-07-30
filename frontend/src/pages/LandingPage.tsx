@@ -14,7 +14,8 @@ import {
 } from "lucide-react";
 import { DashboardPreview } from "../components/DashboardPreview";
 import { Logo } from "../components/Logo";
-import { appUrl, demoContext, demoLabel, homeUrl } from "../config";
+import { requestMagicLink } from "../api/client";
+import { appUrl, demoLabel, homeUrl, isPublicDemo } from "../config";
 
 const personalDomains = ["gmail.com", "outlook.com", "hotmail.com", "yahoo.com", "icloud.com"];
 
@@ -22,8 +23,9 @@ export function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [registrationMessage, setRegistrationMessage] = useState<string | null>(null);
+  const [registrationBusy, setRegistrationBusy] = useState(false);
 
-  const handleRegistration = (event: FormEvent<HTMLFormElement>) => {
+  const handleRegistration = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const domain = email.trim().toLowerCase().split("@")[1];
 
@@ -32,9 +34,20 @@ export function LandingPage() {
       return;
     }
 
-    setRegistrationMessage(
-      `Adresse reconnue. Dans cette ${demoContext}, vous pouvez ouvrir directement l’application.`,
-    );
+    setRegistrationBusy(true);
+    setRegistrationMessage(null);
+    try {
+      const response = await requestMagicLink(email.trim().toLowerCase());
+      setRegistrationMessage(response.message);
+    } catch (error) {
+      setRegistrationMessage(
+        error instanceof Error
+          ? error.message
+          : "Le lien de connexion n’a pas pu être envoyé.",
+      );
+    } finally {
+      setRegistrationBusy(false);
+    }
   };
 
   return (
@@ -214,11 +227,16 @@ export function LandingPage() {
                 aria-describedby="registration-help registration-message"
                 required
               />
-              <button className="button button-primary" type="submit">
-                Rejoindre Parkventory <ArrowUpRight aria-hidden="true" />
+              <button className="button button-primary" type="submit" disabled={registrationBusy}>
+                {registrationBusy ? "Envoi du lien…" : "Rejoindre Parkventory"}
+                {!registrationBusy && <ArrowUpRight aria-hidden="true" />}
               </button>
             </div>
-            <p id="registration-help">{demoLabel} : aucun e-mail ne sera envoyé.</p>
+            <p id="registration-help">
+              {isPublicDemo
+                ? `${demoLabel} : aucun e-mail ne sera envoyé.`
+                : "Local : ouvrez l’e-mail capturé dans Mailpit sur http://127.0.0.1:8025."}
+            </p>
             {registrationMessage && <p id="registration-message" className="registration-message" role="status">{registrationMessage}</p>}
           </form>
         </section>

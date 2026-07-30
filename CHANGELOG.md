@@ -19,6 +19,12 @@ la source du diff technique et les ADR expliquent les décisions importantes.
   offres qui se chevauchent ;
 - tests d’intégration PostgreSQL du parcours autonome, du rejeu de lien, de
   l’invitation exacte et des conflits d’affectation/réservation ;
+- frontend React local branché sans repli silencieux sur la session Quarkus et
+  les données PostgreSQL, avec déclaration, partage, réservation et invitation
+  réelles ;
+- écrans explicites de connexion par Mailpit, validation du lien magique,
+  chargement, erreur et première place, avec déduplication du jeton sous
+  `StrictMode` ;
 - adoption de Project Foundation `v0.5.2` et de l'invariant `P19` ;
 - parcours local intégré PostgreSQL, Quarkus et Vite entièrement piloté par
   Docker Compose avec images par digest et healthchecks ;
@@ -50,8 +56,7 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Limites
 
-- le frontend local n’est pas encore branché sur le nouveau parcours
-  authentifié ; la démo publique reste statique, sans compte ni email ;
+- la démo GitHub Pages reste volontairement statique, sans compte ni email ;
 - aucun hébergement ou domaine de production n'est livré ;
 - les droits de publication des JPEG et le master vectoriel du logo restent à
   confirmer ;

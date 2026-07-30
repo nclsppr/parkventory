@@ -29,7 +29,8 @@ export interface DashboardData {
     firstName: string;
     fullName: string;
     initials: string;
-    assignedSpot: string;
+    assignedSpot: string | null;
+    assignedLevel: string | null;
   };
   organization: {
     name: string;
@@ -51,7 +52,20 @@ export interface InvitationRequest {
   email: string;
 }
 
+export interface SpotRequest {
+  label: string;
+  level?: string;
+}
+
 export interface ActionResponse {
   accepted: boolean;
   message: string;
+}
+
+export interface SessionData {
+  authenticated: boolean;
+  displayName: string;
+  email: string;
+  organizationName: string;
+  role: "MEMBER" | "ADMIN";
 }
