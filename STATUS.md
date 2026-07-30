@@ -10,7 +10,7 @@ Snapshot de l'état réellement vérifié. Il ne remplace ni le contrat stable d
 | Vérifié le | 2026-07-30 |
 | Par | Codex |
 | Branche | `main` |
-| Commits applicatifs | `e069d04a70c62c814345947dfb6e26fb0d890070` — backend persistant et Mailpit ; `9f7b9bef3e85815c40a48af914e0130dc6a6665c` — frontend local réel ; `c748d3212e5285e410b1d56975958b1398efed8e` — logo SVG canonique |
+| Commits applicatifs | `e069d04a70c62c814345947dfb6e26fb0d890070` — backend persistant et Mailpit ; `9f7b9bef3e85815c40a48af914e0130dc6a6665c` — frontend local réel ; `c748d3212e5285e410b1d56975958b1398efed8e` — logo SVG canonique ; `47ee871653e29af9d092b1f3f7eff31dff0671da` — routes Partager et Trouver |
 | Environnement | Local macOS, OrbStack 29.4.0 ; CI GitHub Actions Ubuntu |
 | Version livrée | F02, F03 et F04 partielles ; routes dédiées de partage et recherche ; démo publique GitHub Pages séparée |
 
@@ -59,8 +59,8 @@ graphe local intégré.
 | PostgreSQL | Schéma multi-tenant, sessions, outbox, audit, idempotence et exclusions GiST | Flyway V1 + V2 et relecture après mutations | RLS et rôle applicatif non propriétaire non livrés |
 | Notifications | Invitation et réservation écrites avec l'outbox puis livrées avec reprise bornée | Messages observés dans Mailpit | Délivrabilité externe non prouvée |
 | Environnement | Quatre services Compose, images par digest, healthchecks et volumes | Checker indépendant, smoke complet et stack locale saine | Docker ou OrbStack requis |
-| Démo Pages | Landing, dashboard, partage et recherche statiques sous `/parkventory/` | Artefacts directs contrôlés localement ; dernière publication distante `30536319671` | Aucun compte, email ou stockage distant ; nouvelle publication à vérifier |
-| CI | Gate Foundation, docs, audit, React, Quarkus et smoke Compose | Run Verify `30536319811` réussi sur `c748d32` | Aucune gate de production |
+| Démo Pages | Landing, dashboard, partage et recherche statiques sous `/parkventory/` | Run Pages `30542280043` et cinq routes publiques HTTP 200 | Aucun compte, email ou stockage distant |
+| CI | Gate Foundation, docs, audit, React, Quarkus et smoke Compose | Run Verify `30542280025` réussi sur `47ee871` | Aucune gate de production |
 
 ## État opérationnel
 
@@ -74,7 +74,7 @@ graphe local intégré.
 | API | `http://127.0.0.1:8080/api/v1` | Readiness `UP` |
 | Swagger UI | `http://127.0.0.1:8080/q/swagger-ui` | Accessible |
 | PostgreSQL | `127.0.0.1:5434` | Healthy, Flyway V2 |
-| Démo publique | `https://nclsppr.github.io/parkventory/`, `/app/`, `/app/partager/` et `/app/trouver/` | Dernière publication HTTP 200 pour landing et app ; nouvelles entrées prêtes localement |
+| Démo publique | `https://nclsppr.github.io/parkventory/`, `/app/`, `/app/partager/` et `/app/trouver/` | Toutes les entrées HTTP 200 ; route inconnue HTTP 404 |
 | Production | Aucune URL | Non provisionnée |
 
 La stack locale de développement est laissée active à la fin de cette
@@ -97,6 +97,8 @@ livraison. `npm run compose:down` l'arrête en conservant les volumes.
 | 2026-07-30 | Console navigateur | Aucune erreur ou alerte | Landing et application desktop locales |
 | 2026-07-30 | GitHub Actions Verify `30536319811` | Réussi sur `c748d32` | CI distante, pas déploiement backend |
 | 2026-07-30 | GitHub Pages `30536319671` | Build et déploiement réussis ; landing et app contrôlées | Démo statique uniquement |
+| 2026-07-30 | GitHub Actions Verify `30542280025` | Réussi sur `47ee871` en 2 min 26 s | Rejoue notamment les 15 tests React, Quarkus/PostgreSQL et le smoke Compose |
+| 2026-07-30 | GitHub Pages `30542280043` | Build et déploiement réussis ; landing, app, partage, recherche et callback HTTP 200 | Route inconnue HTTP 404 ; démo statique uniquement |
 
 ## Blocages externes
 

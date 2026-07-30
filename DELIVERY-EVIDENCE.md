@@ -559,3 +559,13 @@ Réservations : cette destination sera ajoutée avec sa propre route.
   évolution API avant d'apparaître dans l'interface.
 - L'annulation, la récurrence et le plan interactif restent hors de cette
   tranche.
+
+### Preuves distantes
+
+| Contrôle | Résultat observé |
+| --- | --- |
+| Commit et push | `47ee871653e29af9d092b1f3f7eff31dff0671da` poussé directement sur `main` |
+| GitHub Actions Verify | Run `30542280025` réussi en 2 min 26 s, gate complète et smoke Compose inclus |
+| GitHub Pages | Run `30542280043` réussi, build et déploiement verts |
+| Probes publiques | Landing, `/app/`, `/app/partager/`, `/app/trouver/` et `/auth/callback/` répondent HTTP 200 |
+| Route inconnue | `/route-inconnue/` répond HTTP 404 et charge le shell 404 dédié |
