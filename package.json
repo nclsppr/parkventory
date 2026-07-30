@@ -23,6 +23,7 @@
     "brand:check": "node scripts/sync_brand_assets.mjs --check",
     "frontend:build": "npm run build --workspace @parkventory/frontend",
     "frontend:test": "npm run test --workspace @parkventory/frontend",
+    "pages:build": "./scripts/build_pages.sh",
     "backend:test": "cd backend && mise exec -- ./mvnw verify",
     "docs:build": "npm run build --prefix docs-nimbus",
     "verify": "./scripts/verify.sh"

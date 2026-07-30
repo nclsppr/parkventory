@@ -7,6 +7,21 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Ajouté
 
+- routes produit dédiées `/app/partager` et `/app/trouver`, reliées à un shell
+  applicatif commun et accessibles depuis les navigations desktop et mobile ;
+- parcours de partage concentré sur l'intervalle d'absence, avec fuseau,
+  validation et résumé avant publication ;
+- parcours de recherche sur les disponibilités réelles des sept prochains
+  jours, avec sélection distincte de la confirmation de réservation ;
+- compatibilité des anciens liens `/app?intent=share|find`, vraie page 404 et
+  artefacts GitHub Pages déterministes pour chaque route directe ;
+- navigation mobile limitée aux destinations réellement livrées, avec tiroir
+  piégeant le focus, cibles tactiles de 44 px et suppression des fausses
+  affordances ;
+- consolidation de l'ancien CSS du Dashboard dans la nouvelle grammaire de
+  surfaces, espacements et couleurs sémantiques ;
+- couverture React portée à 15 tests et smoke Compose étendu aux routes
+  applicatives directes ;
 - master SVG transparent fourni pour le symbole Parkventory, utilisé dans tous
   les lockups React, les favicons, le header et les cartes Open Graph Nimbus,
   avec synchronisation déterministe et gate anti-dérive ;
@@ -60,6 +75,8 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 ### Limites
 
 - la démo GitHub Pages reste volontairement statique, sans compte ni email ;
+- la recherche locale expose l'agenda réel des sept prochains jours ; le filtre
+  d'un intervalle arbitraire attend encore son contrat API dédié ;
 - aucun hébergement ou domaine de production n'est livré ;
 - les droits de publication des cinq JPEG restent à confirmer ; le SVG fourni
   ne contient ni wordmark vectoriel ni variante monochrome ;

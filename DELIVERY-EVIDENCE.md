@@ -516,3 +516,46 @@ le SVG fourni.
   unité s'appuie sur l'instruction explicite du propriétaire du projet ;
 - les cinq JPEG historiques conservent leur statut de références non
   publiables sans confirmation distincte.
+
+## Extension : routes produit dédiées du 2026-07-30
+
+Cette tranche remplace les formulaires concurrents du Dashboard par deux
+parcours focalisés, sans dupliquer la session, les données ou la navigation.
+
+### Contrat de navigation
+
+| URL | Tâche | Comportement vérifié |
+| --- | --- | --- |
+| `/app` | Comprendre l'état puis choisir une action | Dashboard de synthèse, liens réels, disponibilité prioritaire et invitation |
+| `/app/partager` | Publier l'absence du titulaire | Déclaration initiale si nécessaire, intervalle, fuseau, validation et résumé |
+| `/app/trouver` | Réserver une disponibilité d'un collègue | Agenda PostgreSQL à sept jours, sélection distincte puis confirmation idempotente |
+
+Le shell React commun conserve le contexte chargé pendant la navigation et
+utilise l'API History avec des liens natifs : ouverture dans un nouvel onglet,
+boutons précédent/suivant et accès direct restent fonctionnels. Les anciens
+liens `?intent=share|find` sont remplacés par les routes canoniques. Une URL
+inconnue rend une vraie page 404. La navigation mobile ne fabrique pas de lien
+Réservations : cette destination sera ajoutée avec sa propre route.
+
+### Preuves locales
+
+| Contrôle | Résultat observé |
+| --- | --- |
+| `npm run frontend:test` | 15 tests réussis : routes exactes, session, liens, navigation, anciens intents, partage et réservation |
+| `npm run pages:build` | Cinq entrées HTML cohérentes : app, partage, recherche, callback et 404 ; base `/parkventory/` contrôlée |
+| `mise exec -- npm run verify` | Documentation, audit npm, React, Vite, Java 25 / Quarkus, Flyway/PostgreSQL et Compose verts |
+| Smoke Compose | Les routes `/app`, `/app/partager`, `/app/trouver` et `/auth/callback` sont servies directement avant le parcours métier |
+| Navigateur local | Le propriétaire synthétique publie `RR-30` depuis Partager ; un collègue du même tenant le choisit puis le réserve depuis Trouver |
+| Console et géométrie desktop | Aucune erreur ; aucun débordement horizontal à 1 280 × 720 ; formulaires et résumés alignés |
+| Géométrie mobile | Dashboard, Partager et Trouver contrôlés à 390 × 844 ; largeur de document égale au viewport à 320 px, cibles à 44 px minimum et navigation sans libellé tronqué |
+| Clavier mobile | À l'ouverture du tiroir, le focus entre dans la navigation, Tab reste borné, Échap ferme puis rend le focus au déclencheur |
+
+### Limites exactes
+
+- GitHub Pages sert toujours des données de démonstration statiques et ne
+  remplace pas l'application locale connectée à Quarkus.
+- La route Trouver reflète le contrat actuel du Dashboard, soit les sept
+  prochains jours. Un intervalle arbitraire et un filtre de site exigent une
+  évolution API avant d'apparaître dans l'interface.
+- L'annulation, la récurrence et le plan interactif restent hors de cette
+  tranche.

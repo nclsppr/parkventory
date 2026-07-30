@@ -12,7 +12,7 @@ Snapshot de l'état réellement vérifié. Il ne remplace ni le contrat stable d
 | Branche | `main` |
 | Commits applicatifs | `e069d04a70c62c814345947dfb6e26fb0d890070` — backend persistant et Mailpit ; `9f7b9bef3e85815c40a48af914e0130dc6a6665c` — frontend local réel ; `c748d3212e5285e410b1d56975958b1398efed8e` — logo SVG canonique |
 | Environnement | Local macOS, OrbStack 29.4.0 ; CI GitHub Actions Ubuntu |
-| Version livrée | F02, F03 et F04 partielles ; démo publique GitHub Pages séparée |
+| Version livrée | F02, F03 et F04 partielles ; routes dédiées de partage et recherche ; démo publique GitHub Pages séparée |
 
 ## Résumé
 
@@ -27,6 +27,12 @@ Le frontend local ne retombe jamais silencieusement sur les données fictives :
 une session absente, une API indisponible et un tableau vide possèdent des états
 explicites. GitHub Pages reste volontairement une démo statique, signalée et
 sans backend.
+
+Le Dashboard est désormais une synthèse. Les tâches complètes vivent sur
+`/app/partager` et `/app/trouver`, dans le même shell responsive. Le premier
+valide puis résume l'absence avant publication ; le second affiche l'agenda
+PostgreSQL à sept jours et sépare sélection de la place et confirmation de la
+réservation.
 
 Project Foundation `v0.5.2` au commit
 `708d7374f87060809a805c57abc2cf7e7b66c182` est adopté en pack `critical`.
@@ -47,13 +53,13 @@ graphe local intégré.
 | --- | --- | --- | --- |
 | Identité locale | Lien 256 bits, hash en base, durée 15 min, consommation unique, session `HttpOnly` 7 jours | Tests Quarkus, smoke Compose, parcours navigateur | Adaptateur HTTP local, pas OIDC de production |
 | Communauté | Invitation exacte prioritaire, sinon organisation communautaire unique par domaine | PostgreSQL réel et tests d'intégration | Domaine partagé/filiales et liste anti-abus à durcir |
-| Application React | Connexion, première place, partage, réservation, invitation, chargements, erreurs et états vides | 7 tests Vitest, build et navigateur sans erreur console | Client OpenAPI encore manuel |
+| Application React | Connexion, dashboard de synthèse, routes dédiées de partage et recherche, réservation, invitation, chargements, erreurs et états vides | 15 tests Vitest, build, navigation History API et navigateur sans erreur console | Client OpenAPI encore manuel ; recherche limitée à l'agenda de sept jours |
 | Identité visuelle | Master SVG fourni utilisé dans les huit emplacements React, les favicons, le header Nimbus et les cartes Open Graph | Gate anti-dérive, builds et revue navigateur desktop/mobile | Symbole seul ; aucun wordmark vectoriel ni variante monochrome |
 | API Quarkus | Session, dashboard, place, partage, réservation idempotente et invitation | Tests sur PostgreSQL 18.3 et contrat OpenAPI `0.2.0` | Annulation et administration absentes |
 | PostgreSQL | Schéma multi-tenant, sessions, outbox, audit, idempotence et exclusions GiST | Flyway V1 + V2 et relecture après mutations | RLS et rôle applicatif non propriétaire non livrés |
 | Notifications | Invitation et réservation écrites avec l'outbox puis livrées avec reprise bornée | Messages observés dans Mailpit | Délivrabilité externe non prouvée |
 | Environnement | Quatre services Compose, images par digest, healthchecks et volumes | Checker indépendant, smoke complet et stack locale saine | Docker ou OrbStack requis |
-| Démo Pages | Landing et app statiques sous `/parkventory/` | Run Pages `30536319671`, routes publiques HTTP 200 et logo au hash canonique | Aucun compte, email ou stockage distant |
+| Démo Pages | Landing, dashboard, partage et recherche statiques sous `/parkventory/` | Artefacts directs contrôlés localement ; dernière publication distante `30536319671` | Aucun compte, email ou stockage distant ; nouvelle publication à vérifier |
 | CI | Gate Foundation, docs, audit, React, Quarkus et smoke Compose | Run Verify `30536319811` réussi sur `c748d32` | Aucune gate de production |
 
 ## État opérationnel
@@ -62,11 +68,13 @@ graphe local intégré.
 | --- | --- | --- |
 | Landing locale | `http://127.0.0.1:5173/` | Fonctionnelle |
 | Application locale | `http://127.0.0.1:5173/app` | Authentification et données réelles |
+| Partage local | `http://127.0.0.1:5173/app/partager` | Publication PostgreSQL réelle |
+| Recherche locale | `http://127.0.0.1:5173/app/trouver` | Agenda à sept jours et réservation réelle |
 | Mailpit | `http://127.0.0.1:8025/`, SMTP `127.0.0.1:1025` | Healthy, messages persistés localement |
 | API | `http://127.0.0.1:8080/api/v1` | Readiness `UP` |
 | Swagger UI | `http://127.0.0.1:8080/q/swagger-ui` | Accessible |
 | PostgreSQL | `127.0.0.1:5434` | Healthy, Flyway V2 |
-| Démo publique | `https://nclsppr.github.io/parkventory/` et `/app/` | HTTP 200, mode statique |
+| Démo publique | `https://nclsppr.github.io/parkventory/`, `/app/`, `/app/partager/` et `/app/trouver/` | Dernière publication HTTP 200 pour landing et app ; nouvelles entrées prêtes localement |
 | Production | Aucune URL | Non provisionnée |
 
 La stack locale de développement est laissée active à la fin de cette
@@ -77,13 +85,14 @@ livraison. `npm run compose:down` l'arrête en conservant les volumes.
 | Date | Commande ou contrôle | Résultat | Portée de la preuve |
 | --- | --- | --- | --- |
 | 2026-07-30 | `npm run brand:check` | Trois copies SVG exactes et dérivé PNG conformes au master | Détecte un fichier absent ou divergent |
-| 2026-07-30 | `npm run frontend:test` | 7 tests réussis | Inclut le master SVG, l'absence de repli démo et la consommation unique sous `StrictMode` |
-| 2026-07-30 | build Pages du frontend | Build Vite réussi sous `/parkventory/`, JS initial 72,14 Ko gzip | Déployé par le run Pages `30536319671` |
+| 2026-07-30 | `npm run frontend:test` | 15 tests réussis | Routes exactes, liens directs, navigation partagée, compatibilité des anciens intents, partage et réservation réels |
+| 2026-07-30 | `npm run pages:build` | Build Vite réussi sous `/parkventory/`, JS initial 74,57 Ko gzip et cinq entrées HTML contrôlées | Artefact local prêt à déployer |
 | 2026-07-30 | Build et revue Nimbus | 47 pages générées, header/favicons et carte Open Graph avec le logo | Rendu local desktop/mobile |
 | 2026-07-30 | Parcours navigateur du logo | Landing, connexion, dashboard et documentation à 1 440 px et 390 px | Aucun débordement horizontal, master visible aux tailles prévues |
 | 2026-07-30 | `mise exec -- ./mvnw verify` dans `backend/` | 3 tests réussis sur PostgreSQL 18.3 | Identité, sessions, tenant, métier, conflits et outbox |
 | 2026-07-30 | `npm run compose:verify` | Parcours PostgreSQL, Mailpit, Quarkus et Vite réussi | Projet et volumes de vérification isolés puis retirés |
-| 2026-07-30 | `mise exec -- npm run verify` | Gate complète réussie | 36 Markdown catalogués, Nimbus vert, audit npm sans vulnérabilité, 7 tests React, 3 tests Quarkus et smoke Compose |
+| 2026-07-30 | `mise exec -- npm run verify` | Gate complète réussie | 36 Markdown catalogués, Nimbus vert, audit npm sans vulnérabilité, 15 tests React, 3 tests Quarkus et smoke Compose des routes directes |
+| 2026-07-30 | Parcours navigateur des routes | `RR-30` partagé depuis `/app/partager`, puis sélectionné et réservé par un collègue depuis `/app/trouver` | Deux adresses synthétiques `.test`, données relues depuis PostgreSQL, aucune donnée réelle |
 | 2026-07-30 | Parcours navigateur local | Lien Mailpit, session, `UI-30`, partage, collègue, réservation et notification observés | Trois adresses synthétiques `.test`, aucune donnée réelle |
 | 2026-07-30 | Console navigateur | Aucune erreur ou alerte | Landing et application desktop locales |
 | 2026-07-30 | GitHub Actions Verify `30536319811` | Réussi sur `c748d32` | CI distante, pas déploiement backend |
@@ -105,6 +114,7 @@ livraison. `npm run compose:down` l'arrête en conservant les volumes.
 | Client issu d'OpenAPI | Client TypeScript écrit à la main | Dérive de types | Générer et contrôler le diff avant clôture F02 |
 | Défense anti-abus | Refus minimal de domaines personnels | Spam et tenant indésirable | Rate limit, liste versionnée et réponses/timings comparés |
 | Intégrité temporelle complète | Contraintes GiST et conflits testés séquentiellement | Course, annulation ou DST mal traitée | Tests parallèles, annulation et matrice de fuseaux |
+| Recherche d'un intervalle arbitraire | Route dédiée alimentée par l'agenda réel à sept jours | Besoin non couvert au-delà de cette fenêtre | Ajouter un contrat de recherche borné avant d'afficher des filtres date/site |
 | Identité de production | Adaptateur local Mailpit | Mauvais usage hors boucle locale | OIDC, cookie `Secure`, PKCE, CSRF et révocation de migration |
 
 ## Risques et hypothèses

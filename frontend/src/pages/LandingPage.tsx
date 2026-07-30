@@ -15,7 +15,7 @@ import {
 import { DashboardPreview } from "../components/DashboardPreview";
 import { Logo } from "../components/Logo";
 import { requestMagicLink } from "../api/client";
-import { appUrl, demoLabel, homeUrl, isPublicDemo } from "../config";
+import { appUrl, demoLabel, findUrl, homeUrl, isPublicDemo, shareUrl } from "../config";
 
 const personalDomains = ["gmail.com", "outlook.com", "hotmail.com", "yahoo.com", "icloud.com"];
 
@@ -102,10 +102,10 @@ export function LandingPage() {
               Quand vous en avez besoin, réservez en quelques secondes.
             </p>
             <div className="hero-actions">
-              <a className="button button-primary" href={`${appUrl}?intent=share`}>
+              <a className="button button-primary" href={shareUrl}>
                 <CalendarCheck aria-hidden="true" /> Partager ma place
               </a>
-              <a className="button button-secondary" href={`${appUrl}?intent=find`}>
+              <a className="button button-secondary" href={findUrl}>
                 <Search aria-hidden="true" /> Voir les disponibilités
               </a>
             </div>

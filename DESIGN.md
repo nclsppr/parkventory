@@ -110,7 +110,8 @@ essentiel ne descend sous 14 px ; les champs restent à 16 px sur mobile.
 - Application desktop : rail de navigation stable et zone centrale fluide.
 - Dashboard : deux actions principales visibles sans scroll, puis prochaines
   réservations et disponibilités.
-- Mobile : navigation compacte vers Accueil, Partager, Trouver et Réservations.
+- Mobile livré : navigation compacte vers Accueil, Partager et Trouver. La
+  destination Réservations ne sera ajoutée qu'avec sa vraie route.
 - Les calendriers denses deviennent listes ou agendas sur petit écran.
 - Breakpoints motivés par la capacité réelle du contenu, pas par un appareil.
 - Aucun débordement horizontal involontaire à 320 px ou à 200 % de zoom.
@@ -121,9 +122,9 @@ essentiel ne descend sous 14 px ; les champs restent à 16 px sur mobile.
 | --- | --- | --- | --- |
 | Landing | Promesse et CTA email professionnel | Fonctionnement, bénéfices, sécurité, FAQ | Logos clients, pricing, revenus |
 | Onboarding | Étape courante et confiance | Explication du domaine et de la confidentialité | Membres avant vérification |
-| Dashboard | Partager ou trouver | Prochaine réservation, prochain partage, invitation | Activité factice |
-| Partager | Place et intervalle | Résumé, règles d'annulation | Récurrence infinie au MVP |
-| Trouver | Date, site et résultats | Filtres utiles et détails | Plan avant F07 |
+| Dashboard — `/app` | Partager ou trouver | Prochaine réservation, prochain partage, invitation | Activité factice |
+| Partager — `/app/partager` | Place et intervalle | Résumé, fuseau et confidentialité | Récurrence infinie au MVP |
+| Trouver — `/app/trouver` | Disponibilités réelles à sept jours | Sélection, résumé et confirmation | Filtres sans contrat API, plan avant F07 |
 | Réservations | Prochaine réservation | Historique et annulation | Gamification |
 | Administration | Gouvernance et inventaire | Audit et enrichissement | Accès visible aux non-admins |
 

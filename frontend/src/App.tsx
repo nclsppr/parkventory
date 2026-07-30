@@ -1,41 +1,78 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ApiError, loadSession } from "./api/client";
-import { isPublicDemo, relativePathname } from "./config";
-import { DashboardPage } from "./pages/DashboardPage";
+import type { ApplicationRoute } from "./components/AppShell";
+import {
+  findUrl,
+  isPublicDemo,
+  relativePathname,
+  shareUrl,
+} from "./config";
+import { ApplicationPage } from "./pages/ApplicationPage";
 import { LandingPage } from "./pages/LandingPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
 import { AuthCallbackPage, SignInPage } from "./pages/AuthPages";
 
+const applicationRoutes: Record<string, ApplicationRoute> = {
+  "/app": "dashboard",
+  "/app/partager": "share",
+  "/app/trouver": "find",
+};
+
+function legacyIntentTarget() {
+  if (relativePathname(window.location.pathname) !== "/app") return null;
+  const intent = new URLSearchParams(window.location.search).get("intent");
+  if (intent === "share") return shareUrl;
+  if (intent === "find") return findUrl;
+  return null;
+}
+
 function currentPath() {
-  return relativePathname(window.location.pathname);
+  const legacyTarget = legacyIntentTarget();
+  return legacyTarget
+    ? relativePathname(new URL(legacyTarget, window.location.origin).pathname)
+    : relativePathname(window.location.pathname);
 }
 
 export default function App() {
   const [path, setPath] = useState(currentPath);
 
   useEffect(() => {
-    const onPopState = () => setPath(currentPath());
+    const onPopState = () => {
+      const legacyTarget = legacyIntentTarget();
+      if (legacyTarget) window.history.replaceState({}, "", legacyTarget);
+      setPath(relativePathname(window.location.pathname));
+    };
+
+    onPopState();
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
   useEffect(() => {
-    document.title = path === "/app"
-      ? "Accueil — Parkventory"
-      : path === "/auth/callback"
-        ? "Connexion — Parkventory"
-        : "Parkventory — Le parking partagé, simplement";
+    const titles: Record<string, string> = {
+      "/": "Parkventory — Le parking partagé, simplement",
+      "/app": "Accueil — Parkventory",
+      "/app/partager": "Partager ma place — Parkventory",
+      "/app/trouver": "Trouver une place — Parkventory",
+      "/auth/callback": "Connexion — Parkventory",
+    };
+    document.title = titles[path] ?? "Page introuvable — Parkventory";
   }, [path]);
 
+  if (path === "/") return <LandingPage />;
   if (path === "/auth/callback") return <AuthCallbackPage />;
-  if (path === "/app") return <AuthenticatedDashboard />;
-  return <LandingPage />;
+  if (applicationRoutes[path]) {
+    return <AuthenticatedApplication route={applicationRoutes[path]} />;
+  }
+  return <NotFoundPage />;
 }
 
-function AuthenticatedDashboard() {
+function AuthenticatedApplication({ route }: { route: ApplicationRoute }) {
   const [state, setState] = useState<"checking" | "authenticated" | "anonymous">(
     isPublicDemo ? "authenticated" : "checking",
   );
   const [reason, setReason] = useState<string | undefined>();
+  const handleSessionExpired = useCallback(() => setState("anonymous"), []);
 
   useEffect(() => {
     if (isPublicDemo) return;
@@ -69,5 +106,5 @@ function AuthenticatedDashboard() {
     );
   }
   if (state === "anonymous") return <SignInPage reason={reason} />;
-  return <DashboardPage onSessionExpired={() => setState("anonymous")} />;
+  return <ApplicationPage route={route} onSessionExpired={handleSessionExpired} />;
 }

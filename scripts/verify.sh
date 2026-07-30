@@ -68,6 +68,7 @@ npm ci --prefix "${PROJECT_ROOT}" --ignore-scripts --no-audit --no-fund
 npm audit --prefix "${PROJECT_ROOT}" --audit-level=high
 npm run frontend:test --prefix "${PROJECT_ROOT}"
 npm run frontend:build --prefix "${PROJECT_ROOT}"
+npm run pages:build --prefix "${PROJECT_ROOT}"
 
 command -v docker >/dev/null 2>&1 || {
   echo "Docker est requis pour les tests PostgreSQL de Quarkus." >&2

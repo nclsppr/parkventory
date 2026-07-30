@@ -103,6 +103,12 @@ const run = async () => {
   if (!landing.ok || !(await landing.text()).includes("Parkventory")) {
     throw new Error("landing marker missing");
   }
+  for (const path of ["/app", "/app/partager", "/app/trouver", "/auth/callback"]) {
+    const route = await fetch(`${web}${path}`);
+    if (!route.ok || !(await route.text()).includes("Parkventory")) {
+      throw new Error(`frontend route is not directly reachable: ${path}`);
+    }
+  }
   const health = await fetch(`${web}/q/health/ready`);
   if (!health.ok || (await health.json()).status !== "UP") {
     throw new Error("backend is not ready");

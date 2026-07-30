@@ -1,6 +1,8 @@
 export const baseUrl = import.meta.env.BASE_URL;
 export const homeUrl = baseUrl;
 export const appUrl = `${baseUrl}app`;
+export const shareUrl = `${baseUrl}app/partager`;
+export const findUrl = `${baseUrl}app/trouver`;
 export const authCallbackUrl = `${baseUrl}auth/callback`;
 
 export const isPublicDemo = import.meta.env.VITE_DEMO_MODE === "true";

@@ -138,7 +138,7 @@ Le détail et les compromis vivent dans
 | Composant | Rôle | Statut | Exécution | Version | Source | Preuve et date | Propriétaire |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Documentation Nimbus | Rendu des Markdown classés | Actuel | Build local | Nimbus 0.8.2 | `docs-nimbus/` | `./scripts/verify.sh`, 2026-07-30 après exécution | nclsppr |
-| Frontend React | Landing, authentification et application | Actuel, réel en local et démo publique | Compose ou navigateur statique | React 19.2.8, Vite 8.1.5 | `frontend/` | 7 tests, builds et parcours navigateur, 2026-07-30 | nclsppr |
+| Frontend React | Landing, authentification, dashboard, partage et recherche | Actuel, réel en local et démo publique | Compose ou navigateur statique | React 19.2.8, Vite 8.1.5 | `frontend/` | 15 tests, builds et parcours navigateur, 2026-07-30 | nclsppr |
 | API Java | Identité locale, métier, validation, santé et OpenAPI | Actuel, local | Compose, Maven 3.9.16 et Java 25 | Quarkus 3.33.3 LTS | `backend/` | Tests PostgreSQL et smoke Compose, 2026-07-30 | nclsppr |
 | PostgreSQL | Identité, sessions, métier, outbox et contraintes | Actuel, local | Compose et Testcontainers | PostgreSQL 18.3 | migrations Flyway V1 et V2 | Migration et parcours persisté vérifiés, 2026-07-30 | nclsppr |
 | Mailpit | Liens magiques, invitations et notifications locales | Actuel, local uniquement | Compose | Mailpit 1.30.6 | `compose.yaml` | Healthcheck, API et navigateur, 2026-07-30 | nclsppr |
@@ -173,6 +173,18 @@ Le détail et les compromis vivent dans
 | CI | GitHub Actions | `.github/workflows/verify.yml` | Exécuté à chaque push sur `main` | Même commande `verify` |
 | Production | Non provisionnée | Décision d'exploitation future | Aucune URL | Runbook et probes requis avant ouverture |
 
+### Routes applicatives actuelles
+
+| Route | Responsabilité | Données locales | Comportement Pages |
+| --- | --- | --- | --- |
+| `/app` | Synthèse et accès aux deux tâches principales | Session, compteurs, prochains créneaux, invitation | Démo statique signalée |
+| `/app/partager` | Déclarer une place si nécessaire puis publier son absence | Place assignée et création réelle d'une disponibilité | Démo statique signalée |
+| `/app/trouver` | Lire, sélectionner puis confirmer une disponibilité | Agenda réel à sept jours et réservation idempotente | Démo statique signalée |
+
+Les anciens liens `/app?intent=share` et `/app?intent=find` sont remplacés dans
+l'historique du navigateur par leur route dédiée. Toute autre route rend une
+page 404 explicite.
+
 ## Commandes canoniques actuelles
 
 | Action | Commande | Résultat attendu |
@@ -189,7 +201,7 @@ Le détail et les compromis vivent dans
 | Vérifier le logo | `npm run brand:check` | Aucun dérivé public manquant ou divergent |
 | Vérifier | `mise exec -- npm run verify` | Documentation, Compose, audit npm, React, Quarkus et migration PostgreSQL valides |
 | Construire la documentation | `npm run build --prefix docs-nimbus` | Site statique dérivé dans `docs-nimbus/dist/` |
-| Construire la démo Pages | `VITE_BASE_PATH=/parkventory/ VITE_DEMO_MODE=true npm run frontend:build` | Frontend statique sous le chemin public, sans appel backend |
+| Construire la démo Pages | `npm run pages:build` | Frontend statique sous `/parkventory/`, entrées directes des routes et `404.html` déterministes |
 
 Les commandes manuelles utilisent uniquement les services locaux autorisés.
 La démo GitHub Pages est déployée automatiquement depuis `main`; elle ne
