@@ -704,3 +704,33 @@ synchronisation reste ainsi bornée sur les états et effets réseau attendus.
 | Verify | [Run 31483526624](https://github.com/nclsppr/parkventory/actions/runs/31483526624) réussi au premier passage : documentation, audit npm, 19 tests React, builds, Quarkus/PostgreSQL et parcours Docker Compose |
 | Pages | [Run 31483526656](https://github.com/nclsppr/parkventory/actions/runs/31483526656) réussi au premier passage et déployé |
 | Probes publiques | Landing, `/app/`, `/app/partager/`, `/app/trouver/` et `/auth/callback/` répondent HTTP 200 ; le HTML servi contient la clé de préférence et le `theme-color` |
+
+## Extension : audit de lisibilité du thème clair du 2026-08-11
+
+Le skill externe `design-taste-frontend` a été utilisé comme grille consultative
+pour challenger la hiérarchie et les couleurs. Le contrat local est resté
+prioritaire : vert acide pour l'action, glacier pour la disponibilité, thème
+sombre initial et SVG de marque inchangé.
+
+L'audit a confirmé la solidité des encres sémantiques, puis isolé les défauts
+de mise en œuvre : couleurs fixes du logo sur blanc, placeholders dépendants du
+navigateur, anciennes bordures alpha, focus de champs neutralisé, état actif
+perdu en couleurs forcées et aperçu mobile réduit à une miniature.
+
+### Preuves locales
+
+| Contrôle | Résultat observé | Frontière de preuve |
+| --- | --- | --- |
+| Ratios automatisés | 13 vérifications lisent les tokens CSS réels ; texte secondaire au moins 5,38:1, encres vert/cyan au moins 6,69:1, aplats au moins 14,09:1, plaque du SVG au moins 9,77:1 et frontière forte au moins 3,03:1 | Calcul sRGB ; la photographie tramée est contrôlée visuellement et par Axe |
+| Axe Core `4.13.0` | 24 passages sans violation : six routes, clair/sombre, 1 440 × 900 et 390 × 844, règles WCAG A/AA, 2.1 AA et 2.2 AA | Chromium local ; scanner temporaire hors arbre npm du projet |
+| Focus et contraste élevé | Champs à anneau cyan 2 px avec offset 3 px ; choix de thème et route active distincts sous `forced-colors: active` | Émulation Chromium, pas Windows High Contrast sur appareil réel |
+| Responsive | Landing sans débordement à 320 et 390 px ; aperçu produit recomposé sans `scale()` ; sombre inchangé | Captures Chromium avec mouvement réduit |
+| Partage au clavier | Aucun contrôle `.sr-only` tabulable ; horaires inversés annoncés et reliés aux deux champs, action disponible sans requête invalide | Test React et parcours navigateur statique |
+| Tests React | 34 tests réussis sur trois passages consécutifs | JSDOM ne remplace pas un lecteur d'écran réel |
+| Builds | TypeScript, Vite et les cinq entrées Pages construits ; CSS initial 13,43 Ko gzip, JavaScript initial 77,00 Ko gzip | Mesure locale, sans latence réseau |
+
+Le master `parkventory-logo-transparent.svg` n'est ni recoloré ni modifié. En
+clair seulement, les instances UI reçoivent une plaque `#080a08` ; le vert du
+master atteint 15,98:1 et le glacier 9,77:1 sur cette plaque. Le bloc
+photographique final reste une surface inverse volontaire, dont les textes
+dépassent 6,16:1.

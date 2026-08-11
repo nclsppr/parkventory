@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { ThemeProvider, ThemeToggle } from "./Theme";
@@ -41,6 +41,20 @@ describe("ThemeToggle", () => {
     expect(document.documentElement.style.colorScheme).toBe("light");
     expect(window.localStorage.getItem("parkventory:ui-theme:v1")).toBe("light");
     expect(themeColor).toHaveAttribute("content", "#f4f6f1");
+  });
+
+  it("expose un groupe clavier avec un seul choix actif", async () => {
+    const user = userEvent.setup();
+    renderToggle();
+
+    const group = screen.getByRole("group", { name: "Apparence" });
+    const light = screen.getByRole("button", { name: "Thème clair" });
+    await user.tab();
+    expect(light).toHaveFocus();
+    await user.keyboard(" ");
+
+    expect(light).toHaveAttribute("aria-pressed", "true");
+    expect(within(group).getAllByRole("button", { pressed: true })).toHaveLength(1);
   });
 
   it("restaure la préférence enregistrée", () => {

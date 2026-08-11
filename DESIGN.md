@@ -65,7 +65,7 @@ provisoires jusqu'au prototype et à la mesure de contraste sur les composants.
 | Surface | `--surface` | `#0d100e` | `#ffffff` | Sections et panneaux |
 | Surface secondaire | `--surface-2` | `#121512` | `#ecefe9` | Contrôles et survols |
 | Bordure | `--border` | `#252b26` | `#d4dcd2` | Séparateurs fins |
-| Bordure forte | `--border-strong` | `#3b443c` | `#818e84` | Contrôles et états essentiels |
+| Bordure forte | `--border-strong` | `#3b443c` | `#7f8c82` | Contrôles et états essentiels |
 | Texte | `--text` | `#f5f7f2` | `#080a08` | Titres et corps |
 | Texte secondaire | `--muted` | `#9da49d` | `#4a554c` | Métadonnées |
 | Action pleine | `--action-fill` | `#c8f913` | `#c6ff00` | CTA et marqueurs pleins, avec texte sombre |
@@ -79,6 +79,13 @@ sélecteur explicite « clair / sombre » est disponible sur les surfaces
 publiques, l'authentification et l'application. Le choix est appliqué avant le
 premier rendu, mémorisé localement et réutilisé sur les routes suivantes. La
 préférence système ne change jamais le thème silencieusement.
+
+En clair, les aplats acide et glacier restent réservés aux remplissages avec
+texte sombre. Les libellés, icônes, focus et frontières fonctionnelles emploient
+leurs encres foncées. Le symbole SVG original n'est ni recoloré ni redessiné :
+une plaque `--text` compacte lui redonne un contraste non textuel supérieur à
+3:1 sur les surfaces claires. Le dernier appel à l'action conserve une surface
+photographique sombre inversée, documentée comme rupture éditoriale volontaire.
 
 Sémantique :
 
@@ -120,6 +127,8 @@ essentiel ne descend sous 14 px ; les champs restent à 16 px sur mobile.
 - Mobile livré : navigation compacte vers Accueil, Partager et Trouver. La
   destination Réservations ne sera ajoutée qu'avec sa vraie route.
 - Les calendriers denses deviennent listes ou agendas sur petit écran.
+- L'aperçu produit mobile se recompose à sa largeur réelle ; il n'est jamais
+  réduit par transformation au point de rendre ses libellés illisibles.
 - Breakpoints motivés par la capacité réelle du contenu, pas par un appareil.
 - Aucun débordement horizontal involontaire à 320 px ou à 200 % de zoom.
 
@@ -179,6 +188,10 @@ essentiel ne descend sous 14 px ; les champs restent à 16 px sur mobile.
 - Cibles tactiles d'au moins 44 × 44 px.
 - Le sélecteur de thème expose deux boutons pressés/non pressés, nommés
   « Thème clair » et « Thème sombre », avec cibles de 44 px.
+- Les champs conservent un anneau de focus glacier de 2 px et leurs placeholders
+  utilisent une encre à pleine opacité, indépendamment du navigateur.
+- Les thèmes, routes et sélections actives restent distinguables lorsque les
+  couleurs forcées suppriment les fonds et ombres.
 - Disponibilité doublée par libellé, motif ou icône.
 - Calendrier doublé par une liste ou table sémantique.
 - Confirmations et conflits annoncés via une région `aria-live`.

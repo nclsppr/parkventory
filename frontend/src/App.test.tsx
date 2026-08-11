@@ -184,7 +184,9 @@ describe("Parkventory", () => {
       { name: "Formulaire de partage" },
       { timeout: 3_000 },
     )).toBeInTheDocument();
-    expect(screen.getByDisplayValue("A-24")).toHaveAttribute("readonly");
+    const shareForm = screen.getByRole("form", { name: "Formulaire de partage" });
+    expect(within(shareForm).getByText("A-24")).toBeInTheDocument();
+    expect(within(shareForm).queryByRole("textbox", { name: "Votre place" })).not.toBeInTheDocument();
     expect(await screen.findByRole("status")).toHaveTextContent(/affectée à votre profil/i);
   });
 
@@ -207,6 +209,25 @@ describe("Parkventory", () => {
       "/api/v1/shares",
       expect.objectContaining({ method: "POST", credentials: "include" }),
     );
+  });
+
+  it("signale un horaire inversé sans contrôle invisible au clavier", async () => {
+    const fetchMock = stubAuthenticatedApi();
+    window.history.replaceState({}, "", "/app/partager");
+    const user = userEvent.setup();
+    render(<App />);
+
+    const form = await screen.findByRole("form", { name: "Formulaire de partage" });
+    expect(within(form).queryByDisplayValue("A-24")).not.toBeInTheDocument();
+    fireEvent.change(within(form).getByLabelText("Début"), { target: { value: "19:00" } });
+
+    expect(within(form).getByRole("alert")).toHaveTextContent(/postérieure/i);
+    expect(within(form).getByLabelText("Début")).toHaveAttribute("aria-invalid", "true");
+    expect(within(form).getByLabelText("Fin")).toHaveAttribute("aria-invalid", "true");
+    const submit = screen.getByRole("button", { name: "Partager ma place" });
+    expect(submit).toBeEnabled();
+    await user.click(submit);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith("/shares"))).toBe(false);
   });
 
   it("sépare la sélection de la confirmation avant de réserver", async () => {

@@ -94,6 +94,12 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Corrigé
 
+- audit de lisibilité du thème clair : logo original protégé par une plaque
+  sombre, placeholders et focus de champs renforcés, frontières d'accent
+  mesurables, états actifs compatibles avec les couleurs forcées et aperçu
+  produit mobile recomposé sans réduction illisible ;
+- parcours de partage débarrassé d'un champ masqué encore tabulable, avec erreur
+  d'horaires inversés visible et reliée aux deux champs avant toute requête ;
 - stabilisation du test d'affectation d'une place sur la saisie contrôlée, la
   création puis la relecture du dashboard, sans relever les délais de toute la
   suite ;

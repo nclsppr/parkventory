@@ -50,7 +50,7 @@
   --muted: #4a554c;
   --muted-2: #59635b;
   --border: #d4dcd2;
-  --border-strong: #818e84;
+  --border-strong: #7f8c82;
   --green: #425a00;
   --green-hover: #314500;
   --green-deep: #eeffc1;
@@ -260,7 +260,7 @@ svg {
 }
 
 .button:disabled {
-  opacity: 0.55;
+  opacity: 0.65;
   cursor: wait;
   transform: none;
 }
@@ -1331,8 +1331,11 @@ svg {
 }
 
 .registration-form input::placeholder,
-.invite-control input::placeholder {
+.invite-control input::placeholder,
+.auth-panel input::placeholder,
+.field-group input::placeholder {
   color: var(--muted-2);
+  opacity: 1;
 }
 
 .registration-form > p,
@@ -1491,7 +1494,6 @@ svg {
   padding: 0 15px;
   border: 1px solid var(--border-strong);
   border-radius: 8px;
-  outline: 0;
   background: var(--surface-2);
   color: var(--text);
   font-size: 16px;
@@ -1712,7 +1714,7 @@ svg {
 }
 
 .sidebar-logout:disabled {
-  opacity: 0.5;
+  opacity: 0.8;
   cursor: wait;
 }
 
@@ -2237,16 +2239,88 @@ svg {
   }
 
   .hero-product {
-    height: 340px;
+    height: auto;
     min-height: 0;
-    margin-inline: -8px;
-    overflow: hidden;
+    margin-inline: 0;
   }
 
   .dashboard-preview {
-    min-width: 680px;
-    transform: scale(0.58);
-    transform-origin: top left;
+    min-width: 0;
+    min-height: 320px;
+    grid-template-columns: 52px 1fr;
+    transform: none;
+  }
+
+  .preview-rail {
+    gap: 6px;
+    padding: 14px 6px;
+  }
+
+  .preview-rail > span {
+    width: 38px;
+    height: 38px;
+  }
+
+  .preview-content {
+    padding: 16px;
+  }
+
+  .preview-heading p {
+    font-size: 20px;
+  }
+
+  .preview-heading > div > span,
+  .preview-map-heading {
+    font-size: 11px;
+  }
+
+  .preview-site,
+  .preview-legend,
+  .preview-chevron {
+    display: none;
+  }
+
+  .preview-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .preview-stats > div {
+    min-height: 84px;
+    grid-template-columns: 36px 1fr;
+    column-gap: 8px;
+    padding: 10px;
+  }
+
+  .preview-stat-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .preview-stat-icon svg {
+    width: 18px;
+  }
+
+  .preview-stats strong {
+    font-size: 20px;
+  }
+
+  .preview-stats small {
+    font-size: 10px;
+  }
+
+  .preview-map {
+    padding: 10px;
+  }
+
+  .preview-map-heading {
+    margin-bottom: 10px;
+  }
+
+  .preview-map .parking-grid {
+    gap: 4px;
+    padding: 6px;
   }
 
   .benefit-strip,
@@ -2386,12 +2460,12 @@ svg {
   }
 
   .hero-product {
-    height: 300px;
+    height: auto;
     min-height: 0;
   }
 
   .dashboard-preview {
-    transform: scale(0.51);
+    transform: none;
   }
 
   .form-grid-share,
@@ -2415,8 +2489,12 @@ svg {
 }
 
 @media (max-width: 360px) {
-  .dashboard-preview {
-    transform: scale(0.4);
+  .preview-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .preview-stats > div:last-child {
+    display: none;
   }
 }
 
@@ -2959,7 +3037,6 @@ svg {
   padding: 0 var(--space-4);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-small);
-  outline: none;
   background: var(--surface-2);
   color: var(--text);
   font-size: 16px;
@@ -3163,7 +3240,6 @@ svg {
   padding: 0 var(--space-4);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-small);
-  outline: none;
   background: var(--surface-2);
   color: var(--text);
   font-size: 16px;
@@ -4105,7 +4181,15 @@ svg {
 
 /* Light theme — warm editorial canvas with accessible brand inks. */
 :root[data-theme="light"] .button-primary {
+  border-color: var(--green);
   box-shadow: none;
+}
+
+:root[data-theme="light"] .brand-mark,
+:root[data-theme="light"] .preview-logo {
+  padding: 5px;
+  border-radius: var(--radius-small);
+  background: var(--text);
 }
 
 :root[data-theme="light"] .landing-page::before {
@@ -4164,6 +4248,10 @@ svg {
   box-shadow: none;
 }
 
+:root[data-theme="light"] .app-topbar-actions .demo-status i {
+  background: var(--green);
+}
+
 :root[data-theme="light"] .start-section {
   --bg-raised: #080b09;
   --surface-2: #101310;
@@ -4206,6 +4294,10 @@ svg {
   box-shadow: none;
 }
 
+:root[data-theme="light"] .auth-message-success {
+  border-color: var(--green);
+}
+
 :root[data-theme="light"] .app-main {
   background:
     linear-gradient(180deg, rgba(8, 10, 8, 0.02), var(--bg) 260px),
@@ -4239,6 +4331,15 @@ svg {
   background: var(--cyan-deep);
 }
 
+:root[data-theme="light"] .parking-bay-empty {
+  border-color: var(--border-strong);
+}
+
+:root[data-theme="light"] .choose-spot-button,
+:root[data-theme="light"] .reservation-summary-active {
+  border-color: var(--cyan);
+}
+
 :root[data-theme="light"] .toast {
   box-shadow: 0 16px 44px rgba(8, 10, 8, 0.14);
 }
@@ -4247,4 +4348,16 @@ svg {
 :root[data-theme="light"] .mobile-app-nav {
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 16px 46px rgba(8, 10, 8, 0.16);
+}
+
+@media (forced-colors: active) {
+  .theme-toggle button[aria-pressed="true"] {
+    border: 2px solid ButtonText;
+  }
+
+  .app-sidebar nav a[aria-current="page"],
+  .mobile-app-nav a[aria-current="page"] {
+    outline: 2px solid LinkText;
+    outline-offset: -2px;
+  }
 }

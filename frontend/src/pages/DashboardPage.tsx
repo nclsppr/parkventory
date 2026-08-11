@@ -74,7 +74,7 @@ export function DashboardPage({ data, onNotify, onSessionExpired }: DashboardPag
       <header className="app-page-header">
         <div>
           <p className="dashboard-eyebrow">Tableau de bord</p>
-          <h1 tabIndex={-1}>Bonjour, {data.user.firstName} <span aria-hidden="true">👋</span></h1>
+          <h1 tabIndex={-1}>Bonjour, {data.user.firstName}</h1>
           <p>Choisissez votre prochaine action, puis gardez un œil sur la semaine.</p>
         </div>
         <span className="live-data-label"><i /> {isPublicDemo ? "Vue démo · 7 jours" : "PostgreSQL · 7 jours"}</span>

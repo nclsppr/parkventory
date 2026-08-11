@@ -39,6 +39,8 @@ export function SharePage({
     to: "18:00",
   });
   const timeZone = useMemo(browserTimeZone, []);
+  const timeOrderInvalid = Boolean(shareForm.from && shareForm.to && shareForm.from >= shareForm.to);
+  const timeOrderMessage = "L’heure de fin doit être postérieure à l’heure de début.";
 
   useEffect(() => {
     setShareForm((current) => ({ ...current, spot: data.user.assignedSpot ?? "" }));
@@ -78,8 +80,7 @@ export function SharePage({
     if (shareBusy) return;
     setInlineError(null);
     setSuccessMessage(null);
-    if (shareForm.from >= shareForm.to) {
-      setInlineError("L’heure de fin doit être postérieure à l’heure de début.");
+    if (timeOrderInvalid) {
       return;
     }
 
@@ -108,8 +109,9 @@ export function SharePage({
   };
 
   const readyToShare = Boolean(
-    shareForm.spot && shareForm.date && shareForm.from && shareForm.to && shareForm.from < shareForm.to,
+    shareForm.spot && shareForm.date && shareForm.from && shareForm.to,
   );
+  const shareError = timeOrderInvalid ? timeOrderMessage : inlineError;
 
   return (
     <div className="app-page route-page share-route-page">
@@ -145,11 +147,10 @@ export function SharePage({
               <div><h2>Créneau de disponibilité</h2><p>Les heures sont interprétées dans le fuseau affiché ci-dessous.</p></div>
             </div>
 
-            <label className="field-group">
+            <div className="field-group">
               <span>Votre place</span>
               <span className="assigned-spot-field"><CarFront aria-hidden="true" /><strong>{shareForm.spot}</strong><small>{data.user.assignedLevel ?? "Niveau non renseigné"}</small></span>
-              <input className="sr-only" name="spot" value={shareForm.spot} readOnly />
-            </label>
+            </div>
 
             <label className="field-group">
               <span>Date</span>
@@ -169,6 +170,8 @@ export function SharePage({
                   type="time"
                   value={shareForm.from}
                   onChange={(event) => setShareForm({ ...shareForm, from: event.target.value })}
+                  aria-describedby={timeOrderInvalid ? "share-time-error" : undefined}
+                  aria-invalid={timeOrderInvalid || undefined}
                   required
                 />
               </label>
@@ -178,14 +181,15 @@ export function SharePage({
                   type="time"
                   value={shareForm.to}
                   onChange={(event) => setShareForm({ ...shareForm, to: event.target.value })}
-                  aria-describedby="share-time-error"
+                  aria-describedby={timeOrderInvalid ? "share-time-error" : undefined}
+                  aria-invalid={timeOrderInvalid || undefined}
                   required
                 />
               </label>
             </div>
 
             <p className="timezone-note"><Clock3 aria-hidden="true" /> Fuseau : <strong>{timeZone}</strong></p>
-            {inlineError && <p className="field-error" id="share-time-error" role="alert">{inlineError}</p>}
+            {shareError && <p className="field-error" id="share-time-error" role="alert">{shareError}</p>}
           </form>
 
           <aside className="workflow-surface workflow-summary" aria-labelledby="share-summary-title">
