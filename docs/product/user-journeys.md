@@ -112,6 +112,28 @@ Les surfaces d'administration sont absentes pour les non-administrateurs.
 Après preuve et promotion, un administrateur gère l'inventaire, les membres et
 les futurs plans sans remplacer les capacités communautaires.
 
+## 10. Choisir son apparence
+
+1. Le premier accès utilise le thème sombre, signature de Parkventory.
+2. Le visiteur ou le membre sélectionne explicitement « Thème clair » ou
+   « Thème sombre » depuis les surfaces publiques, l'authentification ou
+   l'application.
+3. Le changement s'applique immédiatement, sans animation de page.
+4. Le navigateur mémorise le choix et l'applique avant le rendu des routes
+   suivantes afin d'éviter un flash du thème opposé.
+5. Une valeur mémorisée inconnue ou invalide revient au thème sombre.
+
+Le thème clair utilise un canvas ivoire, des surfaces blanches et des encres
+foncées. Le vert acide et le bleu glacier restent des aplats ou des repères ;
+ils ne servent pas de texte clair sur fond clair. Le symbole de marque conserve
+ses couleurs originales sur une plaque sombre qui assure sa lisibilité.
+
+États obligatoires : premier accès, préférence claire, préférence sombre,
+valeur invalide, navigation directe, clavier, focus visible, couleurs forcées,
+zoom à 200 % et largeur de 320 px. Le sélecteur expose deux boutons nommés avec
+leur état sélectionné ; aucun changement de thème ne dépend uniquement de la
+couleur.
+
 ## Navigation
 
 Desktop :
