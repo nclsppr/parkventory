@@ -69,6 +69,18 @@ dernier administrateur ne bloque pas les usages communautaires.
 Le service n'a pas besoin de connaître le motif d'une absence, le calendrier
 personnel complet, la plaque d'un véhicule ou la localisation continue.
 
+### Apparence choisie et lisible
+
+Le thème sombre constitue l'identité initiale de Parkventory. Chaque personne
+peut sélectionner un thème clair ivoire ou revenir au thème sombre. Le choix est
+explicite, mémorisé dans le navigateur et conservé entre les routes ; la
+préférence du système ne le remplace pas silencieusement.
+
+Les deux thèmes conservent la même hiérarchie fonctionnelle. Le vert acide
+indique l'action, le bleu glacier indique la disponibilité, et toute information
+portée par une couleur reste aussi exprimée par un libellé, une forme ou un état.
+Les textes, contrôles, focus et parcours au clavier visent WCAG 2.2 AA.
+
 ## MVP
 
 Le MVP comprend :
