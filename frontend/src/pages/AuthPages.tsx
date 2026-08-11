@@ -10,6 +10,7 @@ import {
 import { requestMagicLink, verifyMagicLink } from "../api/client";
 import { appUrl, homeUrl } from "../config";
 import { Logo } from "../components/Logo";
+import { ThemeToggle } from "../components/Theme";
 import type { SessionData } from "../types";
 
 const personalDomains = ["gmail.com", "outlook.com", "hotmail.com", "yahoo.com", "icloud.com"];
@@ -65,6 +66,7 @@ export function SignInPage({ reason }: { reason?: string }) {
       <a className="auth-brand" href={homeUrl} aria-label="Parkventory, accueil">
         <Logo />
       </a>
+      <ThemeToggle className="auth-theme-toggle" />
       <section className="auth-panel" aria-labelledby="auth-title">
         <div className="auth-icon"><Mail aria-hidden="true" /></div>
         <p className="section-index">Accès à l’espace parking</p>
@@ -161,6 +163,7 @@ export function AuthCallbackPage() {
       <a className="auth-brand" href={homeUrl} aria-label="Parkventory, accueil">
         <Logo />
       </a>
+      <ThemeToggle className="auth-theme-toggle" />
       <section className="auth-panel auth-callback-panel" aria-labelledby="callback-title">
         <div className={`auth-icon auth-icon-${state}`}>
           {state === "verifying"

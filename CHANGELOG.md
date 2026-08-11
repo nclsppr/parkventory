@@ -7,6 +7,14 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Ajouté
 
+- thème clair ivoire pour la landing, l'authentification, l'application et les
+  routes d'erreur, sans modifier le thème sombre historique par défaut ;
+- sélecteur explicite clair/sombre accessible sur les surfaces publiques et
+  applicatives, appliqué avant le premier rendu et mémorisé localement entre
+  les routes et les visites ;
+- palette sémantique séparant les aplats vert acide et bleu glacier de leurs
+  encres accessibles sur fond clair, avec tests React et revue responsive des
+  deux thèmes ;
 - attente CI ciblée et bornée pour le parcours d’affectation d’une place, qui
   couvre sa mutation puis le rechargement du tableau de bord sans modifier les
   délais de toute la suite de tests ;

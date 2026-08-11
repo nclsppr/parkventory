@@ -7,12 +7,12 @@ Snapshot de l'état réellement vérifié. Il ne remplace ni le contrat stable d
 
 | Champ | Valeur |
 | --- | --- |
-| Vérifié le | 2026-07-30 |
+| Vérifié le | 2026-08-11 |
 | Par | Codex |
 | Branche | `main` |
 | Commits applicatifs | `e069d04` — backend persistant et Mailpit ; `9f7b9be` — frontend local réel ; `c748d32` — logo SVG canonique ; `47ee871` — routes Partager et Trouver ; `25d3197` — narration et interactions de la landing ; `835515a` — stabilisation du parcours CI |
 | Environnement | Local macOS, OrbStack 29.4.0 ; CI GitHub Actions Ubuntu |
-| Version livrée | F02, F03 et F04 partielles ; routes dédiées de partage et recherche ; démo publique GitHub Pages séparée |
+| Version livrée | F02, F03 et F04 partielles ; thèmes sombre et clair sélectionnables ; routes dédiées de partage et recherche ; démo publique GitHub Pages séparée |
 
 ## Résumé
 
@@ -40,6 +40,12 @@ GSAP uniquement sur grand écran, et le contenu reste visible sans ce runtime.
 Le header sticky, ses ancres et le lien d'évitement tiennent compte des safe
 areas Safari ; l'aperçu produit porte explicitement son statut de démonstration.
 
+Le thème sombre reste la signature et le choix initial. Une variante claire
+ivoire couvre désormais la landing, l'authentification, l'application et les
+routes d'erreur. Le sélecteur explicite clair/sombre est accessible au clavier,
+appliqué avant le premier rendu et mémorisé localement sans dépendance au
+backend ni bascule silencieuse selon le système.
+
 Project Foundation `v0.5.2` au commit
 `708d7374f87060809a805c57abc2cf7e7b66c182` est adopté en pack `critical`.
 `P18` impose commit et push des tranches validées ; `P19` impose Compose comme
@@ -59,8 +65,8 @@ graphe local intégré.
 | --- | --- | --- | --- |
 | Identité locale | Lien 256 bits, hash en base, durée 15 min, consommation unique, session `HttpOnly` 7 jours | Tests Quarkus, smoke Compose, parcours navigateur | Adaptateur HTTP local, pas OIDC de production |
 | Communauté | Invitation exacte prioritaire, sinon organisation communautaire unique par domaine | PostgreSQL réel et tests d'intégration | Domaine partagé/filiales et liste anti-abus à durcir |
-| Application React | Connexion, dashboard de synthèse, routes dédiées de partage et recherche, réservation, invitation, chargements, erreurs et états vides | 15 tests Vitest, build, navigation History API et navigateur sans erreur console | Client OpenAPI encore manuel ; recherche limitée à l'agenda de sept jours |
-| Identité visuelle | Master SVG fourni utilisé dans les huit emplacements React, les favicons, le header Nimbus et les cartes Open Graph | Gate anti-dérive, builds et revue navigateur desktop/mobile | Symbole seul ; aucun wordmark vectoriel ni variante monochrome |
+| Application React | Connexion, dashboard de synthèse, routes dédiées de partage et recherche, réservation, invitation, chargements, erreurs, états vides et choix clair/sombre persistant | 19 tests Vitest, build, navigation History API et navigateur sans erreur console | Client OpenAPI encore manuel ; recherche limitée à l'agenda de sept jours |
+| Identité visuelle | Master SVG fourni utilisé dans les huit emplacements React, les favicons, le header Nimbus et les cartes Open Graph ; palettes sombre et claire sémantiques | Gate anti-dérive, builds et revue des deux thèmes desktop/mobile | Symbole seul ; aucun wordmark vectoriel ni variante monochrome |
 | API Quarkus | Session, dashboard, place, partage, réservation idempotente et invitation | Tests sur PostgreSQL 18.3 et contrat OpenAPI `0.2.0` | Annulation et administration absentes |
 | PostgreSQL | Schéma multi-tenant, sessions, outbox, audit, idempotence et exclusions GiST | Flyway V1 + V2 et relecture après mutations | RLS et rôle applicatif non propriétaire non livrés |
 | Notifications | Invitation et réservation écrites avec l'outbox puis livrées avec reprise bornée | Messages observés dans Mailpit | Délivrabilité externe non prouvée |
@@ -90,6 +96,10 @@ livraison. `npm run compose:down` l'arrête en conservant les volumes.
 
 | Date | Commande ou contrôle | Résultat | Portée de la preuve |
 | --- | --- | --- | --- |
+| 2026-08-11 | `npm run frontend:test` | 19 tests réussis | Sélecteur clair/sombre, choix initial, persistance, valeur invalide, routes et parcours React existants |
+| 2026-08-11 | `npm run frontend:build` et `npm run pages:build` | Builds Vite réussis ; CSS initial 13,11 Ko gzip et JavaScript initial inférieur à 77 Ko gzip | Typecheck, bundle local et cinq entrées statiques Pages ; ne mesure pas le LCP réseau |
+| 2026-08-11 | Revue des thèmes sombre et clair | Landing, application, partage et recherche à 1 440 × 900 et 390 × 844 ; contrôles de largeur à 320 px et 768 px, sans débordement ni erreur console | Chromium local ; Safari iPhone réel reste requis avant pilote |
+| 2026-08-11 | Contrastes de la palette claire | Texte 18,25:1 ; textes secondaires et encres d'accent au moins 7,13:1 ; bordure de contrôle 3,42:1 ; texte sombre sur aplats d'accent au moins 14,49:1 | Calculs sRGB des paires canoniques ; un audit composant automatisé reste souhaitable avant pilote |
 | 2026-07-30 | `npm run brand:check` | Trois copies SVG exactes et dérivé PNG conformes au master | Détecte un fichier absent ou divergent |
 | 2026-07-30 | `npm run frontend:test` | 15 tests réussis | Routes exactes, liens directs, navigation partagée, compatibilité des anciens intents, partage et réservation réels |
 | 2026-07-30 | `npm run frontend:build` après revue motion | Build Vite réussi ; JavaScript initial 75,69 Ko gzip, GSAP 27,28 Ko gzip et ScrollTrigger 17,41 Ko gzip en chunks différés | Reste sous le budget initial de 180 Ko gzip ; ne mesure pas le LCP réseau |

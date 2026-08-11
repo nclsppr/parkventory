@@ -19,6 +19,7 @@ import {
 import type { DashboardData } from "../types";
 import { AppLink } from "./AppLink";
 import { Logo } from "./Logo";
+import { ThemeToggle } from "./Theme";
 
 export type ApplicationRoute = "dashboard" | "share" | "find";
 export type NoticeTone = "success" | "error";
@@ -190,7 +191,10 @@ export function AppShell({
             <Menu aria-hidden="true" />
           </button>
           <a className="mobile-app-logo" href={homeUrl} aria-label="Revenir au site Parkventory"><Logo compact /></a>
-          <EnvironmentStatus loading={loading} />
+          <div className="app-topbar-actions">
+            <ThemeToggle />
+            <EnvironmentStatus loading={loading} />
+          </div>
         </div>
 
         {loadError && (

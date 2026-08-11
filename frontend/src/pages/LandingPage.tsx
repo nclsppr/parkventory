@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { DashboardPreview } from "../components/DashboardPreview";
 import { Logo } from "../components/Logo";
+import { ThemeToggle } from "../components/Theme";
 import { requestMagicLink } from "../api/client";
 import { appUrl, demoLabel, findUrl, homeUrl, isPublicDemo, shareUrl } from "../config";
 import { useLandingMotion } from "../hooks/useLandingMotion";
@@ -85,6 +86,7 @@ export function LandingPage() {
           <a href="#securite">Sécurité</a>
         </nav>
         <div className="landing-actions">
+          <ThemeToggle />
           <a className="text-link" href={appUrl}>Se connecter</a>
           <a className="button button-primary button-small" href="#commencer">
             Commencer <ArrowUpRight aria-hidden="true" />
@@ -105,6 +107,10 @@ export function LandingPage() {
             <a href="#fonctionnement" onClick={() => setMenuOpen(false)}>Comment ça marche</a>
             <a href="#equipes" onClick={() => setMenuOpen(false)}>Pour les équipes</a>
             <a href="#securite" onClick={() => setMenuOpen(false)}>Sécurité</a>
+            <div className="mobile-theme-choice">
+              <span>Apparence</span>
+              <ThemeToggle />
+            </div>
             <a href={appUrl}>Ouvrir l’application</a>
           </nav>
         )}

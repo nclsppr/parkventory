@@ -7,9 +7,11 @@ synthétiser, pas des écrans à recopier ni une preuve de produit livré.
 
 ### Impression recherchée
 
-Un outil opérationnel nocturne, précis et immédiatement lisible : grille
-rigoureuse, surfaces presque noires, vert acide énergique, bleu glacier
-fonctionnel et photographie de parking traitée comme une trame imprimée.
+Un outil opérationnel précis et immédiatement lisible : grille rigoureuse,
+vert acide énergique, bleu glacier fonctionnel et photographie de parking
+traitée comme une trame imprimée. Le thème sombre nocturne reste la signature
+et le choix initial ; le thème clair transpose la même identité sur un canvas
+ivoire chaud, avec des surfaces plates et des encres olive et cyan foncé.
 
 L'interface doit donner envie de partager sans transformer le parking en produit
 financier. Elle reste humaine, rapide et utile avant d'être spectaculaire.
@@ -57,22 +59,26 @@ provisoires jusqu'au prototype et à la mesure de contraste sur les composants.
 
 ### Couleurs
 
-| Rôle | Token cible | Valeur sombre | Usage | Contraste requis |
+| Rôle | Token exécutable | Sombre | Clair | Usage |
 | --- | --- | --- | --- | --- |
-| Canvas | `--color-canvas` | `#030504` | Fond global | Base |
-| Surface | `--color-surface` | `#101210` | Sections et panneaux | Texte AA |
-| Surface haute | `--color-surface-raised` | `#151715` | Contrôles et survol | Texte AA |
-| Bordure | `--color-border` | `#282b28` | Séparateurs fins | Visible à 200 % |
-| Texte | `--color-text` | `#f5f7f2` | Titres et corps | AA |
-| Texte secondaire | `--color-text-muted` | `#a3aaa1` | Métadonnées | AA |
-| Vert acide | `--color-action` | `#c8f913` | CTA, contribution, succès | AA avec texte sombre |
-| Bleu glacier | `--color-available` | `#15c9d5` | Place disponible, sélection, lien spécial | AA sur canvas |
-| Réservé | `--color-reserved` | `#f5f7f2` | Réservation confirmée | Avec icône ou libellé |
-| Indisponible | `--color-unavailable` | `#5f6660` | Place non disponible | Avec motif ou libellé |
-| Erreur | `--color-danger` | `#ff665c` | Conflit, suppression, erreur | AA et texte explicite |
+| Canvas | `--bg` | `#030504` | `#f4f6f1` | Fond global |
+| Surface | `--surface` | `#0d100e` | `#ffffff` | Sections et panneaux |
+| Surface secondaire | `--surface-2` | `#121512` | `#ecefe9` | Contrôles et survols |
+| Bordure | `--border` | `#252b26` | `#d4dcd2` | Séparateurs fins |
+| Bordure forte | `--border-strong` | `#3b443c` | `#818e84` | Contrôles et états essentiels |
+| Texte | `--text` | `#f5f7f2` | `#080a08` | Titres et corps |
+| Texte secondaire | `--muted` | `#9da49d` | `#4a554c` | Métadonnées |
+| Action pleine | `--action-fill` | `#c8f913` | `#c6ff00` | CTA et marqueurs pleins, avec texte sombre |
+| Action en texte | `--green` | `#c8f913` | `#425a00` | Libellés, icônes et bordures accessibles |
+| Disponible plein | `--available-fill` | `#15c9d5` | `#a8e5ff` | Place sélectionnée et marqueurs pleins |
+| Disponible en texte | `--cyan` | `#15c9d5` | `#075a70` | Liens, focus, icônes et bordures accessibles |
+| Erreur | `--danger` | `#ff746d` | `#b42318` | Conflit, suppression et erreur explicite |
 
-Le thème clair n'est pas prévu dans le MVP. Les préférences système ne doivent
-pas basculer silencieusement vers une variante non conçue.
+Le premier accès reste sombre afin de préserver l'identité historique. Un
+sélecteur explicite « clair / sombre » est disponible sur les surfaces
+publiques, l'authentification et l'application. Le choix est appliqué avant le
+premier rendu, mémorisé localement et réutilisé sur les routes suivantes. La
+préférence système ne change jamais le thème silencieusement.
 
 Sémantique :
 
@@ -101,6 +107,7 @@ essentiel ne descend sous 14 px ; les champs restent à 16 px sur mobile.
 - rayon : 8 px pour les contrôles, 12 px pour les grandes surfaces ;
 - bordure : 1 px, contraste faible mais mesurable ;
 - ombre : rare, courte et noire ; la hiérarchie vient d'abord de la grille ;
+- thème clair : surfaces plates et ombres limitées aux panneaux flottants ;
 - halo vert réservé au focus de marque ou au CTA public, jamais permanent.
 
 ## Mise en page
@@ -159,6 +166,7 @@ essentiel ne descend sous 14 px ; les champs restent à 16 px sur mobile.
 - `prefers-reduced-motion` retire parallaxe, balayage et déplacements ; le
   feedback d'état reste instantané.
 - Les hovers ne s'appliquent qu'aux pointeurs compatibles.
+- Le changement de thème est immédiat et ne déclenche aucune animation de page.
 
 ## Accessibilité
 
@@ -169,6 +177,8 @@ essentiel ne descend sous 14 px ; les champs restent à 16 px sur mobile.
   `viewport-fit=cover` pour Safari iPhone.
 - Navigation clavier complète et ordre conforme à la lecture.
 - Cibles tactiles d'au moins 44 × 44 px.
+- Le sélecteur de thème expose deux boutons pressés/non pressés, nommés
+  « Thème clair » et « Thème sombre », avec cibles de 44 px.
 - Disponibilité doublée par libellé, motif ou icône.
 - Calendrier doublé par une liste ou table sémantique.
 - Confirmations et conflits annoncés via une région `aria-live`.
@@ -229,7 +239,7 @@ consommateurs sont consignés dans `docs/references/visual-sources.md`.
 Ne changent pas sans décision explicite :
 
 - orthographe `Parkventory` ;
-- fond sombre dominant ;
+- thème sombre signature par défaut et thème clair explicitement sélectionnable ;
 - vert acide comme action principale ;
 - bleu glacier comme disponibilité réservable et lien spécial ;
 - symbole `P` associé à une grille de places ;
@@ -242,7 +252,7 @@ Ne changent pas sans décision explicite :
 | Dimension | Valeurs |
 | --- | --- |
 | Viewports | 320 × 568, 390 × 844, 768 × 1024, 1440 × 900 |
-| Thèmes | Sombre uniquement au MVP |
+| Thèmes | Sombre et clair, choix persistant, sombre au premier accès |
 | Entrées | Clavier, tactile, souris |
 | Mouvement | Normal, réduit |
 | Contenu | Court, long, vide, chargement, erreur, conflit |

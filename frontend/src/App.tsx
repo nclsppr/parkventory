@@ -11,6 +11,7 @@ import { ApplicationPage } from "./pages/ApplicationPage";
 import { LandingPage } from "./pages/LandingPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { AuthCallbackPage, SignInPage } from "./pages/AuthPages";
+import { ThemeProvider, ThemeToggle } from "./components/Theme";
 
 const applicationRoutes: Record<string, ApplicationRoute> = {
   "/app": "dashboard",
@@ -34,6 +35,14 @@ function currentPath() {
 }
 
 export default function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
+  );
+}
+
+function AppContent() {
   const [path, setPath] = useState(currentPath);
 
   useEffect(() => {
@@ -101,6 +110,7 @@ function AuthenticatedApplication({ route }: { route: ApplicationRoute }) {
     return (
       <main className="auth-page">
         <div className="auth-backdrop" aria-hidden="true" />
+        <ThemeToggle className="auth-theme-toggle" />
         <p className="auth-loading" role="status">Vérification de la session locale…</p>
       </main>
     );
