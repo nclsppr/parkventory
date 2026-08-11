@@ -1,13 +1,18 @@
 import { config } from "virtual:nimbus/config";
+import { absoluteSiteUrl, withBasePath } from "../lib/routing.mjs";
 
 export const prerender = true;
 
 export function GET() {
   const body = [
     "User-agent: *",
-    "Allow: /",
+    `Allow: ${withBasePath("/", import.meta.env.BASE_URL)}`,
     "",
-    `Sitemap: ${new URL("/sitemap-index.xml", config.site).href}`,
+    `Sitemap: ${absoluteSiteUrl(
+      "/sitemap-index.xml",
+      config.site,
+      import.meta.env.BASE_URL,
+    )}`,
     "",
   ].join("\n");
 

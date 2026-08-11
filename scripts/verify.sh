@@ -55,7 +55,10 @@ python3 "${SCRIPT_DIR}/check_markdown.py"
 python3 "${SCRIPT_DIR}/check_compose.py"
 npm ci --prefix "${PROJECT_ROOT}/docs-nimbus" --ignore-scripts --no-audit --no-fund
 node "${SCRIPT_DIR}/sync_brand_assets.mjs" --check
-npm run check --prefix "${PROJECT_ROOT}/docs-nimbus"
+(
+  unset NIMBUS_PUBLIC_COLLECTIONS
+  npm run check --prefix "${PROJECT_ROOT}/docs-nimbus"
+)
 if [[ -n "$(git -C "${PROJECT_ROOT}" ls-files -- docs-nimbus/src/content/docs)" ]]; then
   echo "La collection Nimbus générée ne doit pas être suivie par Git." >&2
   exit 1

@@ -18,6 +18,7 @@
 
 import { getIndexedTopLevel, type IndexedEntry } from "@cloudflare/nimbus-docs";
 import { config } from "virtual:nimbus/config";
+import { absoluteSiteUrl } from "../../lib/routing.mjs";
 
 export const prerender = true;
 
@@ -47,12 +48,17 @@ export async function getStaticPaths() {
 export async function GET({ props }: { props: SectionProps }) {
   const { label, members } = props;
 
-  const lines = [`# ${label}`, "", "## Pages", ""];
+  const sectionLabel = label === "docs" ? "Documentation produit" : label;
+  const lines = [`# ${sectionLabel}`, "", "## Pages", ""];
 
   for (const item of members) {
     const description = item.description ? ` — ${item.description}` : "";
     lines.push(
-      `- [${item.title}](${new URL(item.markdownUrl, config.site).href})${description}`,
+      `- [${item.title}](${absoluteSiteUrl(
+        item.markdownUrl,
+        config.site,
+        import.meta.env.BASE_URL,
+      )})${description}`,
     );
   }
 

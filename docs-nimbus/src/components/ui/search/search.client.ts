@@ -103,7 +103,7 @@ export function initSearch(config: SearchConfig): SearchInstance {
       initialized = true;
       return true;
     } catch {
-      emptyState.textContent = "Search is available after a production build.";
+      emptyState.textContent = "La recherche est disponible après un build de production.";
       return false;
     }
   }
@@ -114,7 +114,7 @@ export function initSearch(config: SearchConfig): SearchInstance {
     const signal = activeController.signal;
 
     emptyState.style.display = "";
-    emptyState.textContent = "Searching…";
+    emptyState.textContent = "Recherche en cours…";
     clearResults();
 
     if (!(await ensureInitialized()) || signal.aborted) return;
@@ -128,7 +128,7 @@ export function initSearch(config: SearchConfig): SearchInstance {
 
       if (results.length === 0) {
         emptyState.style.display = "";
-        emptyState.textContent = "No results found.";
+        emptyState.textContent = "Aucun résultat.";
         return;
       }
 
@@ -139,7 +139,7 @@ export function initSearch(config: SearchConfig): SearchInstance {
       if (signal.aborted) return;
       clearResults();
       emptyState.style.display = "";
-      emptyState.textContent = "Search is temporarily unavailable.";
+      emptyState.textContent = "La recherche est temporairement indisponible.";
     }
   }
 
@@ -151,7 +151,7 @@ export function initSearch(config: SearchConfig): SearchInstance {
         activeController?.abort();
         clearResults();
         emptyState.style.display = "";
-        emptyState.textContent = "Type to search…";
+        emptyState.textContent = "Saisissez votre recherche…";
         return;
       }
       void runSearch(query);
@@ -190,7 +190,7 @@ export function initSearch(config: SearchConfig): SearchInstance {
       activeIndex = -1;
       clearResults();
       emptyState.style.display = "";
-      emptyState.textContent = "Type to search…";
+      emptyState.textContent = "Saisissez votre recherche…";
       await ensureInitialized();
     },
     destroy() {

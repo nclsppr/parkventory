@@ -1,5 +1,6 @@
 import type { SearchProvider, SearchResult } from "@cloudflare/nimbus-docs/types";
 import { config } from "virtual:nimbus/config";
+import { withBasePath } from "@/lib/routing.mjs";
 
 interface PagefindSubResult {
   title?: string;
@@ -69,12 +70,15 @@ export const provider: SearchProvider = {
     );
     const results = await Promise.all(search.results.slice(0, 10).map((result) => result.data()));
     return results.map((result): SearchResult => ({
-      title: result.meta?.title ?? "Untitled",
-      url: result.url,
+      title: result.meta?.title ?? "Sans titre",
+      url: withBasePath(result.url, import.meta.env.BASE_URL),
       snippet: result.excerpt,
       subResults: result.sub_results
         ?.filter((sub): sub is Required<PagefindSubResult> => Boolean(sub.title && sub.url))
-        .map((sub) => ({ title: sub.title, url: sub.url })),
+        .map((sub) => ({
+          title: sub.title,
+          url: withBasePath(sub.url, import.meta.env.BASE_URL),
+        })),
     }));
   },
 };

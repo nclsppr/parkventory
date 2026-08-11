@@ -54,7 +54,27 @@ Depuis la racine du projet :
 
 ## Publication
 
-Le build local contient toutes les audiences afin de rendre le corpus
-navigable. Il ne doit pas être publié tel quel. Une surface publiée sélectionne
-explicitement ses collections autorisées et prouve qu'aucun document interne
-n'est exposé.
+Le build local sans filtre contient toutes les audiences afin de rendre le
+corpus navigable. Il ne doit jamais être publié tel quel.
+
+Le workflow GitHub Pages est configuré pour publier Nimbus sous
+`https://nclsppr.github.io/parkventory/docs/` dans le même artefact que la démo
+frontend. `scripts/build_pages.sh` fixe :
+
+- `NIMBUS_PUBLIC_COLLECTIONS=product` ;
+- `NIMBUS_SITE_ORIGIN=https://nclsppr.github.io` ;
+- `NIMBUS_BASE_PATH=/parkventory/docs` ;
+- `NIMBUS_TITLE=Documentation Parkventory` ;
+- `NIMBUS_DESCRIPTION=Vision, parcours, rôles et règles produit de Parkventory.` ;
+- `NIMBUS_GITHUB=https://github.com/nclsppr/parkventory`.
+
+L'adaptateur refuse une collection inconnue ou dont la visibilité n'est pas
+`public`. Il refuse aussi un lien Markdown relatif direct d'une source publiée
+vers un fichier `.md` classé mais exclu. La gate contrôle l'absence de routes
+internes avant de copier `docs-nimbus/dist/` sous `frontend/dist/docs/`.
+
+Vérifier après publication l'accueil, les quatre pages produit, la recherche,
+`llms.txt`, `llms-full.txt`, les variantes Markdown, le sitemap et une route
+interne représentative qui doit répondre `404`. La décision et le rollback
+vivent dans
+[`ADR-0006`](../docs/decisions/adr-0006-publication-nimbus-github-pages.md).

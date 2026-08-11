@@ -15,7 +15,7 @@ const basePath = rawBasePath === "/" ? "" : rawBasePath.replace(/\/+$/, "");
 
 const nimbusConfig = defineNimbusConfig({
   site: siteOrigin,
-  title: process.env.NIMBUS_TITLE?.trim() || "Parkventory Documentation",
+  title: process.env.NIMBUS_TITLE?.trim() || "Documentation Parkventory",
   description:
     process.env.NIMBUS_DESCRIPTION?.trim() ||
     "Vision produit, architecture Quarkus et décisions de conception de Parkventory.",

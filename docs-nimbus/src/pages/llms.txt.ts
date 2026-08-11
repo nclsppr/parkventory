@@ -1,6 +1,7 @@
 // Root /llms.txt — sectioned index for AI agents.
 import { getIndexedTopLevel } from "@cloudflare/nimbus-docs";
 import { config } from "virtual:nimbus/config";
+import { absoluteSiteUrl } from "../lib/routing.mjs";
 
 export const prerender = true;
 
@@ -10,9 +11,13 @@ export async function GET() {
   const lines = [
     `# ${config.title}`,
     "",
-    config.description ?? "Documentation index for AI agents.",
+    config.description ?? "Index de documentation pour les agents d'IA.",
     "",
-    `Full corpus (all pages, one document): ${new URL("/llms-full.txt", config.site).href}`,
+    `Corpus complet (toutes les pages dans un document) : ${absoluteSiteUrl(
+      "/llms-full.txt",
+      config.site,
+      import.meta.env.BASE_URL,
+    )}`,
     "",
     "## Pages",
     "",
@@ -26,7 +31,11 @@ export async function GET() {
     const description = leaf.description ? ` — ${leaf.description}` : "";
     rows.push({
       key: leaf.url,
-      line: `- [${leaf.title}](${new URL(leaf.markdownUrl, config.site).href})${description}`,
+      line: `- [${leaf.title}](${absoluteSiteUrl(
+        leaf.markdownUrl,
+        config.site,
+        import.meta.env.BASE_URL,
+      )})${description}`,
     });
   }
 
@@ -35,7 +44,11 @@ export async function GET() {
     if (group.kind === "version") continue;
     rows.push({
       key: `/${group.slug}`,
-      line: `- [${group.label}](${new URL(`/${group.slug}/llms.txt`, config.site).href})`,
+      line: `- [${group.label === "docs" ? "Documentation produit" : group.label}](${absoluteSiteUrl(
+        `/${group.slug}/llms.txt`,
+        config.site,
+        import.meta.env.BASE_URL,
+      )})`,
     });
   }
 

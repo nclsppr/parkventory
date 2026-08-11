@@ -10,14 +10,20 @@ par Flyway. En local, l'authentification par lien magique, les sessions, les
 places, les partages, les réservations, les invitations et les notifications
 sont réellement branchés sur PostgreSQL et Mailpit.
 
-## Voir la démo publique
+## Voir les surfaces Pages
 
 - [landing publique](https://nclsppr.github.io/parkventory/) ;
-- [application publique](https://nclsppr.github.io/parkventory/app).
+- [application publique](https://nclsppr.github.io/parkventory/app) ;
+- [documentation Nimbus — URL cible](https://nclsppr.github.io/parkventory/docs/).
 
-GitHub Pages sert uniquement le frontend en mode démo statique. Les actions y
-sont simulées dans le navigateur : aucun compte n'est créé, aucun e-mail n'est
-envoyé et aucune donnée n'est persistée.
+GitHub Pages sert actuellement le frontend en mode démo statique. Le workflow
+est prêt à y ajouter la documentation Nimbus à l'URL ci-dessus ; la disponibilité
+distante du commit courant doit encore être vérifiée après déploiement. Les
+actions du frontend y sont simulées dans le navigateur : aucun compte n'est
+créé, aucun e-mail n'est envoyé et aucune donnée n'est persistée. Le build
+Nimbus destiné à Pages inclut uniquement la collection produit classée
+`public` ; les documents internes, les décisions et les références restent
+absents de l'artefact.
 
 ## Démarrer en local
 
@@ -74,6 +80,8 @@ Vite dans un projet Compose isolé.
 ## Périmètre actuel
 
 - React 19, TypeScript 7 et Vite 8 pour la landing et l'application responsive ;
+- thèmes sombre et clair sélectionnables, choix persistant, contrastes testés
+  et parcours clavier vérifiés ;
 - Java 25 et Quarkus LTS pour `/api/v1`, SmallRye Health et OpenAPI ;
 - PostgreSQL 18 avec contraintes temporelles d'affectation et de réservation ;
 - authentification locale par lien magique, cookie de session `HttpOnly` et
@@ -91,6 +99,7 @@ Vite dans un projet Compose isolé.
 
 ## Documentation essentielle
 
+- [documentation Nimbus — URL Pages cible](https://nclsppr.github.io/parkventory/docs/) : vision, parcours, rôles et règles produit ;
 - [`PROJECT.md`](PROJECT.md) : contrat stable et architecture ;
 - [`STATUS.md`](STATUS.md) : état réellement vérifié ;
 - [`ROADMAP.md`](ROADMAP.md) : séquencement et sorties ;

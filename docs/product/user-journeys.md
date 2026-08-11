@@ -125,5 +125,6 @@ Desktop :
 - Paramètres
 - Administration, conditionnelle
 
-Mobile : Accueil, Partager, Trouver et Réservations restent directement
-accessibles ; les autres sections passent dans un menu explicite.
+Mobile : Accueil, Partager et Trouver sont directement accessibles. La
+destination Réservations sera ajoutée avec sa route réelle ; les autres
+sections passent dans un menu explicite.

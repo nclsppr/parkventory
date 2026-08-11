@@ -104,5 +104,6 @@ vertical dans lequel :
 4. une tentative concurrente reçoit un conflit compréhensible ;
 5. aucune intervention administrateur ou opérateur n'a été nécessaire.
 
-Les critères de phase et leur ordre vivent uniquement dans
-[`ROADMAP.md`](../../ROADMAP.md).
+Les critères de phase et leur ordre sont maintenus dans la roadmap interne du
+dépôt. La documentation publique décrit le produit sans inclure ces documents
+d'exploitation ou de travail dans la surface Nimbus publique.

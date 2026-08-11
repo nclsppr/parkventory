@@ -12,7 +12,7 @@ Moteur déclaré : `nimbus`.
 | Produit | `public` | 4 |
 | Architecture et sécurité | `internal` | 3 |
 | Questions de travail | `internal` | 1 |
-| Décisions | `internal` | 5 |
+| Décisions | `internal` | 6 |
 | Références visuelles | `reference` | 1 |
 | Socle vendorisé | `reference` | 9 |
 | Maintenance Nimbus | `reference` | 1 |
@@ -56,6 +56,7 @@ Moteur déclaré : `nimbus`.
 - [docs/decisions/adr-0003-authentication-et-isolation.md](docs/decisions/adr-0003-authentication-et-isolation.md)
 - [docs/decisions/adr-0004-integrite-temporelle-reservations.md](docs/decisions/adr-0004-integrite-temporelle-reservations.md)
 - [docs/decisions/adr-0005-adaptateur-identite-mailpit-local.md](docs/decisions/adr-0005-adaptateur-identite-mailpit-local.md)
+- [docs/decisions/adr-0006-publication-nimbus-github-pages.md](docs/decisions/adr-0006-publication-nimbus-github-pages.md)
 
 ## Références visuelles
 
@@ -85,6 +86,7 @@ Ces chemins contiennent des dépendances ou sorties dérivées, pas des sources 
 | --- | --- |
 | Dépendances tierces | `node_modules/**/*.md` |
 | Sorties générées | `dist/**/*.md` |
+| Artefact GitHub Pages combiné généré | `frontend/dist/**/*.md` |
 | Sorties générées | `build/**/*.md` |
 | Environnement Python local | `.venv/**/*.md` |
 | Collection Nimbus générée depuis les sources classées | `docs-nimbus/src/content/docs/**/*.md` |

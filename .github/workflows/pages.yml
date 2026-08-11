@@ -33,10 +33,13 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Install documentation dependencies
+        run: npm ci --prefix docs-nimbus --ignore-scripts --no-audit --no-fund
+
       - name: Test frontend
         run: npm run frontend:test
 
-      - name: Build public demo and direct routes
+      - name: Build public demo, direct routes and public documentation
         run: npm run pages:build
 
       - name: Upload GitHub Pages artifact

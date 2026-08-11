@@ -85,7 +85,13 @@ function routeForSourcePath(sourcePath, basePath = "") {
   return slug ? `${basePath}/${slug}` : `${basePath || ""}/`;
 }
 
-function convertLinks(body, sourcePath, sourcePaths, basePath) {
+function convertLinks(
+  body,
+  sourcePath,
+  sourcePaths,
+  basePath,
+  classifiedSourcePaths = sourcePaths,
+) {
   const sourceDirectory = path.posix.dirname(sourcePath);
   let activeFence = null;
 
@@ -111,9 +117,17 @@ function convertLinks(body, sourcePath, sourcePaths, basePath) {
           let target = path.posix.normalize(
             path.posix.join(sourceDirectory, decodeURIComponent(rawTarget)),
           );
-          if (!sourcePaths.has(target)) {
+          if (!classifiedSourcePaths.has(target)) {
             const rootTarget = path.posix.basename(target);
-            if (sourcePaths.has(rootTarget)) target = rootTarget;
+            if (classifiedSourcePaths.has(rootTarget)) target = rootTarget;
+          }
+          if (
+            classifiedSourcePaths.has(target) &&
+            !sourcePaths.has(target)
+          ) {
+            throw new Error(
+              `Published Nimbus source ${sourcePath} links to excluded source ${target}.`,
+            );
           }
           return sourcePaths.has(target)
             ? `](${routeForSourcePath(target, basePath)}${fragment})`
@@ -167,12 +181,19 @@ export function destinationFor(sourcePath) {
   return destination;
 }
 
+export function syntheticIndexDestination(directory) {
+  return directory
+    ? path.join(destinationRoot, directory, "index.mdx")
+    : path.join(destinationRoot, "overview.mdx");
+}
+
 export function convertSourceDocument(
   source,
   sourcePath,
   visibility,
   sourcePaths,
   basePath = "",
+  classifiedSourcePaths = sourcePaths,
 ) {
   const { frontmatter, body } = splitFrontmatter(source, sourcePath);
   const extracted = extractTitle(body, frontmatter, sourcePath);
@@ -200,6 +221,7 @@ export function convertSourceDocument(
     sourcePath,
     sourcePaths,
     basePath,
+    classifiedSourcePaths,
   );
 
   return {
@@ -214,16 +236,71 @@ function loadInventory() {
     encoding: "utf8",
   });
   const inventory = JSON.parse(raw);
-  const entries = inventory.collections.flatMap((collection) =>
+  return inventory;
+}
+
+function entriesFromCollections(collections) {
+  return collections.flatMap((collection) =>
     collection.files.map((sourcePath) => ({
+      collectionId: collection.id,
       sourcePath,
       visibility: collection.visibility,
     })),
   );
-  return { entries, inventory };
 }
 
-async function writeSyntheticIndexes(entries, metadata, basePath) {
+export function selectPublicCollections(inventory, requestedCollectionIds) {
+  const collectionIds = requestedCollectionIds
+    .split(",")
+    .map((collectionId) => collectionId.trim())
+    .filter(Boolean);
+
+  if (collectionIds.length === 0) {
+    throw new Error("NIMBUS_PUBLIC_COLLECTIONS must name at least one collection.");
+  }
+
+  const uniqueCollectionIds = [...new Set(collectionIds)];
+  const collectionsById = new Map(
+    inventory.collections.map((collection) => [collection.id, collection]),
+  );
+  const selectedCollections = uniqueCollectionIds.map((collectionId) => {
+    const collection = collectionsById.get(collectionId);
+    if (!collection) {
+      throw new Error(`Unknown public Nimbus collection: ${collectionId}`);
+    }
+    if (collection.visibility !== "public") {
+      throw new Error(
+        `Refusing to publish Nimbus collection ${collectionId}: ` +
+          `visibility is ${collection.visibility}, expected public.`,
+      );
+    }
+    return collection;
+  });
+
+  const entries = entriesFromCollections(selectedCollections);
+  if (entries.length === 0) {
+    throw new Error("The selected public Nimbus collections contain no Markdown files.");
+  }
+
+  return { collectionIds: uniqueCollectionIds, entries };
+}
+
+export function publicationSelectionFromEnvironment(inventory, environment) {
+  if (!Object.hasOwn(environment, "NIMBUS_PUBLIC_COLLECTIONS")) return null;
+  return selectPublicCollections(
+    inventory,
+    environment.NIMBUS_PUBLIC_COLLECTIONS ?? "",
+  );
+}
+
+function syntheticDirectoryTitle(directory) {
+  const basename = path.posix.basename(directory);
+  if (basename === "docs") return "Documentation";
+  if (basename === "product") return "Produit";
+  return basename.replace(/[-_]/gu, " ");
+}
+
+async function writeSyntheticIndexes(entries, metadata, basePath, visibility = "reference") {
   const sourcePaths = new Set(entries.map((entry) => entry.sourcePath));
   const directories = new Set([""]);
   for (const { sourcePath } of entries) {
@@ -262,7 +339,7 @@ async function writeSyntheticIndexes(entries, metadata, basePath) {
         href: routeForSourcePath(sourcePath, basePath),
       })),
       ...[...childDirectories].map((child) => ({
-        label: path.posix.basename(child),
+        label: syntheticDirectoryTitle(child),
         href: routeForSourcePath(`${child}/index.md`, basePath),
       })),
     ]
@@ -270,15 +347,15 @@ async function writeSyntheticIndexes(entries, metadata, basePath) {
       .map(({ label, href }) => `- [${label}](${href})`)
       .join("\n");
     const title = directory
-      ? path.posix.basename(directory).replace(/[-_]/gu, " ")
+      ? syntheticDirectoryTitle(directory)
       : "Documentation";
-    const outputPath = path.join(destinationRoot, directory, "index.mdx");
+    const outputPath = syntheticIndexDestination(directory);
     const frontmatter = {
       title,
       sidebar: { label: title },
       searchable: true,
       sourcePath: `generated:${directory || "root"}`,
-      visibility: "reference",
+      visibility,
     };
     await mkdir(path.dirname(outputPath), { recursive: true });
     await writeFile(
@@ -304,8 +381,18 @@ export async function syncContent() {
   }
 
   const basePath = normalizeBasePath(process.env.NIMBUS_BASE_PATH || "/");
-  const { entries } = loadInventory();
+  const inventory = loadInventory();
+  const publicSelection = publicationSelectionFromEnvironment(
+    inventory,
+    process.env,
+  );
+  const entries = publicSelection
+    ? publicSelection.entries
+    : entriesFromCollections(inventory.collections);
   const sourcePaths = new Set(entries.map((entry) => entry.sourcePath));
+  const classifiedSourcePaths = new Set(
+    entriesFromCollections(inventory.collections).map((entry) => entry.sourcePath),
+  );
   const destinations = new Set();
   const metadata = new Map();
 
@@ -329,6 +416,7 @@ export async function syncContent() {
       entry.visibility,
       sourcePaths,
       basePath,
+      classifiedSourcePaths,
     );
     await mkdir(path.dirname(outputPath), { recursive: true });
     await writeFile(outputPath, converted.content, "utf8");
@@ -339,12 +427,20 @@ export async function syncContent() {
     entries,
     metadata,
     basePath,
+    publicSelection ? "public" : "reference",
   );
+  const scope = publicSelection
+    ? ` for public collection(s) ${publicSelection.collectionIds.join(", ")}`
+    : "";
   process.stdout.write(
     `Nimbus content: ${entries.length + syntheticCount} pages generated ` +
-      `from ${entries.length} maintained Markdown files.\n`,
+      `from ${entries.length} maintained Markdown files${scope}.\n`,
   );
-  return { sourceCount: entries.length, syntheticCount };
+  return {
+    sourceCount: entries.length,
+    syntheticCount,
+    publicCollectionIds: publicSelection?.collectionIds ?? [],
+  };
 }
 
 const isDirectExecution =

@@ -11,6 +11,7 @@
 
 import { getIndexedEntries, renderEntryAsMarkdown, type IndexedEntry } from "@cloudflare/nimbus-docs";
 import { config } from "virtual:nimbus/config";
+import { absoluteSiteUrl } from "../../lib/routing.mjs";
 
 export const prerender = true;
 
@@ -53,14 +54,20 @@ export async function GET({ props }: { props: SlugProps }) {
     `title: ${JSON.stringify(title)}`,
     ...(description ? [`description: ${JSON.stringify(description)}`] : []),
     ...(socialImage
-      ? [`image: ${JSON.stringify(new URL(socialImage, config.site).href)}`]
+      ? [`image: ${JSON.stringify(
+          absoluteSiteUrl(socialImage, config.site, import.meta.env.BASE_URL),
+        )}`]
       : []),
     ...(version ? [`version: ${JSON.stringify(version)}`] : []),
     "---",
     "",
-    "> Documentation Index",
-    `> Fetch the complete documentation index at: ${new URL("/llms.txt", config.site).href}`,
-    "> Use this file to discover all available pages before exploring further.",
+    "> Index de la documentation",
+    `> Index complet de la documentation : ${absoluteSiteUrl(
+      "/llms.txt",
+      config.site,
+      import.meta.env.BASE_URL,
+    )}`,
+    "> Utilisez ce fichier pour découvrir les pages disponibles avant de les parcourir.",
     "",
     `# ${title}`,
     "",
@@ -68,7 +75,11 @@ export async function GET({ props }: { props: SlugProps }) {
     "",
     // Point at the authored source (`.mdx` twin) when it exists — the
     // `.md` alternate referencing itself was a placeholder.
-    `Source: ${new URL(sourceUrl ?? markdownUrl, config.site).href}`,
+    `Source : ${absoluteSiteUrl(
+      sourceUrl ?? markdownUrl,
+      config.site,
+      import.meta.env.BASE_URL,
+    )}`,
     "",
   ].join("\n");
 

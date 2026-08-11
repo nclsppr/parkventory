@@ -744,3 +744,37 @@ dépassent 6,16:1.
 | Pages | [Run 31490845612](https://github.com/nclsppr/parkventory/actions/runs/31490845612) réussi et déployé |
 | Probes publiques | Landing, `/app/`, `/app/partager/`, `/app/trouver/` et `/auth/callback/` répondent HTTP 200 ; `/app/inconnue/` répond HTTP 404 |
 | Artefact publié | La feuille `index-BF7UhOiP.css` contient les règles de couleurs forcées et les corrections du thème clair |
+
+## Extension : publication Nimbus filtrée du 2026-08-11
+
+La documentation produit doit être accessible depuis le README sur la même
+surface GitHub Pages que la démo. Le build Nimbus local complet contient aussi
+des audiences `internal` et `reference` ; il n'a donc pas été copié directement.
+L'ADR-0006 retient une allowlist explicite et un artefact Pages unique.
+
+### Périmètre prêt à publier
+
+| Élément | Valeur vérifiée localement |
+| --- | --- |
+| URL cible | `https://nclsppr.github.io/parkventory/docs/` |
+| Collection autorisée | `product`, visibilité `public` |
+| Sources | 4 Markdown : vision, parcours, rôles et règles métier |
+| Sortie Nimbus | 7 pages de contenu indexées, 9 fichiers HTML et 93 fichiers publics |
+| Artefact Pages | `frontend/dist/` avec la démo à la racine et Nimbus sous `docs/` |
+| Décision | `docs/decisions/adr-0006-publication-nimbus-github-pages.md` |
+
+### Contrôles locaux
+
+| Contrôle | Résultat | Frontière de preuve |
+| --- | --- | --- |
+| Tests d'adaptateur Nimbus | Tests réussis : allowlist, rejet non public, variable vide, lien Markdown relatif exclu, index synthétique, base path et structures de navigation | Tests Node ; le rendu final est contrôlé séparément |
+| Gate Nimbus publique | Typecheck sans diagnostic, build, recherche Pagefind et 8 fichiers lintés | Variables Pages fixées par `scripts/build_pages.sh` |
+| Audience | Aucune front matter `internal`, `reference` ou `archive` dans la collection générée | Les visibilités restent éditoriales, pas un contrôle d'accès au dépôt public |
+| Routes interdites | `project`, `status`, `design`, `delivery-evidence`, décisions, documents internes, Foundation et maintenance Nimbus absents | Contrôle de l'arbre généré avant copie |
+| URL sous chemin | Navigation, recherche, canonical, Open Graph, sitemap, `robots.txt`, `llms.txt`, `llms-full.txt`, `index.md` et `index.mdx` utilisent `/parkventory/docs/` ; serveur statique local : routes autorisées HTTP 200 et deux routes exclues HTTP 404 | Artefact monté sous `/parkventory/` ; disponibilité distante encore à prouver |
+| Corpus local complet | 37 Markdown donnent 46 pages de contenu ; 102 fichiers sans diagnostic et 47 fichiers lintés | Ce corpus complet n'entre jamais dans l'artefact Pages |
+
+Le workflow Pages installe les lockfiles frontend et Nimbus, teste le frontend,
+exécute `npm run pages:build`, puis charge l'unique dossier `frontend/dist`.
+La preuve de publication distante sera ajoutée après le premier déploiement de
+cette unité ; elle ne doit pas être déduite du build local.

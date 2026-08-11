@@ -54,8 +54,10 @@ Ce document porte la sémantique canonique. Les valeurs exécutables vivent dans
 alignés dans cette première surface. Une extraction vers des modules dédiés ne
 sera faite que si la croissance du design system la justifie.
 
-Les valeurs ont été estimées à partir de JPEG compressés. Elles sont
-provisoires jusqu'au prototype et à la mesure de contraste sur les composants.
+Les valeurs initiales ont été estimées à partir de JPEG compressés. Le prototype
+du 2026-08-11, les tests de ratios et les audits Axe ont ensuite validé ou
+ajusté les tokens exécutables. `frontend/src/styles.css` reste l'autorité de
+mise en œuvre ; `STATUS.md` et `DELIVERY-EVIDENCE.md` portent les preuves datées.
 
 ### Couleurs
 
@@ -180,7 +182,7 @@ essentiel ne descend sous 14 px ; les champs restent à 16 px sur mobile.
 ## Accessibilité
 
 - Niveau visé : WCAG 2.2 AA.
-- Focus : anneau glacier ou acide de 2 px avec offset visible.
+- Focus : anneau glacier de 2 px avec offset de 3 px.
 - Le lien « Aller au contenu » est une cible de 44 px positionnée après
   `safe-area-inset-top` et les marges latérales de l'écran ; le viewport utilise
   `viewport-fit=cover` pour Safari iPhone.
@@ -196,6 +198,9 @@ essentiel ne descend sous 14 px ; les champs restent à 16 px sur mobile.
 - Calendrier doublé par une liste ou table sémantique.
 - Confirmations et conflits annoncés via une région `aria-live`.
 - Erreurs liées programmatiquement aux champs.
+- Un intervalle horaire inversé marque les deux champs invalides, les relie à
+  une erreur visible commune et bloque la requête. Aucun contrôle masqué ne
+  reste dans l'ordre de tabulation.
 - Photographie tramée décorative masquée aux technologies d'assistance.
 - Dates, heures et fuseau toujours explicites.
 - Zoom 200 %, reflow, contenu long et chaînes non sécables testés.

@@ -1,0 +1,174 @@
+---
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { config } from "virtual:nimbus/config";
+import {
+  getCollectionLlmsUrl,
+  getVersionAlternates,
+  getVersionStatus,
+} from "@cloudflare/nimbus-docs";
+import type { HeadElement } from "@cloudflare/nimbus-docs/types";
+import {
+  absoluteSiteUrl,
+  withBasePath,
+  withoutBasePath,
+} from "@/lib/routing.mjs";
+
+interface Props {
+  title: string;
+  description?: string;
+  noindex?: boolean;
+  markdownUrl?: string;
+  socialImage?: string;
+  lastUpdated?: Date;
+  head?: HeadElement[];
+  collection?: string;
+  entryId?: string;
+}
+
+const {
+  title,
+  description,
+  noindex,
+  markdownUrl,
+  socialImage,
+  lastUpdated,
+  head: pageHead = [],
+  collection,
+  entryId,
+} = Astro.props;
+
+const basePath = import.meta.env.BASE_URL;
+const versionRecord =
+  collection && entryId ? await getVersionAlternates(collection, entryId) : null;
+const versionStatus = collection ? await getVersionStatus(collection) : null;
+const isHiddenVersion = versionStatus?.isHidden === true;
+const versionCanonicalPath = versionRecord?.canonical?.url ?? null;
+const llmsIndexPath = isHiddenVersion
+  ? null
+  : collection
+    ? await getCollectionLlmsUrl(collection)
+    : "/llms.txt";
+const llmsIndexUrl = llmsIndexPath && Astro.site
+  ? absoluteSiteUrl(llmsIndexPath, Astro.site, basePath)
+  : llmsIndexPath
+    ? withBasePath(llmsIndexPath, basePath)
+    : null;
+const canonical = Astro.site
+  ? absoluteSiteUrl(versionCanonicalPath ?? Astro.url.pathname, Astro.site, basePath)
+  : null;
+
+const fullTitle = title !== config.title ? `${title} | ${config.title}` : title;
+const resolvedDescription = description ?? config.description;
+const lang = config.locale ?? "en";
+const isHomePage = withoutBasePath(Astro.url.pathname, basePath) === "/";
+const publicDir = join(process.cwd(), "public");
+const faviconCandidates: ReadonlyArray<{ file: string; type: string }> = [
+  { file: "favicon.svg", type: "image/svg+xml" },
+  { file: "favicon.ico", type: "image/x-icon" },
+  { file: "favicon.png", type: "image/png" },
+];
+const matchedFavicon =
+  faviconCandidates.find((candidate) => existsSync(join(publicDir, candidate.file))) ??
+  faviconCandidates[0];
+const defaultSocialImage = existsSync(join(publicDir, "opengraph.png"))
+  ? "/opengraph.png"
+  : existsSync(join(publicDir, "logo.png"))
+    ? "/logo.png"
+    : "/og.png";
+const socialImagePath = socialImage ?? config.socialImage ?? defaultSocialImage;
+const ogImage = socialImagePath && Astro.site
+  ? absoluteSiteUrl(socialImagePath, Astro.site, basePath)
+  : socialImagePath
+    ? withBasePath(socialImagePath, basePath)
+    : null;
+const siteRoot = Astro.site
+  ? absoluteSiteUrl("/", Astro.site, basePath)
+  : withBasePath("/", basePath);
+const structuredData = canonical
+  ? JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": isHomePage ? "WebSite" : "WebPage",
+      name: fullTitle,
+      ...(resolvedDescription ? { description: resolvedDescription } : {}),
+      url: canonical,
+      inLanguage: lang,
+      ...(ogImage ? { image: ogImage } : {}),
+      ...(isHomePage
+        ? {}
+        : {
+            isPartOf: {
+              "@type": "WebSite",
+              name: config.title,
+              url: siteRoot,
+            },
+            ...(lastUpdated ? { dateModified: lastUpdated.toISOString() } : {}),
+          }),
+    })
+  : null;
+const mergedHead = [...(config.head ?? []), ...pageHead];
+const sitemapHref = withBasePath("/sitemap-index.xml", basePath);
+const shikiCssHref = `${withBasePath("/_nimbus/shiki.css", basePath)}${
+  import.meta.env.DEV ? `?v=${Date.now()}` : ""
+}`;
+---
+
+<title>{fullTitle}</title>
+<meta name="generator" content={Astro.generator} />
+{resolvedDescription && <meta name="description" content={resolvedDescription} />}
+{noindex && <meta name="robots" content="noindex" />}
+
+<link
+  rel="icon"
+  type={matchedFavicon.type}
+  href={withBasePath(`/${matchedFavicon.file}`, basePath)}
+/>
+<link rel="stylesheet" href={shikiCssHref} />
+{canonical && <link rel="canonical" href={canonical} />}
+{Astro.site && <link rel="sitemap" href={sitemapHref} />}
+{markdownUrl && !isHiddenVersion && (
+  <link rel="alternate" type="text/markdown" href={markdownUrl} />
+)}
+{llmsIndexUrl && (
+  <link rel="alternate" type="text/plain" href={llmsIndexUrl} title="LLM index" />
+)}
+{!isHiddenVersion && versionRecord?.alternates.map((alternate) => (
+  <link
+    rel="alternate"
+    data-version={alternate.version}
+    href={Astro.site
+      ? absoluteSiteUrl(alternate.url, Astro.site, basePath)
+      : withBasePath(alternate.url, basePath)}
+  />
+))}
+
+<meta property="og:title" content={fullTitle} />
+<meta property="og:type" content={isHomePage ? "website" : "article"} />
+<meta property="og:site_name" content={config.title} />
+<meta property="og:locale" content={lang} />
+{resolvedDescription && <meta property="og:description" content={resolvedDescription} />}
+{canonical && <meta property="og:url" content={canonical} />}
+{ogImage && <meta property="og:image" content={ogImage} />}
+{ogImage && config.socialImageAlt && (
+  <meta property="og:image:alt" content={config.socialImageAlt} />
+)}
+{ogImage && <meta property="og:image:width" content="1200" />}
+{ogImage && <meta property="og:image:height" content="630" />}
+{!isHomePage && lastUpdated && (
+  <meta property="article:modified_time" content={lastUpdated.toISOString()} />
+)}
+
+<meta name="twitter:card" content={ogImage ? "summary_large_image" : "summary"} />
+<meta name="twitter:title" content={fullTitle} />
+{resolvedDescription && <meta name="twitter:description" content={resolvedDescription} />}
+{ogImage && <meta name="twitter:image" content={ogImage} />}
+{ogImage && config.socialImageAlt && (
+  <meta name="twitter:image:alt" content={config.socialImageAlt} />
+)}
+{structuredData && (
+  <script is:inline type="application/ld+json" set:html={structuredData} />
+)}
+
+{mergedHead.map(({ tag: Tag, attrs = {}, content }) =>
+  content ? <Tag {...attrs} set:html={content} /> : <Tag {...attrs} />
+)}

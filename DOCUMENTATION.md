@@ -13,9 +13,11 @@ Tous les Markdown maintenus appartiennent à une collection de
 - `archive` : documents historiques explicitement retirés ; aucune archive
   n'existe actuellement.
 
-Le dépôt GitHub est public : `internal` organise une future publication Nimbus,
-mais ne constitue pas un contrôle d'accès. Aucun secret ni contenu confidentiel
-ne doit être committé.
+Le dépôt GitHub est public : `internal` organise le corpus complet, mais ne
+constitue pas un contrôle d'accès. Aucun secret ni contenu confidentiel ne doit
+être committé. La surface Nimbus destinée à Pages autorise explicitement la
+seule collection `product`, classée `public`, à l'adresse cible
+`https://nclsppr.github.io/parkventory/docs/`.
 
 ## Règles
 
@@ -34,10 +36,17 @@ ne doit être committé.
 ```bash
 python3 scripts/documentation_catalog.py --write
 ./scripts/verify.sh
+npm run pages:build
 ```
 
 Nimbus 0.8.2 est épinglé dans `docs-nimbus/package.json`. La collection générée
-et `docs-nimbus/dist/` restent ignorés par Git.
+et `docs-nimbus/dist/` restent ignorés par Git. `npm run pages:build` construit
+le corpus public avec l'allowlist `product`, le chemin de base
+`/parkventory/docs/`, puis le copie sous `frontend/dist/docs/` dans l'unique
+artefact GitHub Pages. Le build échoue si une collection absente ou non publique
+est demandée, si une source publique utilise un lien Markdown relatif direct
+vers un fichier `.md` classé mais exclu ou si une route interne apparaît dans la
+sortie. Le lint Nimbus contrôle en plus les routes internes du corpus retenu.
 
 ## Ajouter un document
 

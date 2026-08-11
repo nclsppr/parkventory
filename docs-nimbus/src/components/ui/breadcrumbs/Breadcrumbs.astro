@@ -22,7 +22,7 @@ const tailItems = shouldCollapse ? items.slice(items.length - tailCount) : [];
 ---
 
 {items.length > 1 && (
-  <nav aria-label="Breadcrumb" class={cn("text-xs font-medium", className)} {...attrs}>
+  <nav aria-label="Fil d'Ariane" class={cn("text-xs font-medium", className)} {...attrs}>
     <ol class="flex flex-wrap items-center gap-y-0.5 text-muted-foreground">
       {headItems.map((crumb, i) => (
         <li class="flex items-center">

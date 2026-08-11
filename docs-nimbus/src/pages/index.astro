@@ -2,11 +2,19 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import Header from "../components/Header.astro";
 import { config } from "virtual:nimbus/config";
+import { getCollection } from "astro:content";
+import { withBasePath } from "../lib/routing.mjs";
 
-const basePath = import.meta.env.BASE_URL.endsWith("/")
-  ? import.meta.env.BASE_URL
-  : `${import.meta.env.BASE_URL}/`;
-const documentationHref = `${basePath}overview/`;
+const entries = await getCollection("docs");
+const entry =
+  entries.find(({ data }) => data.sourcePath === "README.md") ??
+  entries.find(({ data }) => data.sourcePath === "docs/product/vision.md") ??
+  entries.find(({ data }) => !data.sourcePath.startsWith("generated:")) ??
+  entries[0];
+
+if (!entry) throw new Error("Nimbus requires at least one documentation entry.");
+
+const documentationHref = withBasePath(`/${entry.id}/`, import.meta.env.BASE_URL);
 ---
 
 <BaseLayout title={config.title} description={config.description}>
@@ -24,7 +32,7 @@ const documentationHref = `${basePath}overview/`;
       >
       </div>
       <p class="mb-3 font-mono text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-        Socle produit et technique
+        Documentation produit
       </p>
       <h1
         class="text-foreground leading-tight"

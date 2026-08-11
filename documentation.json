@@ -64,6 +64,10 @@
       "reason": "Sorties générées"
     },
     {
+      "pattern": "frontend/dist/**/*.md",
+      "reason": "Artefact GitHub Pages combiné généré"
+    },
+    {
       "pattern": "build/**/*.md",
       "reason": "Sorties générées"
     },
