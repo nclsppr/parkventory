@@ -645,3 +645,53 @@ Le commit, le push, les runs GitHub Actions et les probes Pages ci-dessous ont
 | Routes publiques | Landing, `/app/`, `/app/partager/`, `/app/trouver/` et `/auth/callback/` répondent HTTP 200 ; `/app/inconnue/` répond HTTP 404 avec le shell courant |
 | Assets publics | JavaScript et CSS finaux, SVG canonique, GSAP et ScrollTrigger différés répondent HTTP 200 ; le bundle principal référence explicitement les deux chunks motion |
 | Frontière de preuve | La géométrie safe-area est publiée et contrôlée par le code, le build et Chromium ; le focus sous Dynamic Island doit encore être observé sur un iPhone Safari réel avant F05 |
+
+## Extension : thème clair sélectionnable du 2026-08-11
+
+Cette tranche conserve le thème sombre comme signature et premier choix, puis
+ajoute une variante claire ivoire explicitement sélectionnable. Elle couvre la
+landing, l'authentification, l'application, les routes de partage et recherche
+ainsi que la page 404. La préférence binaire est appliquée avant le premier
+rendu, stockée dans le navigateur et ne dépend ni du backend ni du thème du
+système.
+
+### Contrôles de l'interface
+
+| Contrôle | Résultat observé | Limite |
+| --- | --- | --- |
+| React | 19 tests réussis : défaut sombre, sélection claire, persistance, valeur invalide et parcours existants | JSDOM ne calcule pas les contrastes ni la géométrie |
+| Vite et Pages | TypeScript et cinq entrées statiques construits ; JavaScript initial inférieur à 77 Ko gzip | Mesure locale, pas réseau réel |
+| Revue responsive | Deux thèmes revus à 1 440 × 900 et 390 × 844 ; absence de débordement contrôlée à 320 px et 768 px | Chromium local, pas Safari iPhone réel |
+| Palette claire | Texte principal 18,25:1, encres d'accent au moins 7,13:1, bordure de contrôle 3,42:1 et texte sur aplats au moins 14,49:1 | Calcul sRGB des paires canoniques, pas audit automatisé de chaque composant |
+| Accessibilité | Deux boutons nommés avec `aria-pressed`, cibles 44 px, focus visible et anneau d'état contrasté | Une revue avec technologies d'assistance réelles reste requise avant pilote |
+
+### Verrou de dépendance déclenché par la CI
+
+Le premier commit de l'interface, `75c6a3784617dca016a485c5dc3b31aded7a446e`,
+a déclenché l'avis npm `GHSA-2v37-7h3g-55p8` sur `nanoid < 3.3.17` dans la
+gate Verify. La dépendance n'est pas importée par Parkventory : elle est
+transitive, limitée au build frontend via PostCSS et Vite. Une mise à jour
+globale de Vite aurait élargi le risque ; le lockfile est donc seul déplacé de
+`nanoid` `3.3.16` vers la version compatible `3.3.18`.
+
+| Dimension | Observation datée |
+| --- | --- |
+| Besoin | Lever l'avis de disponibilité élevée signalé par la gate npm sans changement de contrat ni de runtime applicatif |
+| Origine et propriétaire | Package officiel npm `nanoid`, dépôt `ai/nanoid`, maintenu par son projet amont ; consommateur local : PostCSS `8.5.25` dans la chaîne Vite |
+| Version et intégrité | `3.3.18`, tarball npm verrouillé par `sha512-DTg4MJbGMWkfi6VZFdNt2/caMbQy4Ou+Op/hJQvGEWcnVfoA1QA+xzRKAzw9jD6+GVOOeYr/mIcuDSdug6F6+w==` |
+| Licence | MIT, inchangée et compatible avec la distribution actuelle |
+| Scripts, permissions et binaires | Aucun package direct ni permission ajouté ; le binaire npm existant reste celui de la dépendance transitive de développement |
+| Données, réseau et coût | Aucune donnée, requête runtime, rétention, secret, quota ou coût externe ajouté |
+| Compatibilité | PostCSS accepte `^3.3.16` ; `3.3.18` reste dans la même ligne majeure et conserve les moteurs Node déclarés |
+| Audit | `npm audit --audit-level=high`, npm `11.9.0`, exécuté le 2026-08-11 contre la base d'avis du registre npm : aucun avis dans le lockfile racine ; le lockfile Nimbus séparé et les avis futurs restent hors de cette preuve |
+| Retrait et rollback | Le retrait suit celui de PostCSS/Vite ; revenir à `3.3.16` réintroduirait l'avis et exige donc une dérogation explicite ou une autre version 3.x corrigée |
+| Réexamen | Rejouer l'audit à chaque changement de lockfile et avant chaque livraison |
+
+Les runs initiaux `31481985053` (Verify) et `31481985170` (Pages) ont aussi
+exposé l'attente déjà connue du test d'affectation d'une place. Son rejeu Pages
+a réussi sans changement de code ; le second passage Verify a franchi React et
+s'est arrêté uniquement sur l'avis npm ci-dessus. Aucun délai global de test
+n'a été relâché. Le test émet désormais des changements déterministes sur les
+deux champs contrôlés, vérifie l'activation du bouton, le `POST /spots` puis la
+seconde lecture de `/dashboard` avant d'attendre le formulaire de partage. Sa
+synchronisation reste ainsi bornée sur les états et effets réseau attendus.

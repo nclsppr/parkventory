@@ -1,5 +1,5 @@
 import { StrictMode } from "react";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
@@ -162,10 +162,23 @@ describe("Parkventory", () => {
     render(<App />);
 
     const spotForm = await screen.findByRole("form", { name: "Déclarer ma place" });
-    await user.type(within(spotForm).getByLabelText("Libellé de la place"), "A-24");
-    await user.type(within(spotForm).getByLabelText(/Niveau ou zone/i), "Niveau A");
-    await user.click(within(spotForm).getByRole("button", { name: "Affecter cette place" }));
+    fireEvent.change(within(spotForm).getByLabelText("Libellé de la place"), {
+      target: { value: "A-24" },
+    });
+    fireEvent.change(within(spotForm).getByLabelText(/Niveau ou zone/i), {
+      target: { value: "Niveau A" },
+    });
+    const assignButton = within(spotForm).getByRole("button", { name: "Affecter cette place" });
+    expect(assignButton).toBeEnabled();
+    await user.click(assignButton);
 
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/v1/spots",
+        expect.objectContaining({ method: "POST", credentials: "include" }),
+      );
+      expect(fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/dashboard"))).toHaveLength(2);
+    }, { timeout: 3_000 });
     expect(await screen.findByRole(
       "form",
       { name: "Formulaire de partage" },
@@ -173,10 +186,6 @@ describe("Parkventory", () => {
     )).toBeInTheDocument();
     expect(screen.getByDisplayValue("A-24")).toHaveAttribute("readonly");
     expect(await screen.findByRole("status")).toHaveTextContent(/affectée à votre profil/i);
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/v1/spots",
-      expect.objectContaining({ method: "POST", credentials: "include" }),
-    );
   });
 
   it("publie un partage réel depuis la route dédiée", async () => {

@@ -10,8 +10,8 @@ Snapshot de l'état réellement vérifié. Il ne remplace ni le contrat stable d
 | Vérifié le | 2026-08-11 |
 | Par | Codex |
 | Branche | `main` |
-| Commits applicatifs | `e069d04` — backend persistant et Mailpit ; `9f7b9be` — frontend local réel ; `c748d32` — logo SVG canonique ; `47ee871` — routes Partager et Trouver ; `25d3197` — narration et interactions de la landing ; `835515a` — stabilisation du parcours CI |
-| Environnement | Local macOS, OrbStack 29.4.0 ; CI GitHub Actions Ubuntu |
+| Commits applicatifs | `e069d04` — backend persistant et Mailpit ; `9f7b9be` — frontend local réel ; `c748d32` — logo SVG canonique ; `47ee871` — routes Partager et Trouver ; `25d3197` — narration et interactions de la landing ; `835515a` — stabilisation du parcours CI ; `75c6a37` — thèmes sombre et clair sélectionnables |
+| Environnement | Local macOS, OrbStack 29.4.0 ; contrôles du thème sous Codex Linux, Node 24.14.0 et npm 11.9.0 ; CI GitHub Actions Ubuntu |
 | Version livrée | F02, F03 et F04 partielles ; thèmes sombre et clair sélectionnables ; routes dédiées de partage et recherche ; démo publique GitHub Pages séparée |
 
 ## Résumé
@@ -96,6 +96,7 @@ livraison. `npm run compose:down` l'arrête en conservant les volumes.
 
 | Date | Commande ou contrôle | Résultat | Portée de la preuve |
 | --- | --- | --- | --- |
+| 2026-08-11 | `npm audit --audit-level=high` après verrouillage de `nanoid` `3.3.18` | Aucun avis rapporté | Arbre npm verrouillé à cet instant ; ne prédit pas les avis futurs |
 | 2026-08-11 | `npm run frontend:test` | 19 tests réussis | Sélecteur clair/sombre, choix initial, persistance, valeur invalide, routes et parcours React existants |
 | 2026-08-11 | `npm run frontend:build` et `npm run pages:build` | Builds Vite réussis ; CSS initial 13,11 Ko gzip et JavaScript initial inférieur à 77 Ko gzip | Typecheck, bundle local et cinq entrées statiques Pages ; ne mesure pas le LCP réseau |
 | 2026-08-11 | Revue des thèmes sombre et clair | Landing, application, partage et recherche à 1 440 × 900 et 390 × 844 ; contrôles de largeur à 320 px et 768 px, sans débordement ni erreur console | Chromium local ; Safari iPhone réel reste requis avant pilote |

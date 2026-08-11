@@ -92,6 +92,15 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 - illustration de parking originale générée pour le projet, master PNG,
   dérivé WebP et provenance.
 
+### Corrigé
+
+- stabilisation du test d'affectation d'une place sur la saisie contrôlée, la
+  création puis la relecture du dashboard, sans relever les délais de toute la
+  suite ;
+- verrouillage de la dépendance de build transitive `nanoid` en `3.3.18` pour
+  corriger l'avis `GHSA-2v37-7h3g-55p8` détecté par la gate npm, sans ajouter de
+  dépendance directe ni modifier le runtime applicatif.
+
 ### Limites
 
 - la démo GitHub Pages reste volontairement statique, sans compte ni email ;
