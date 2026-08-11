@@ -1,9 +1,9 @@
 # ADR-0006 : publication filtrée de Nimbus sur GitHub Pages
 
 - Statut : accepté
-- Statut d'implémentation : implémenté et vérifié localement
+- Statut d'implémentation : implémenté et vérifié sur GitHub Pages
 - Date : 2026-08-11
-- Dernière vérification : build Pages public, routes et audiences contrôlés le 2026-08-11
+- Dernière vérification : runs Verify `31499873532` et Pages `31499873475`, puis probes HTTP le 2026-08-11
 - Propriétaire : nclsppr
 - Domaine : documentation et exploitation
 - Remplace : aucune
@@ -91,8 +91,7 @@ reste public et ne doit contenir aucun secret ou contenu confidentiel.
 
 ### Positives
 
-- le README porte le lien Pages cible, dont la disponibilité est vérifiée après
-  déploiement ;
+- le README pointe vers une documentation disponible sans installation ;
 - les documents produit et la démo partagent une URL et un déploiement ;
 - une nouvelle collection publique n'entre pas dans Pages sans modification
   explicite de l'allowlist ;

@@ -7,9 +7,8 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Ajouté
 
-- préparation de la documentation Nimbus publique sous `/parkventory/docs/`,
-  reliée depuis le README et construite dans le même artefact Pages que la
-  démo ;
+- documentation Nimbus publique sous `/parkventory/docs/`, reliée depuis le
+  README et construite dans le même artefact Pages que la démo ;
 - interface Nimbus, métadonnées, recherche et surfaces Markdown/agents
   harmonisées en français sous le chemin GitHub Pages ;
 - allowlist de publication limitée à la collection `product`, avec rejet des

@@ -57,7 +57,7 @@ Depuis la racine du projet :
 Le build local sans filtre contient toutes les audiences afin de rendre le
 corpus navigable. Il ne doit jamais être publié tel quel.
 
-Le workflow GitHub Pages est configuré pour publier Nimbus sous
+GitHub Pages publie Nimbus sous
 `https://nclsppr.github.io/parkventory/docs/` dans le même artefact que la démo
 frontend. `scripts/build_pages.sh` fixe :
 

@@ -14,16 +14,13 @@ sont réellement branchés sur PostgreSQL et Mailpit.
 
 - [landing publique](https://nclsppr.github.io/parkventory/) ;
 - [application publique](https://nclsppr.github.io/parkventory/app) ;
-- [documentation Nimbus — URL cible](https://nclsppr.github.io/parkventory/docs/).
+- [documentation Nimbus](https://nclsppr.github.io/parkventory/docs/).
 
-GitHub Pages sert actuellement le frontend en mode démo statique. Le workflow
-est prêt à y ajouter la documentation Nimbus à l'URL ci-dessus ; la disponibilité
-distante du commit courant doit encore être vérifiée après déploiement. Les
-actions du frontend y sont simulées dans le navigateur : aucun compte n'est
-créé, aucun e-mail n'est envoyé et aucune donnée n'est persistée. Le build
-Nimbus destiné à Pages inclut uniquement la collection produit classée
-`public` ; les documents internes, les décisions et les références restent
-absents de l'artefact.
+GitHub Pages sert le frontend en mode démo statique et la documentation Nimbus.
+Les actions du frontend y sont simulées dans le navigateur : aucun compte n'est
+créé, aucun e-mail n'est envoyé et aucune donnée n'est persistée. Nimbus publie
+uniquement la collection produit classée `public` ; les documents internes, les
+décisions et les références restent absents de l'artefact Pages.
 
 ## Démarrer en local
 
@@ -99,7 +96,7 @@ Vite dans un projet Compose isolé.
 
 ## Documentation essentielle
 
-- [documentation Nimbus — URL Pages cible](https://nclsppr.github.io/parkventory/docs/) : vision, parcours, rôles et règles produit ;
+- [documentation Nimbus publique](https://nclsppr.github.io/parkventory/docs/) : vision, parcours, rôles et règles produit ;
 - [`PROJECT.md`](PROJECT.md) : contrat stable et architecture ;
 - [`STATUS.md`](STATUS.md) : état réellement vérifié ;
 - [`ROADMAP.md`](ROADMAP.md) : séquencement et sorties ;

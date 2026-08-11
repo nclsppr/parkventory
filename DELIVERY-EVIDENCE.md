@@ -752,11 +752,11 @@ surface GitHub Pages que la démo. Le build Nimbus local complet contient aussi
 des audiences `internal` et `reference` ; il n'a donc pas été copié directement.
 L'ADR-0006 retient une allowlist explicite et un artefact Pages unique.
 
-### Périmètre prêt à publier
+### Périmètre publié
 
-| Élément | Valeur vérifiée localement |
+| Élément | Valeur |
 | --- | --- |
-| URL cible | `https://nclsppr.github.io/parkventory/docs/` |
+| URL publique | `https://nclsppr.github.io/parkventory/docs/` |
 | Collection autorisée | `product`, visibilité `public` |
 | Sources | 4 Markdown : vision, parcours, rôles et règles métier |
 | Sortie Nimbus | 7 pages de contenu indexées, 9 fichiers HTML et 93 fichiers publics |
@@ -771,10 +771,19 @@ L'ADR-0006 retient une allowlist explicite et un artefact Pages unique.
 | Gate Nimbus publique | Typecheck sans diagnostic, build, recherche Pagefind et 8 fichiers lintés | Variables Pages fixées par `scripts/build_pages.sh` |
 | Audience | Aucune front matter `internal`, `reference` ou `archive` dans la collection générée | Les visibilités restent éditoriales, pas un contrôle d'accès au dépôt public |
 | Routes interdites | `project`, `status`, `design`, `delivery-evidence`, décisions, documents internes, Foundation et maintenance Nimbus absents | Contrôle de l'arbre généré avant copie |
-| URL sous chemin | Navigation, recherche, canonical, Open Graph, sitemap, `robots.txt`, `llms.txt`, `llms-full.txt`, `index.md` et `index.mdx` utilisent `/parkventory/docs/` ; serveur statique local : routes autorisées HTTP 200 et deux routes exclues HTTP 404 | Artefact monté sous `/parkventory/` ; disponibilité distante encore à prouver |
+| URL sous chemin | Navigation, recherche, canonical, Open Graph, sitemap, `robots.txt`, `llms.txt`, `llms-full.txt`, `index.md` et `index.mdx` utilisent `/parkventory/docs/` ; serveur statique local : routes autorisées HTTP 200 et deux routes exclues HTTP 404 | Artefact monté sous `/parkventory/` ; disponibilité distante contrôlée séparément |
 | Corpus local complet | 37 Markdown donnent 46 pages de contenu ; 102 fichiers sans diagnostic et 47 fichiers lintés | Ce corpus complet n'entre jamais dans l'artefact Pages |
 
 Le workflow Pages installe les lockfiles frontend et Nimbus, teste le frontend,
 exécute `npm run pages:build`, puis charge l'unique dossier `frontend/dist`.
-La preuve de publication distante sera ajoutée après le premier déploiement de
-cette unité ; elle ne doit pas être déduite du build local.
+
+### Publication vérifiée
+
+| Preuve distante | Résultat du 2026-08-11 |
+| --- | --- |
+| Commit applicatif | [`c61fb2e42f1638a52f0ec25774cebe584fcfca12`](https://github.com/nclsppr/parkventory/commit/c61fb2e42f1638a52f0ec25774cebe584fcfca12) poussé directement sur `main` |
+| Verify | [Run 31499873532](https://github.com/nclsppr/parkventory/actions/runs/31499873532) réussi au premier passage, gate complète incluse |
+| Pages | [Run 31499873475](https://github.com/nclsppr/parkventory/actions/runs/31499873475) réussi et déployé |
+| Routes autorisées | Accueil, aperçu, quatre pages produit, Pagefind, `llms.txt`, `llms-full.txt`, sitemap, `robots.txt`, favicon et variantes Markdown répondent HTTP 200 |
+| Métadonnées | Titre public, lien produit, canonical et image Open Graph portent tous `/parkventory/docs/` |
+| Routes exclues | `/parkventory/docs/project/` et `/parkventory/docs/docs/internal/open-questions/` répondent HTTP 404 |

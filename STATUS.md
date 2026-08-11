@@ -10,9 +10,9 @@ Snapshot de l'état réellement vérifié. Il ne remplace ni le contrat stable d
 | Vérifié le | 2026-08-11 |
 | Par | Codex |
 | Branche | `main` |
-| Commits applicatifs | `e069d04` — backend persistant et Mailpit ; `9f7b9be` — frontend local réel ; `c748d32` — logo SVG canonique ; `47ee871` — routes Partager et Trouver ; `25d3197` — narration et interactions de la landing ; `835515a` — stabilisation du parcours CI ; `75c6a37` — thèmes sombre et clair sélectionnables ; `e53ae9a` — stabilisation de la gate et audit npm ; `c5b9dc5` — audit de lisibilité du thème clair |
+| Commits applicatifs | `e069d04` — backend persistant et Mailpit ; `9f7b9be` — frontend local réel ; `c748d32` — logo SVG canonique ; `47ee871` — routes Partager et Trouver ; `25d3197` — narration et interactions de la landing ; `835515a` — stabilisation du parcours CI ; `75c6a37` — thèmes sombre et clair sélectionnables ; `e53ae9a` — stabilisation de la gate et audit npm ; `c5b9dc5` — audit de lisibilité du thème clair ; `c61fb2e` — publication Nimbus filtrée |
 | Environnement | Local macOS, OrbStack 29.4.0 ; contrôles du thème sous Codex Linux, Node 24.14.0 et npm 11.9.0 ; CI GitHub Actions Ubuntu |
-| Version livrée | F02, F03 et F04 partielles ; thèmes sombre et clair sélectionnables ; routes dédiées de partage et recherche ; artefact Pages combiné prêt à publier |
+| Version livrée | F02, F03 et F04 partielles ; thèmes sombre et clair sélectionnables ; routes dédiées de partage et recherche ; documentation Nimbus publique filtrée |
 
 ## Résumé
 
@@ -46,11 +46,11 @@ routes d'erreur. Le sélecteur explicite clair/sombre est accessible au clavier,
 appliqué avant le premier rendu et mémorisé localement sans dépendance au
 backend ni bascule silencieuse selon le système.
 
-Nimbus dispose maintenant d'un build Pages filtré sous `/parkventory/docs/`.
-Seule la collection `product` classée `public` entre dans l'artefact ; les
-collections internes et de référence restent réservées au build local complet.
-Les liens de navigation, de recherche, de sitemap, Open Graph, Markdown et
-d'agents respectent le sous-chemin Pages.
+Nimbus est maintenant publié sous `/parkventory/docs/`. Seule la collection
+`product` classée `public` entre dans l'artefact ; les collections internes et
+de référence restent réservées au build local complet. Les liens de navigation,
+de recherche, de sitemap, Open Graph, Markdown et d'agents respectent le
+sous-chemin Pages.
 
 Project Foundation `v0.5.2` au commit
 `708d7374f87060809a805c57abc2cf7e7b66c182` est adopté en pack `critical`.
@@ -78,8 +78,8 @@ graphe local intégré.
 | Notifications | Invitation et réservation écrites avec l'outbox puis livrées avec reprise bornée | Messages observés dans Mailpit | Délivrabilité externe non prouvée |
 | Environnement | Quatre services Compose, images par digest, healthchecks et volumes | Checker indépendant, smoke complet et stack locale saine | Docker ou OrbStack requis |
 | Démo Pages | Landing animée, dashboard, partage et recherche statiques sous `/parkventory/` | Run Pages `31490845612` et cinq routes publiques HTTP 200 sur `c5b9dc5` | Aucun compte, email ou stockage distant |
-| Documentation Nimbus | Vision, parcours, rôles et règles produit sous `/parkventory/docs/` | 13 tests d'adaptateur, build/lint public de 7 pages et contrôles d'audience | Publication distante du commit courant à vérifier |
-| CI | Gate Foundation, docs, audit, React, Quarkus et smoke Compose | Run Verify `31490845653` réussi sur `c5b9dc5` | Aucune gate de production |
+| Documentation Nimbus | Vision, parcours, rôles et règles produit sous `/parkventory/docs/` | Run Pages `31499873475`, routes publiques HTTP 200 et routes exclues HTTP 404 sur `c61fb2e` | Seule la collection produit est publique ; le corpus complet reste local |
+| CI | Gate Foundation, docs, audit, React, Quarkus et smoke Compose | Run Verify `31499873532` réussi sur `c61fb2e` | Aucune gate de production |
 
 ## État opérationnel
 
@@ -94,7 +94,7 @@ graphe local intégré.
 | Swagger UI | `http://127.0.0.1:8080/q/swagger-ui` | Accessible |
 | PostgreSQL | `127.0.0.1:5434` | Healthy, Flyway V2 |
 | Démo publique | `https://nclsppr.github.io/parkventory/`, `/app/`, `/app/partager/` et `/app/trouver/` | Toutes les entrées HTTP 200 ; route inconnue HTTP 404 |
-| Documentation publique | `https://nclsppr.github.io/parkventory/docs/` | Artefact local prêt ; publication distante du commit courant à vérifier |
+| Documentation publique | `https://nclsppr.github.io/parkventory/docs/` | Accueil, produit, recherche, agents et variantes Markdown HTTP 200 ; routes internes testées HTTP 404 |
 | Production | Aucune URL | Non provisionnée |
 
 La stack locale de développement est laissée active à la fin de cette
@@ -104,6 +104,8 @@ livraison. `npm run compose:down` l'arrête en conservant les volumes.
 
 | Date | Commande ou contrôle | Résultat | Portée de la preuve |
 | --- | --- | --- | --- |
+| 2026-08-11 | GitHub Actions Verify `31499873532` et Pages `31499873475` sur `c61fb2e` | Deux workflows réussis au premier passage ; artefact combiné déployé | Gate distante complète et publication filtrée de Nimbus |
+| 2026-08-11 | Probes Nimbus publiques après `c61fb2e` | Accueil, aperçu, quatre pages produit, recherche, agents, sitemap, `robots.txt`, favicon et variantes Markdown HTTP 200 ; `project` et `docs/internal/open-questions` HTTP 404 | Disponibilité publique ponctuelle et frontière d'audience de l'artefact ; pas une supervision continue |
 | 2026-08-11 | `npm run check --prefix docs-nimbus` | 13 tests, 102 fichiers sans diagnostic, 46 pages de contenu générées depuis 37 Markdown et 47 fichiers lintés | Corpus local complet ; aucune preuve de publication |
 | 2026-08-11 | `npm run pages:build` après filtrage Nimbus | Frontend construit ; 4 sources produit donnent 7 pages de contenu, 9 HTML et 93 fichiers sous `frontend/dist/docs/` | Artefact local public ; collections `internal`, `reference` et `archive` absentes |
 | 2026-08-11 | Inspection des URL et audiences Nimbus publiques | Base `/parkventory/docs/` présente dans navigation, recherche, canonical, Open Graph, sitemap, Markdown et index d'agents ; routes `project`, `status`, `design`, décisions, documents internes et Foundation absentes | Inspection statique de l'artefact ; réponses HTTP distantes encore à vérifier |

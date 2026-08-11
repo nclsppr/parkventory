@@ -15,8 +15,8 @@ Tous les Markdown maintenus appartiennent à une collection de
 
 Le dépôt GitHub est public : `internal` organise le corpus complet, mais ne
 constitue pas un contrôle d'accès. Aucun secret ni contenu confidentiel ne doit
-être committé. La surface Nimbus destinée à Pages autorise explicitement la
-seule collection `product`, classée `public`, à l'adresse cible
+être committé. La surface Nimbus publiée autorise explicitement la seule
+collection `product`, classée `public`, à l'adresse
 `https://nclsppr.github.io/parkventory/docs/`.
 
 ## Règles

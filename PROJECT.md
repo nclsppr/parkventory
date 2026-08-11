@@ -7,7 +7,7 @@
 | Nom | Parkventory |
 | Propriétaire | nclsppr |
 | Classe | Critique |
-| Surface de production | Aucune ; application locale persistante, démo statique et documentation Pages prête à publier au 2026-08-11 |
+| Surface de production | Aucune ; application locale persistante, démo statique et documentation publique au 2026-08-11 |
 | Socle adopté | [`FOUNDATION.md`](FOUNDATION.md) |
 
 ## Problème
@@ -114,7 +114,7 @@ Ces cibles ne sont pas des résultats acquis.
 | Artefacts générés | Catalogue Nimbus, site Nimbus, copies publiques du logo et futur client TypeScript | dérivée | Sources et commandes à conserver |
 | Archives | Aucune | historique | Ne pas créer sans motif |
 | Démonstration publique | Données statiques portant `demo: true` sur GitHub Pages | expérimentale et signalée | Séparée du parcours local réel |
-| Documentation publique cible | Collection Nimbus `product` sous `/parkventory/docs/` | publique | Artefact filtré prêt ; disponibilité distante à vérifier |
+| Documentation publique | Collection Nimbus `product` sous `/parkventory/docs/` | publique | Allowlist vérifiée ; aucune collection interne ou de référence dans l'artefact |
 
 ## Architecture
 
@@ -138,7 +138,7 @@ Le détail et les compromis vivent dans
 
 | Composant | Rôle | Statut | Exécution | Version | Source | Preuve et date | Propriétaire |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Documentation Nimbus | Rendu des Markdown classés | Actuel | Build local complet et artefact Pages filtré prêt | Nimbus 0.8.2 | `docs-nimbus/` | 13 tests d'adaptateur, 7 pages publiques issues de 4 sources et build/lint, 2026-08-11 | nclsppr |
+| Documentation Nimbus | Rendu des Markdown classés | Actuel | Build local complet et GitHub Pages filtré | Nimbus 0.8.2 | `docs-nimbus/` | 13 tests d'adaptateur, 7 pages publiques issues de 4 sources, build/lint et probes, 2026-08-11 | nclsppr |
 | Frontend React | Landing, authentification, dashboard, partage et recherche | Actuel, réel en local et démo publique | Compose ou navigateur statique | React 19.2.8, Vite 8.1.5 | `frontend/` | 34 tests, 24 audits Axe, builds et parcours navigateur, 2026-08-11 | nclsppr |
 | API Java | Identité locale, métier, validation, santé et OpenAPI | Actuel, local | Compose, Maven 3.9.16 et Java 25 | Quarkus 3.33.3 LTS | `backend/` | Tests PostgreSQL et smoke Compose, 2026-07-30 | nclsppr |
 | PostgreSQL | Identité, sessions, métier, outbox et contraintes | Actuel, local | Compose et Testcontainers | PostgreSQL 18.3 | migrations Flyway V1 et V2 | Migration et parcours persisté vérifiés, 2026-07-30 | nclsppr |
@@ -182,7 +182,7 @@ ni contrat, ni données, ni autre module, et son retrait est local.
 | Développement documentaire | macOS local | Dépôt et lockfile Nimbus | `127.0.0.1:4321` quand lancé | `./scripts/verify.sh` |
 | Développement applicatif | Docker Compose sur macOS ou Linux | `compose.yaml`, `.env.example` | Web `5173`, API `8080`, Mailpit `8025`/`1025`, PostgreSQL `5434` | `npm run dev` et `npm run compose:verify` |
 | Démo publique | GitHub Pages | `.github/workflows/pages.yml`, base `/parkventory/`, données statiques | `https://nclsppr.github.io/parkventory/` | Tests frontend, build puis probes publics |
-| Documentation publique cible | GitHub Pages | collection Nimbus `product`, base `/parkventory/docs/` | `https://nclsppr.github.io/parkventory/docs/` | Build public, lint et contrôle d'audience réussis ; probes distants après déploiement |
+| Documentation publique | GitHub Pages | collection Nimbus `product`, base `/parkventory/docs/` | `https://nclsppr.github.io/parkventory/docs/` | Build public, lint, contrôle d'audience et probes HTTP |
 | CI | GitHub Actions | `.github/workflows/verify.yml` | Exécuté à chaque push sur `main` | Même commande `verify` |
 | Production | Non provisionnée | Décision d'exploitation future | Aucune URL | Runbook et probes requis avant ouverture |
 
@@ -214,13 +214,13 @@ page 404 explicite.
 | Vérifier le logo | `npm run brand:check` | Aucun dérivé public manquant ou divergent |
 | Vérifier | `mise exec -- npm run verify` | Documentation, Compose, audit npm, React, Quarkus et migration PostgreSQL valides |
 | Construire la documentation | `npm run build --prefix docs-nimbus` | Site statique dérivé dans `docs-nimbus/dist/` |
-| Construire les surfaces Pages | `npm run pages:build` | Frontend statique sous `/parkventory/`, routes directes et documentation Nimbus publique prête sous `/parkventory/docs/` |
+| Construire les surfaces Pages | `npm run pages:build` | Frontend statique sous `/parkventory/`, routes directes et documentation Nimbus publique sous `/parkventory/docs/` |
 
 Les commandes manuelles utilisent uniquement les services locaux autorisés.
-Le workflow GitHub Pages est configuré pour déployer automatiquement depuis
-`main` la démo et la documentation publique dans un artefact unique ; elles ne
-constituent pas une cible de production. Aucun déploiement backend n'existe tant
-qu'une cible de production n'est pas explicitement décidée et autorisée.
+La démo et la documentation publique GitHub Pages sont déployées automatiquement
+depuis `main` dans un artefact unique ; elles ne constituent pas une cible de
+production. Aucun déploiement backend n'existe tant qu'une cible de production
+n'est pas explicitement décidée et autorisée.
 
 ## Données, sécurité et confidentialité
 
