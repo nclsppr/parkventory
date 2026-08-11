@@ -10,7 +10,7 @@ Snapshot de l'état réellement vérifié. Il ne remplace ni le contrat stable d
 | Vérifié le | 2026-08-11 |
 | Par | Codex |
 | Branche | `main` |
-| Commits applicatifs | `e069d04` — backend persistant et Mailpit ; `9f7b9be` — frontend local réel ; `c748d32` — logo SVG canonique ; `47ee871` — routes Partager et Trouver ; `25d3197` — narration et interactions de la landing ; `835515a` — stabilisation du parcours CI ; `75c6a37` — thèmes sombre et clair sélectionnables |
+| Commits applicatifs | `e069d04` — backend persistant et Mailpit ; `9f7b9be` — frontend local réel ; `c748d32` — logo SVG canonique ; `47ee871` — routes Partager et Trouver ; `25d3197` — narration et interactions de la landing ; `835515a` — stabilisation du parcours CI ; `75c6a37` — thèmes sombre et clair sélectionnables ; `e53ae9a` — stabilisation de la gate et audit npm |
 | Environnement | Local macOS, OrbStack 29.4.0 ; contrôles du thème sous Codex Linux, Node 24.14.0 et npm 11.9.0 ; CI GitHub Actions Ubuntu |
 | Version livrée | F02, F03 et F04 partielles ; thèmes sombre et clair sélectionnables ; routes dédiées de partage et recherche ; démo publique GitHub Pages séparée |
 
@@ -96,6 +96,8 @@ livraison. `npm run compose:down` l'arrête en conservant les volumes.
 
 | Date | Commande ou contrôle | Résultat | Portée de la preuve |
 | --- | --- | --- | --- |
+| 2026-08-11 | GitHub Actions Verify `31483526624` et Pages `31483526656` sur `e53ae9a` | Deux workflows réussis au premier passage ; Pages déployé | Gate distante complète, puis publication statique ; ne couvre pas Safari iPhone réel |
+| 2026-08-11 | Probes `https://nclsppr.github.io/parkventory/` et quatre routes directes | Cinq réponses HTTP 200 ; bootstrap de thème présent dans le HTML | Disponibilité publique ponctuelle après déploiement ; pas une supervision continue |
 | 2026-08-11 | `npm audit --audit-level=high` après verrouillage de `nanoid` `3.3.18` | Aucun avis rapporté | Arbre npm verrouillé à cet instant ; ne prédit pas les avis futurs |
 | 2026-08-11 | `npm run frontend:test` | 19 tests réussis | Sélecteur clair/sombre, choix initial, persistance, valeur invalide, routes et parcours React existants |
 | 2026-08-11 | `npm run frontend:build` et `npm run pages:build` | Builds Vite réussis ; CSS initial 13,11 Ko gzip et JavaScript initial inférieur à 77 Ko gzip | Typecheck, bundle local et cinq entrées statiques Pages ; ne mesure pas le LCP réseau |

@@ -695,3 +695,12 @@ n'a été relâché. Le test émet désormais des changements déterministes sur
 deux champs contrôlés, vérifie l'activation du bouton, le `POST /spots` puis la
 seconde lecture de `/dashboard` avant d'attendre le formulaire de partage. Sa
 synchronisation reste ainsi bornée sur les états et effets réseau attendus.
+
+### Publication corrigée
+
+| Preuve distante | Résultat du 2026-08-11 |
+| --- | --- |
+| Commit | `e53ae9abcdc8ced2b6b9b47ebbd11452c302b921` — stabilisation du test et verrouillage de `nanoid` `3.3.18` |
+| Verify | [Run 31483526624](https://github.com/nclsppr/parkventory/actions/runs/31483526624) réussi au premier passage : documentation, audit npm, 19 tests React, builds, Quarkus/PostgreSQL et parcours Docker Compose |
+| Pages | [Run 31483526656](https://github.com/nclsppr/parkventory/actions/runs/31483526656) réussi au premier passage et déployé |
+| Probes publiques | Landing, `/app/`, `/app/partager/`, `/app/trouver/` et `/auth/callback/` répondent HTTP 200 ; le HTML servi contient la clé de préférence et le `theme-color` |
