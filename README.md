@@ -10,11 +10,18 @@ par Flyway. En local, l'authentification par lien magique, les sessions, les
 places, les partages, les réservations, les invitations et les notifications
 sont réellement branchés sur PostgreSQL et Mailpit.
 
+## Documentation
+
+La documentation produit est publiée avec Nimbus sur GitHub Pages. Elle décrit
+la vision, les parcours, les rôles, les règles métier et le choix d'apparence
+clair ou sombre, sans installation locale.
+
+**[Ouvrir la documentation Nimbus](https://nclsppr.github.io/parkventory/docs/)**
+
 ## Voir les surfaces Pages
 
 - [landing publique](https://nclsppr.github.io/parkventory/) ;
-- [application publique](https://nclsppr.github.io/parkventory/app) ;
-- [documentation Nimbus](https://nclsppr.github.io/parkventory/docs/).
+- [application publique](https://nclsppr.github.io/parkventory/app).
 
 GitHub Pages sert le frontend en mode démo statique et la documentation Nimbus.
 Les actions du frontend y sont simulées dans le navigateur : aucun compte n'est
