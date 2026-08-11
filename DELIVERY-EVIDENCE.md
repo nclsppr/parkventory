@@ -734,3 +734,13 @@ clair seulement, les instances UI reçoivent une plaque `#080a08` ; le vert du
 master atteint 15,98:1 et le glacier 9,77:1 sur cette plaque. Le bloc
 photographique final reste une surface inverse volontaire, dont les textes
 dépassent 6,16:1.
+
+### Publication vérifiée
+
+| Preuve distante | Résultat du 2026-08-11 |
+| --- | --- |
+| Commit applicatif | [`c5b9dc524e35e514973953956c7e91c5b1a671a7`](https://github.com/nclsppr/parkventory/commit/c5b9dc524e35e514973953956c7e91c5b1a671a7) poussé directement sur `main` |
+| Verify | [Run 31490845653](https://github.com/nclsppr/parkventory/actions/runs/31490845653) réussi au premier passage avec documentation, audit npm, 34 tests React, Quarkus/PostgreSQL et smoke Compose |
+| Pages | [Run 31490845612](https://github.com/nclsppr/parkventory/actions/runs/31490845612) réussi et déployé |
+| Probes publiques | Landing, `/app/`, `/app/partager/`, `/app/trouver/` et `/auth/callback/` répondent HTTP 200 ; `/app/inconnue/` répond HTTP 404 |
+| Artefact publié | La feuille `index-BF7UhOiP.css` contient les règles de couleurs forcées et les corrections du thème clair |

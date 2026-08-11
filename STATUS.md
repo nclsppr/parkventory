@@ -10,7 +10,7 @@ Snapshot de l'état réellement vérifié. Il ne remplace ni le contrat stable d
 | Vérifié le | 2026-08-11 |
 | Par | Codex |
 | Branche | `main` |
-| Commits applicatifs | `e069d04` — backend persistant et Mailpit ; `9f7b9be` — frontend local réel ; `c748d32` — logo SVG canonique ; `47ee871` — routes Partager et Trouver ; `25d3197` — narration et interactions de la landing ; `835515a` — stabilisation du parcours CI ; `75c6a37` — thèmes sombre et clair sélectionnables ; `e53ae9a` — stabilisation de la gate et audit npm |
+| Commits applicatifs | `e069d04` — backend persistant et Mailpit ; `9f7b9be` — frontend local réel ; `c748d32` — logo SVG canonique ; `47ee871` — routes Partager et Trouver ; `25d3197` — narration et interactions de la landing ; `835515a` — stabilisation du parcours CI ; `75c6a37` — thèmes sombre et clair sélectionnables ; `e53ae9a` — stabilisation de la gate et audit npm ; `c5b9dc5` — audit de lisibilité du thème clair |
 | Environnement | Local macOS, OrbStack 29.4.0 ; contrôles du thème sous Codex Linux, Node 24.14.0 et npm 11.9.0 ; CI GitHub Actions Ubuntu |
 | Version livrée | F02, F03 et F04 partielles ; thèmes sombre et clair sélectionnables ; routes dédiées de partage et recherche ; démo publique GitHub Pages séparée |
 
@@ -71,12 +71,12 @@ graphe local intégré.
 | PostgreSQL | Schéma multi-tenant, sessions, outbox, audit, idempotence et exclusions GiST | Flyway V1 + V2 et relecture après mutations | RLS et rôle applicatif non propriétaire non livrés |
 | Notifications | Invitation et réservation écrites avec l'outbox puis livrées avec reprise bornée | Messages observés dans Mailpit | Délivrabilité externe non prouvée |
 | Environnement | Quatre services Compose, images par digest, healthchecks et volumes | Checker indépendant, smoke complet et stack locale saine | Docker ou OrbStack requis |
-| Démo Pages | Landing animée, dashboard, partage et recherche statiques sous `/parkventory/` | Run Pages `30548089705` et cinq routes publiques HTTP 200 sur `835515a` | Aucun compte, email ou stockage distant |
-| CI | Gate Foundation, docs, audit, React, Quarkus et smoke Compose | Run Verify `30548090051` réussi sur `835515a` | Aucune gate de production |
+| Démo Pages | Landing animée, dashboard, partage et recherche statiques sous `/parkventory/` | Run Pages `31490845612` et cinq routes publiques HTTP 200 sur `c5b9dc5` | Aucun compte, email ou stockage distant |
+| CI | Gate Foundation, docs, audit, React, Quarkus et smoke Compose | Run Verify `31490845653` réussi sur `c5b9dc5` | Aucune gate de production |
 
 ## État opérationnel
 
-| Surface | URL ou accès | Santé au 2026-07-30 |
+| Surface | URL ou accès | Santé au 2026-08-11 |
 | --- | --- | --- |
 | Landing locale | `http://127.0.0.1:5173/` | Fonctionnelle |
 | Application locale | `http://127.0.0.1:5173/app` | Authentification et données réelles |
@@ -96,6 +96,8 @@ livraison. `npm run compose:down` l'arrête en conservant les volumes.
 
 | Date | Commande ou contrôle | Résultat | Portée de la preuve |
 | --- | --- | --- | --- |
+| 2026-08-11 | GitHub Actions Verify `31490845653` et Pages `31490845612` sur `c5b9dc5` | Deux workflows réussis au premier passage ; Pages déployé | Gate distante complète et publication statique de l'audit de lisibilité ; ne couvre pas Safari iPhone réel |
+| 2026-08-11 | Probes Pages après `c5b9dc5` | Landing et quatre routes directes HTTP 200, route inconnue HTTP 404 ; CSS publié contient le traitement `forced-colors` | Disponibilité publique ponctuelle, pas une supervision continue |
 | 2026-08-11 | Axe Core `4.13.0`, six routes, deux thèmes et deux viewports | 24 audits WCAG A/AA, 2.1 AA et 2.2 AA sans violation ni erreur console | Chromium local ; outil temporaire hors dépendances du projet, pas une preuve Safari ou technologie d'assistance réelle |
 | 2026-08-11 | Contrastes automatisés du thème clair | 13 vérifications de ratio : texte secondaire au moins 5,38:1, encres d'accent au moins 6,69:1, texte sur aplats au moins 14,09:1, plaque du logo au moins 9,77:1 et bordure forte au moins 3,03:1 | Calcul sRGB sur les tokens et couleurs du master ; ne mesure pas une photographie composite |
 | 2026-08-11 | `npm run frontend:test`, trois passages consécutifs | 34 tests réussis à chaque passage | Ratios, clavier du thème, persistance, horaires inversés, absence de contrôle masqué tabulable et parcours React existants |
