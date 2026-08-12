@@ -7,6 +7,11 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Ajouté
 
+- matrice PostgreSQL liée aux digests exacts 17.10 et 18.3, avec application
+  isolée de V1 puis V2, vérification de `btree_gist` et des exclusions GiST, et
+  exécution complète des tests Quarkus sur chaque version ;
+- contrat lisible par machine qui conserve la décision de production bloquée
+  malgré la compatibilité technique du candidat Atlas PostgreSQL 17.10 ;
 - documentation Nimbus publique sous `/parkventory/docs/`, reliée depuis le
   README et construite dans le même artefact Pages que la démo ;
 - interface Nimbus, métadonnées, recherche et surfaces Markdown/agents

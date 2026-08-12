@@ -787,3 +787,26 @@ exécute `npm run pages:build`, puis charge l'unique dossier `frontend/dist`.
 | Routes autorisées | Accueil, aperçu, quatre pages produit, Pagefind, `llms.txt`, `llms-full.txt`, sitemap, `robots.txt`, favicon et variantes Markdown répondent HTTP 200 |
 | Métadonnées | Titre public, lien produit, canonical et image Open Graph portent tous `/parkventory/docs/` |
 | Routes exclues | `/parkventory/docs/project/` et `/parkventory/docs/docs/internal/open-questions/` répondent HTTP 404 |
+
+## Extension : matrice PostgreSQL Atlas du 2026-08-12
+
+Cette tranche répond uniquement à la divergence de version entre la cible
+Parkventory PostgreSQL 18 et le cluster partagé Atlas PostgreSQL 17.10. Elle ne
+choisit pas la version de production et ne crée aucune base distante.
+
+### Contrat et contrôles
+
+| Contrôle | Résultat observé | Frontière de preuve |
+| --- | --- | --- |
+| Images | PostgreSQL 17.10 Alpine 3.24 et 18.3 Alpine liées à leurs digests multi-architecture exacts | Les mises à jour de patch ou de digest exigent une nouvelle preuve |
+| V1 isolée | `btree_gist` et les deux exclusions d'affectation et de réservation présents sur les deux versions | Conteneur éphémère sans volume, port aléatoire lié uniquement à la boucle locale et mot de passe généré à chaque passage |
+| V1 vers V2 | La troisième exclusion et les tables d'identité locale sont appliquées sur les deux versions | Prouve les migrations actuelles uniquement |
+| Flyway et Quarkus | Un test arrête Flyway à V1 ; un second démarrage reprend la même base vers V2 puis exécute quatre tests. Les contrôles lisent `server_version`, l'historique Flyway, l'extension et les exclusions depuis la base réelle | Tests séquentiels ; la concurrence parallèle, RLS et les rôles séparés restent ouverts |
+| Décision | `backend/postgres-compatibility.json` conserve `productionDecision` à `blocked` | Ne vaut ni ADR, ni déploiement, ni compatibilité future |
+
+### Validation locale
+
+`mise exec -- npm run postgres:verify` a réussi le 2026-08-12 sur macOS arm64,
+OrbStack 29.4.0 et Java 25. Les conteneurs de schéma et Testcontainers ont été
+retirés après le passage. Aucune valeur de production, donnée utilisateur,
+route publique ou ressource Atlas n'a été lue ou modifiée.
