@@ -70,7 +70,13 @@ export async function requestMagicLink(email: string): Promise<ActionResponse> {
   });
 }
 
-export function verifyMagicLink(token: string): Promise<SessionData> {
+export async function verifyMagicLink(token: string): Promise<SessionData> {
+  if (isPublicDemo) {
+    throw new ApiError(
+      "La démo publique ne consomme aucun lien magique. Ouvrez l’application pour explorer les données fictives.",
+      0,
+    );
+  }
   return request<SessionData>("/auth/verify", {
     method: "POST",
     body: JSON.stringify({ token }),

@@ -132,8 +132,8 @@ jobs:
           RELEASE_DIRECTORY: ${{ runner.temp }}/vps-release
         run: |
           set -Eeuo pipefail
-          site_repository="ghcr.io/${GITHUB_REPOSITORY}/site"
-          routes_repository="ghcr.io/${GITHUB_REPOSITORY}/routes"
+          site_repository="ghcr.io/${GITHUB_REPOSITORY_OWNER}/parkventory-static-site"
+          routes_repository="ghcr.io/${GITHUB_REPOSITORY_OWNER}/parkventory-static-routes"
           tag="sha-${GITHUB_SHA}"
           source="https://github.com/${GITHUB_REPOSITORY}"
           created_at=$(git show -s --format=%cI "${GITHUB_SHA}")
