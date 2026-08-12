@@ -26,7 +26,10 @@ la source du diff technique et les ADR expliquent les décisions importantes.
   `/parkventory/`, avec mode démo obligatoire et routes directes ;
 - archive et inventaire de routes déterministes pour une publication OCI par
   digest, workflow de provenance GitHub et intégration Caddy partagée ;
-- ADR-0006 qui borne `parkventory.com` à une démo sans backend, secret, port
+- espaces GHCR propres à ces artefacts, créés et reliés par le workflow du
+  dépôt pour éviter un ancien namespace sans droit GitHub Actions ;
+- refus local des liens magiques sur la démo, sans requête vers une API absente ;
+- ADR-0007 qui borne `parkventory.com` à une démo sans backend, secret, port
   applicatif ou donnée persistée ;
 - verrouillage transitif de `nanoid` en `3.3.18` pour corriger l'alerte de
   sécurité du générateur personnalisé sans changer l'API applicative ;
