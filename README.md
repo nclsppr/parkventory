@@ -77,9 +77,14 @@ mise exec -- npm run verify
 ```
 
 Cette gate rejoue le catalogue et le build Nimbus, le contrôle Foundation de
-Compose, l'audit npm, les tests et le build React, les tests Quarkus contre un
-PostgreSQL éphémère, puis le parcours intégré PostgreSQL, Mailpit, Quarkus et
-Vite dans un projet Compose isolé.
+Compose, l'audit npm, les tests et le build React, puis la matrice PostgreSQL.
+Cette matrice applique V1 seule puis V2 et exécute les tests Quarkus sur les
+images exactes PostgreSQL 17.10 et 18.3. Le parcours intégré utilise ensuite
+PostgreSQL 18.3, Mailpit, Quarkus et Vite dans un projet Compose isolé.
+
+La matrice peut être rejouée seule avec `mise exec -- npm run postgres:verify`.
+Son succès prouve une compatibilité technique bornée. Il ne choisit pas la
+version de production et n'autorise ni création de base, ni déploiement.
 
 ## Périmètre actuel
 

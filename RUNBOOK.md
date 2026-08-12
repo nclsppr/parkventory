@@ -36,6 +36,7 @@ donnée persistée ; elle ne satisfait aucun checkpoint de ce runbook.
 | Version, SHA ou digest | Application locale aux commits `e069d04` et `9f7b9be` ; aucun artefact de production | `STATUS.md` et état Git | 2026-07-30 |
 | Configuration chargée | Aucune configuration de production | Arborescence du dépôt | 2026-07-30 |
 | Santé et dépendances | Stack locale Compose à quatre services vérifiée ; aucune URL de production | `npm run compose:verify` | 2026-07-30 |
+| Compatibilité PostgreSQL | V1 seule, V1 vers V2 et tests Quarkus réussis sur les images exactes 17.10 et 18.3 | `npm run postgres:verify` | 2026-08-12 |
 
 ### Cible
 
@@ -49,6 +50,8 @@ rollback vérifié.
 - Aucune commande de déploiement n'existe.
 - Aucune sauvegarde ni restauration n'est possible avant création de la base.
 - Ce runbook ne permet pas de provisionner implicitement un service.
+- La compatibilité PostgreSQL 17.10 ne remplace pas la décision de version, les
+  rôles séparés, la restauration ni l'ADR d'exploitation.
 
 ## Cible exacte
 

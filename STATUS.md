@@ -9,17 +9,30 @@ Snapshot de l'état réellement vérifié. Il ne remplace ni le contrat stable d
 | --- | --- |
 | Vérifié le | 2026-08-12 |
 | Par | Codex |
-| Branche | `codex/parkventory-atlas-static`, PR #1 ; publication `main` non encore effectuée |
-| Commits applicatifs | `e069d04` — backend persistant et Mailpit ; `9f7b9be` — frontend local réel ; `c748d32` — logo SVG canonique ; `47ee871` — routes Partager et Trouver ; `25d3197` — narration et interactions de la landing ; `835515a` — stabilisation du parcours CI ; `75c6a37` — thèmes sombre et clair sélectionnables ; `e53ae9a` — stabilisation de la gate et audit npm ; `c5b9dc5` — audit de lisibilité du thème clair ; `c61fb2e` — publication Nimbus filtrée ; `946f0e7` — base `main` du candidat Atlas ; `ef48292` — candidat Atlas vérifié localement |
-| Environnement | macOS Darwin 27.0.0 arm64, OrbStack 29.4.0, Node 24.18.0, npm 11.16.0, Python 3.12.13 ; CI GitHub Actions Ubuntu en attente sur la PR #1 |
-| Version livrée | F02, F03 et F04 partielles ; thèmes sombre et clair sélectionnables ; routes dédiées de partage et recherche ; documentation Nimbus publique filtrée ; candidate statique Atlas non déployée |
+| Branche | `codex/atlas-postgres-compatibility`, base `db088b8` ; draft PR [#3](https://github.com/nclsppr/parkventory/pull/3) |
+| Commits applicatifs | `e069d04` — backend persistant et Mailpit ; `9f7b9be` — frontend local réel ; `c748d32` — logo SVG canonique ; `47ee871` — routes Partager et Trouver ; `25d3197` — narration et interactions de la landing ; `835515a` — stabilisation du parcours CI ; `75c6a37` — thèmes sombre et clair sélectionnables ; `e53ae9a` — stabilisation de la gate et audit npm ; `c5b9dc5` — audit de lisibilité du thème clair ; `c61fb2e` — publication Nimbus filtrée ; `db088b8` — sécurisation du candidat statique Atlas sur `main` |
+| Environnement | macOS Darwin 27.0.0 arm64, OrbStack 29.4.0, Node 24.18.0, npm 11.16.0, Python 3.12.13 |
+| Version livrée | F02, F03 et F04 partielles ; thèmes sombre et clair sélectionnables ; routes dédiées de partage et recherche ; documentation Nimbus publique filtrée ; démo statique matérialisée sur Atlas en préflight HTTP, sans DNS ni HTTPS publics |
 
 ## Résumé
 
 Au 2026-08-12, une cible Atlas distincte construit la démo publique à la racine
 et produit une archive OCI avec inventaire de routes déterministe. Cette cible
-n'a pas été déployée depuis ce dépôt. Elle ne contient aucun backend, secret ou
+a été matérialisée immuablement sur Atlas depuis la source
+`db088b831ad09092e07a42c5cf54ff28676c284c`. L'artefact site
+`sha256:799d8dfa9e3a5b4b169e984575cea05a02b92522258531db267ada1f2472d614`
+et l'inventaire de routes
+`sha256:d31ae39ba0a4399a637b8fdbcc0bf4d6a3595b29509e85fb3e75cfee219568fc`
+ont passé le préflight HTTP sur Atlas. Le DNS et le HTTPS publics ne sont pas
+encore basculés. Cette démo ne contient aucun backend dynamique, secret ou
 stockage distant et ne change pas la cible GitHub Pages sous `/parkventory/`.
+
+Une gate de préparation vérifie maintenant les migrations V1 puis V2 et les
+tests Quarkus sur les images exactes PostgreSQL 17.10 et 18.3. PostgreSQL 17.10
+est seulement un candidat de compatibilité pour le cluster partagé Atlas. La
+cible documentaire reste PostgreSQL 18 et la décision de production reste
+bloquée jusqu'à son alignement explicite par ADR. Aucune base Atlas n'est créée
+par cette gate.
 
 Le parcours local n'est plus une simulation. Docker Compose démarre
 PostgreSQL 18.3, Mailpit 1.30.6, Java 25 / Quarkus 3.33.3 LTS et React/Vite.
@@ -78,14 +91,14 @@ graphe local intégré.
 | Communauté | Invitation exacte prioritaire, sinon organisation communautaire unique par domaine | PostgreSQL réel et tests d'intégration | Domaine partagé/filiales et liste anti-abus à durcir |
 | Application React | Connexion, dashboard de synthèse, routes dédiées de partage et recherche, réservation, invitation, chargements, erreurs, états vides et choix clair/sombre persistant | 34 tests Vitest, build, navigation History API et navigateur sans erreur console | Client OpenAPI encore manuel ; recherche limitée à l'agenda de sept jours |
 | Identité visuelle | Master SVG fourni utilisé dans les huit emplacements React, les favicons, le header Nimbus et les cartes Open Graph ; palettes sombre et claire sémantiques ; plaque de contraste claire sans recoloration du master | Gate anti-dérive, tests de ratios et revue des deux thèmes desktop/mobile | Symbole seul ; aucun wordmark vectoriel ni variante monochrome |
-| API Quarkus | Session, dashboard, place, partage, réservation idempotente et invitation | Tests sur PostgreSQL 18.3 et contrat OpenAPI `0.2.0` | Annulation et administration absentes |
-| PostgreSQL | Schéma multi-tenant, sessions, outbox, audit, idempotence et exclusions GiST | Flyway V1 + V2 et relecture après mutations | RLS et rôle applicatif non propriétaire non livrés |
+| API Quarkus | Session, dashboard, place, partage, réservation idempotente et invitation | Un test V1 dédié puis quatre tests sur chacune des images exactes PostgreSQL 17.10 et 18.3, contrat OpenAPI `0.2.0` | Annulation et administration absentes |
+| PostgreSQL | Schéma multi-tenant, sessions, outbox, audit, idempotence et exclusions GiST | V1 isolée, V1 vers V2 avec Flyway, `btree_gist` et trois exclusions vérifiés sur 17.10 et 18.3 | Compatibilité ne vaut pas choix de production ; RLS et rôle applicatif non propriétaire non livrés |
 | Notifications | Invitation et réservation écrites avec l'outbox puis livrées avec reprise bornée | Messages observés dans Mailpit | Délivrabilité externe non prouvée |
 | Environnement | Quatre services Compose, images par digest, healthchecks et volumes | Checker indépendant, smoke complet et stack locale saine | Docker ou OrbStack requis |
 | Démo Pages | Landing animée, dashboard, partage et recherche statiques sous `/parkventory/` | Run Pages `31490845612` et cinq routes publiques HTTP 200 sur `c5b9dc5` | Aucun compte, email ou stockage distant |
 | Documentation Nimbus | Vision, parcours, rôles et règles produit sous `/parkventory/docs/` | Run Pages `31499873475`, routes publiques HTTP 200 et routes exclues HTTP 404 sur `c61fb2e` | Seule la collection produit est publique ; le corpus complet reste local |
 | CI | Gate Foundation, docs, audit, React, Quarkus et smoke Compose | Run Verify `31499873532` réussi sur `c61fb2e` | Aucune gate de production |
-| Candidate Atlas | Même démo statique construite sous `/`, avec routes directes et artefacts OCI déterministes | `npm run atlas:build`, double construction de l'archive et de l'inventaire | Non déployée dans ce dépôt ; aucune API ni persistance |
+| Démo Atlas statique | Même démo construite sous `/`, avec routes directes et artefacts OCI déterministes | Source `db088b831ad09092e07a42c5cf54ff28676c284c`, artefacts exacts matérialisés immuablement et préflight HTTP réussi sur Atlas | DNS et HTTPS publics non basculés ; aucune API ni persistance |
 
 ## État opérationnel
 
@@ -102,7 +115,7 @@ graphe local intégré.
 | Démo publique | `https://nclsppr.github.io/parkventory/`, `/app/`, `/app/partager/` et `/app/trouver/` | Toutes les entrées HTTP 200 ; route inconnue HTTP 404 |
 | Documentation publique | `https://nclsppr.github.io/parkventory/docs/` | Accueil, produit, recherche, agents et variantes Markdown HTTP 200 ; routes internes testées HTTP 404 |
 | Production | Aucune URL | Non provisionnée |
-| Démo Atlas candidate | Domaine cible `parkventory.com` | Build et artefacts préparés ; promotion, DNS, TLS et probe public non exécutés dans ce dépôt |
+| Démo Atlas statique | Domaine cible `parkventory.com` | Release immuable présente et préflight HTTP réussi sur Atlas ; DNS et HTTPS publics non basculés, aucun backend dynamique |
 
 La stack locale de développement est laissée active à la fin de cette
 livraison. `npm run compose:down` l'arrête en conservant les volumes.
@@ -111,6 +124,9 @@ livraison. `npm run compose:down` l'arrête en conservant les volumes.
 
 | Date | Commande ou contrôle | Résultat | Portée de la preuve |
 | --- | --- | --- | --- |
+| 2026-08-12 | `scripts/test_postgres_compatibility_contract.sh` | Une décision de production falsifiée est rejetée avec un statut non nul avant Docker et aucun message de succès | Preuve négative du chemin shell ; les autres mutations invalides restent couvertes par les validations du même parseur |
+| 2026-08-12 | Inspection des manifestes OCI et état de déploiement Atlas transmis par l'opérateur | Source `db088b831ad09092e07a42c5cf54ff28676c284c`, site `sha256:799d8dfa9e3a5b4b169e984575cea05a02b92522258531db267ada1f2472d614`, routes `sha256:d31ae39ba0a4399a637b8fdbcc0bf4d6a3595b29509e85fb3e75cfee219568fc`, matérialisation immuable et préflight HTTP réussis | Démo statique Atlas seulement ; DNS, HTTPS public, API et persistance non activés |
+| 2026-08-12 | `mise exec -- npm run postgres:verify` | Test V1 dédié puis quatre tests V2, version serveur, `btree_gist` et exclusions réussis sur PostgreSQL 17.10 et 18.3 par digest exact | Compatibilité locale arm64 ; aucune décision de version, base Atlas, sauvegarde ou production |
 | 2026-08-11 | GitHub Actions Verify `31499873532` et Pages `31499873475` sur `c61fb2e` | Deux workflows réussis au premier passage ; artefact combiné déployé | Gate distante complète et publication filtrée de Nimbus |
 | 2026-08-11 | Probes Nimbus publiques après `c61fb2e` | Accueil, aperçu, quatre pages produit, recherche, agents, sitemap, `robots.txt`, favicon et variantes Markdown HTTP 200 ; `project` et `docs/internal/open-questions` HTTP 404 | Disponibilité publique ponctuelle et frontière d'audience de l'artefact ; pas une supervision continue |
 | 2026-08-11 | `npm run check --prefix docs-nimbus` | 13 tests, 102 fichiers sans diagnostic, 46 pages de contenu générées depuis 37 Markdown et 47 fichiers lintés | Corpus local complet ; aucune preuve de publication |
@@ -160,6 +176,7 @@ livraison. `npm run compose:down` l'arrête en conservant les volumes.
 | --- | --- | --- | --- |
 | Fournisseurs OIDC et email non choisis | Interdit de présenter l'identité locale comme prête pour la production | nclsppr | ADR, contrat, région, coût et retrait validés |
 | Production applicative non décidée | Bloque toute API, identité ou persistance publique | nclsppr | Architecture d'exploitation, services externes et gates du runbook validés |
+| Version PostgreSQL Atlas non alignée par ADR | Interdit d'utiliser la preuve 17.10 comme décision de production | nclsppr | Choix 17 ou 18, rôles, migration, sauvegarde et restauration approuvés dans les deux dépôts |
 | Droits des cinq JPEG non documentés | Interdit leur publication comme assets servis | nclsppr | Confirmer origine et droits ; le site sert une création originale |
 
 ## Dérives et travaux ouverts

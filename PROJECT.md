@@ -101,7 +101,7 @@ Ces cibles ne sont pas des résultats acquis.
 | Historique | `CHANGELOG.md` | historique | Changements livrés |
 | Architecture | [`docs/architecture/overview.md`](docs/architecture/overview.md) | normative | Cible, pas état livré |
 | Contrat API | `api/openapi/parkventory.yaml` | normative actuelle | Authentification locale et parcours métier versionnés |
-| Schéma de données | [`docs/architecture/domain-model.md`](docs/architecture/domain-model.md) et `backend/src/main/resources/db/migration/` | normative et opérationnelle | Migrations V1 et V2 testées sur PostgreSQL 18.3 |
+| Schéma de données | [`docs/architecture/domain-model.md`](docs/architecture/domain-model.md) et `backend/src/main/resources/db/migration/` | normative et opérationnelle | Migrations V1 et V2 testées sur PostgreSQL 18.3 ; compatibilité 17.10 vérifiée sans décision de production |
 | Sécurité et isolation | [`docs/architecture/security-and-tenancy.md`](docs/architecture/security-and-tenancy.md) | normative | Défense en profondeur |
 | Design system | [`DESIGN.md`](DESIGN.md) et `frontend/src/styles.css` | normative et opérationnelle | Tokens, composants et responsive alignés |
 | Identité de marque | `assets/brand/parkventory-logo-transparent.svg` | normative | Master du symbole ; copies publiques synchronisées et contrôlées |
@@ -213,7 +213,7 @@ page 404 explicite.
 | Développer la documentation | `npm run dev --prefix docs-nimbus` | Nimbus local sur `127.0.0.1:4321` |
 | Synchroniser le logo | `npm run brand:sync` | Trois copies SVG exactes et un dérivé PNG Open Graph régénérés |
 | Vérifier le logo | `npm run brand:check` | Aucun dérivé public manquant ou divergent |
-| Vérifier | `mise exec -- npm run verify` | Documentation, Compose, audit npm, React, Quarkus et migration PostgreSQL valides |
+| Vérifier | `mise exec -- npm run verify` | Documentation, Compose, audit npm, React, Quarkus et matrice PostgreSQL 17.10/18.3 valides |
 | Construire la documentation | `npm run build --prefix docs-nimbus` | Site statique dérivé dans `docs-nimbus/dist/` |
 | Construire les surfaces Pages | `npm run pages:build` | Frontend statique sous `/parkventory/`, routes directes et documentation Nimbus publique sous `/parkventory/docs/` |
 | Construire la démo Atlas | `npm run atlas:build` | Frontend statique à la racine, toujours en mode démo et sans backend |

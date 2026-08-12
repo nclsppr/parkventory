@@ -7,6 +7,11 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Ajouté
 
+- matrice PostgreSQL liée aux digests exacts 17.10 et 18.3, avec application
+  isolée de V1 puis V2, vérification de `btree_gist` et des exclusions GiST, et
+  exécution complète des tests Quarkus sur chaque version ;
+- contrat lisible par machine qui conserve la décision de production bloquée
+  malgré la compatibilité technique du candidat Atlas PostgreSQL 17.10 ;
 - documentation Nimbus publique sous `/parkventory/docs/`, reliée depuis le
   README et construite dans le même artefact Pages que la démo ;
 - interface Nimbus, métadonnées, recherche et surfaces Markdown/agents
@@ -112,6 +117,10 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Corrigé
 
+- attente de la base PostgreSQL de compatibilité par une requête réelle sur la
+  base cible, au lieu d'un simple signal serveur qui pouvait précéder sa
+  création en CI, avec refus explicite de Python antérieur à 3.9 et propagation
+  du rejet d'un contrat invalide jusqu'au statut de la gate ;
 - audit de lisibilité du thème clair : logo original protégé par une plaque
   sombre, placeholders et focus de champs renforcés, frontières d'accent
   mesurables, états actifs compatibles avec les couleurs forcées et aperçu
@@ -131,8 +140,9 @@ la source du diff technique et les ADR expliquent les décisions importantes.
   ni email ;
 - la recherche locale expose l'agenda réel des sept prochains jours ; le filtre
   d'un intervalle arbitraire attend encore son contrat API dédié ;
-- aucun backend ou domaine de production applicative n'est livré ; la cible
-  Atlas statique exige encore promotion, DNS, TLS et probe public ;
+- aucun backend ou domaine de production applicative n'est livré ; la démo
+  Atlas statique a passé son préflight HTTP, mais le DNS et le HTTPS publics ne
+  sont pas encore basculés ;
 - les droits de publication des cinq JPEG restent à confirmer ; le SVG fourni
   ne contient ni wordmark vectoriel ni variante monochrome ;
 - le fournisseur OIDC, le fournisseur d'email et l'infrastructure de production

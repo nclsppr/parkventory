@@ -107,6 +107,8 @@ if not required.issubset(actual):
     raise SystemExit("L'inventaire Atlas ne contient pas toutes les routes directes.")
 PY
 
+"${SCRIPT_DIR}/test_postgres_compatibility_contract.sh"
+
 command -v docker >/dev/null 2>&1 || {
   echo "Docker est requis pour les tests PostgreSQL de Quarkus." >&2
   exit 1
@@ -117,15 +119,8 @@ docker info >/dev/null 2>&1 || {
   exit 1
 }
 
-echo "Vérification du backend Quarkus et de la migration PostgreSQL"
-(
-  cd "${PROJECT_ROOT}/backend"
-  if command -v mise >/dev/null 2>&1; then
-    mise exec -- ./mvnw verify -Dquarkus.analytics.disabled=true
-  else
-    ./mvnw verify -Dquarkus.analytics.disabled=true
-  fi
-)
+echo "Vérification du backend Quarkus et de la matrice PostgreSQL"
+"${SCRIPT_DIR}/verify_postgres_compatibility.sh"
 
 echo "Vérification du parcours intégré Docker Compose"
 "${SCRIPT_DIR}/verify_compose.sh"

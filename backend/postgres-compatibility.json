@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "productionDecision": "blocked",
+  "variants": [
+    {
+      "role": "atlas-shared-cluster-candidate",
+      "version": "17.10",
+      "image": "docker.io/library/postgres:17.10-alpine3.24@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"
+    },
+    {
+      "role": "canonical-development-baseline",
+      "version": "18.3",
+      "image": "docker.io/library/postgres:18.3-alpine@sha256:54451ecb8ab38c24c3ec123f2fd501303a3a1856a5c66e98cecf2460d5e1e9d7"
+    }
+  ]
+}
