@@ -1,8 +1,10 @@
 # RUNBOOK : première mise en production
 
-Ce document prépare une future mise en production. Il n'autorise aucune action
-externe et reste non exécutable tant que la cible, les secrets, les sauvegardes
-et les commandes canoniques ne sont pas décidés et testés.
+Ce document prépare une future mise en production applicative. Il n'autorise
+aucune action externe et reste non exécutable tant que la cible, les secrets,
+les sauvegardes et les commandes canoniques ne sont pas décidés et testés. La
+démo statique Atlas de l'ADR-0006 est une livraison distincte sans backend ni
+donnée persistée ; elle ne satisfait aucun checkpoint de ce runbook.
 
 ## Nature du document
 

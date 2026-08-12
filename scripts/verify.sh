@@ -8,6 +8,12 @@ fi
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 PROJECT_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd -P)"
+VPS_RELEASE_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/parkventory-vps-release.XXXXXX")"
+
+cleanup() {
+  rm -rf -- "${VPS_RELEASE_ROOT}"
+}
+trap cleanup EXIT HUP INT TERM
 
 command -v git >/dev/null 2>&1 || {
   echo "git est requis pour vérifier le projet." >&2
@@ -72,6 +78,34 @@ npm audit --prefix "${PROJECT_ROOT}" --audit-level=high
 npm run frontend:test --prefix "${PROJECT_ROOT}"
 npm run frontend:build --prefix "${PROJECT_ROOT}"
 npm run pages:build --prefix "${PROJECT_ROOT}"
+npm run atlas:build --prefix "${PROJECT_ROOT}"
+"${SCRIPT_DIR}/build-vps-release.sh" \
+  "${PROJECT_ROOT}/frontend/dist" \
+  "${VPS_RELEASE_ROOT}/first" \
+  HEAD
+"${SCRIPT_DIR}/build-vps-release.sh" \
+  "${PROJECT_ROOT}/frontend/dist" \
+  "${VPS_RELEASE_ROOT}/second" \
+  HEAD
+cmp "${VPS_RELEASE_ROOT}/first/site.tar.gz" \
+  "${VPS_RELEASE_ROOT}/second/site.tar.gz"
+cmp "${VPS_RELEASE_ROOT}/first/routes.json" \
+  "${VPS_RELEASE_ROOT}/second/routes.json"
+python3 - "${VPS_RELEASE_ROOT}/first/routes.json" <<'PY'
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+inventory = json.loads(Path(sys.argv[1]).read_text(encoding="ascii"))
+required = {"/", "/app/", "/app/partager/", "/app/trouver/", "/auth/callback/"}
+actual = {route["path"] for route in inventory["routes"]}
+if inventory["source"]["repository"] != "nclsppr/parkventory":
+    raise SystemExit("L'inventaire Atlas porte un dépôt source inattendu.")
+if not required.issubset(actual):
+    raise SystemExit("L'inventaire Atlas ne contient pas toutes les routes directes.")
+PY
 
 command -v docker >/dev/null 2>&1 || {
   echo "Docker est requis pour les tests PostgreSQL de Quarkus." >&2

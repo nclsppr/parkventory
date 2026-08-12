@@ -16,6 +16,11 @@ Snapshot de l'état réellement vérifié. Il ne remplace ni le contrat stable d
 
 ## Résumé
 
+Au 2026-08-12, une cible Atlas distincte construit la démo publique à la racine
+et produit une archive OCI avec inventaire de routes déterministe. Cette cible
+n'a pas été déployée depuis ce dépôt. Elle ne contient aucun backend, secret ou
+stockage distant et ne change pas la cible GitHub Pages sous `/parkventory/`.
+
 Le parcours local n'est plus une simulation. Docker Compose démarre
 PostgreSQL 18.3, Mailpit 1.30.6, Java 25 / Quarkus 3.33.3 LTS et React/Vite.
 Une adresse professionnelle reçoit un lien magique dans Mailpit ; sa
@@ -80,6 +85,7 @@ graphe local intégré.
 | Démo Pages | Landing animée, dashboard, partage et recherche statiques sous `/parkventory/` | Run Pages `31490845612` et cinq routes publiques HTTP 200 sur `c5b9dc5` | Aucun compte, email ou stockage distant |
 | Documentation Nimbus | Vision, parcours, rôles et règles produit sous `/parkventory/docs/` | Run Pages `31499873475`, routes publiques HTTP 200 et routes exclues HTTP 404 sur `c61fb2e` | Seule la collection produit est publique ; le corpus complet reste local |
 | CI | Gate Foundation, docs, audit, React, Quarkus et smoke Compose | Run Verify `31499873532` réussi sur `c61fb2e` | Aucune gate de production |
+| Candidate Atlas | Même démo statique construite sous `/`, avec routes directes et artefacts OCI déterministes | `npm run atlas:build`, double construction de l'archive et de l'inventaire | Non déployée dans ce dépôt ; aucune API ni persistance |
 
 ## État opérationnel
 
@@ -96,6 +102,7 @@ graphe local intégré.
 | Démo publique | `https://nclsppr.github.io/parkventory/`, `/app/`, `/app/partager/` et `/app/trouver/` | Toutes les entrées HTTP 200 ; route inconnue HTTP 404 |
 | Documentation publique | `https://nclsppr.github.io/parkventory/docs/` | Accueil, produit, recherche, agents et variantes Markdown HTTP 200 ; routes internes testées HTTP 404 |
 | Production | Aucune URL | Non provisionnée |
+| Démo Atlas candidate | Domaine cible `parkventory.com` | Build et artefacts préparés ; promotion, DNS, TLS et probe public non exécutés dans ce dépôt |
 
 La stack locale de développement est laissée active à la fin de cette
 livraison. `npm run compose:down` l'arrête en conservant les volumes.
@@ -123,6 +130,8 @@ livraison. `npm run compose:down` l'arrête en conservant les volumes.
 | 2026-08-11 | `npm run frontend:build` et `npm run pages:build` | Builds Vite réussis ; CSS initial 13,11 Ko gzip et JavaScript initial inférieur à 77 Ko gzip | Typecheck, bundle local et cinq entrées statiques Pages ; ne mesure pas le LCP réseau |
 | 2026-08-11 | Revue des thèmes sombre et clair | Landing, application, partage et recherche à 1 440 × 900 et 390 × 844 ; contrôles de largeur à 320 px et 768 px, sans débordement ni erreur console | Chromium local ; Safari iPhone réel reste requis avant pilote |
 | 2026-08-11 | Contrastes de la palette claire | Texte 18,25:1 ; textes secondaires et encres d'accent au moins 7,13:1 ; bordure de contrôle 3,42:1 ; texte sombre sur aplats d'accent au moins 14,49:1 | Calcul initial des paires canoniques, désormais complété par les tests de ratios et les 24 audits Axe ci-dessus |
+| 2026-08-12 | `npm run pages:build`, puis `npm run atlas:build` | Bases `/parkventory/` et `/` construites séparément avec les cinq entrées HTML | Prouve les deux chemins statiques, pas leur publication |
+| 2026-08-12 | double `scripts/build-vps-release.sh` | Archives et inventaires identiques byte à byte, routes directes présentes | Prouve le conditionnement déterministe local, pas la provenance distante |
 | 2026-07-30 | `npm run brand:check` | Trois copies SVG exactes et dérivé PNG conformes au master | Détecte un fichier absent ou divergent |
 | 2026-07-30 | `npm run frontend:test` | 15 tests réussis | Routes exactes, liens directs, navigation partagée, compatibilité des anciens intents, partage et réservation réels |
 | 2026-07-30 | `npm run frontend:build` après revue motion | Build Vite réussi ; JavaScript initial 75,69 Ko gzip, GSAP 27,28 Ko gzip et ScrollTrigger 17,41 Ko gzip en chunks différés | Reste sous le budget initial de 180 Ko gzip ; ne mesure pas le LCP réseau |
@@ -150,7 +159,7 @@ livraison. `npm run compose:down` l'arrête en conservant les volumes.
 | Blocage | Impact | Propriétaire | Condition de reprise |
 | --- | --- | --- | --- |
 | Fournisseurs OIDC et email non choisis | Interdit de présenter l'identité locale comme prête pour la production | nclsppr | ADR, contrat, région, coût et retrait validés |
-| Infrastructure non choisie | Bloque toute URL de production | nclsppr | Architecture d'exploitation et autorité de provisionnement |
+| Production applicative non décidée | Bloque toute API, identité ou persistance publique | nclsppr | Architecture d'exploitation, services externes et gates du runbook validés |
 | Droits des cinq JPEG non documentés | Interdit leur publication comme assets servis | nclsppr | Confirmer origine et droits ; le site sert une création originale |
 
 ## Dérives et travaux ouverts

@@ -12,7 +12,7 @@ Moteur déclaré : `nimbus`.
 | Produit | `public` | 4 |
 | Architecture et sécurité | `internal` | 3 |
 | Questions de travail | `internal` | 1 |
-| Décisions | `internal` | 6 |
+| Décisions | `internal` | 7 |
 | Références visuelles | `reference` | 1 |
 | Socle vendorisé | `reference` | 9 |
 | Maintenance Nimbus | `reference` | 1 |
@@ -57,6 +57,7 @@ Moteur déclaré : `nimbus`.
 - [docs/decisions/adr-0004-integrite-temporelle-reservations.md](docs/decisions/adr-0004-integrite-temporelle-reservations.md)
 - [docs/decisions/adr-0005-adaptateur-identite-mailpit-local.md](docs/decisions/adr-0005-adaptateur-identite-mailpit-local.md)
 - [docs/decisions/adr-0006-publication-nimbus-github-pages.md](docs/decisions/adr-0006-publication-nimbus-github-pages.md)
+- [docs/decisions/adr-0007-demo-statique-atlas.md](docs/decisions/adr-0007-demo-statique-atlas.md)
 
 ## Références visuelles
 
