@@ -7,7 +7,7 @@
 | Nom | Parkventory |
 | Propriétaire | nclsppr |
 | Classe | Critique |
-| Surface de production | Aucune ; application locale persistante, démos statiques Pages et Atlas séparées du backend, documentation publique au 2026-08-11 |
+| Surface de production | Aucune ; application locale persistante, démo Pages et documentation publique, candidate statique Atlas séparée du backend |
 | Socle adopté | [`FOUNDATION.md`](FOUNDATION.md) |
 
 ## Problème

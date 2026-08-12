@@ -7,12 +7,12 @@ Snapshot de l'état réellement vérifié. Il ne remplace ni le contrat stable d
 
 | Champ | Valeur |
 | --- | --- |
-| Vérifié le | 2026-08-11 |
+| Vérifié le | 2026-08-12 |
 | Par | Codex |
-| Branche | `main` |
-| Commits applicatifs | `e069d04` — backend persistant et Mailpit ; `9f7b9be` — frontend local réel ; `c748d32` — logo SVG canonique ; `47ee871` — routes Partager et Trouver ; `25d3197` — narration et interactions de la landing ; `835515a` — stabilisation du parcours CI ; `75c6a37` — thèmes sombre et clair sélectionnables ; `e53ae9a` — stabilisation de la gate et audit npm ; `c5b9dc5` — audit de lisibilité du thème clair ; `c61fb2e` — publication Nimbus filtrée |
-| Environnement | Local macOS, OrbStack 29.4.0 ; contrôles du thème sous Codex Linux, Node 24.14.0 et npm 11.9.0 ; CI GitHub Actions Ubuntu |
-| Version livrée | F02, F03 et F04 partielles ; thèmes sombre et clair sélectionnables ; routes dédiées de partage et recherche ; documentation Nimbus publique filtrée |
+| Branche | `codex/parkventory-atlas-static`, PR #1 ; publication `main` non encore effectuée |
+| Commits applicatifs | `e069d04` — backend persistant et Mailpit ; `9f7b9be` — frontend local réel ; `c748d32` — logo SVG canonique ; `47ee871` — routes Partager et Trouver ; `25d3197` — narration et interactions de la landing ; `835515a` — stabilisation du parcours CI ; `75c6a37` — thèmes sombre et clair sélectionnables ; `e53ae9a` — stabilisation de la gate et audit npm ; `c5b9dc5` — audit de lisibilité du thème clair ; `c61fb2e` — publication Nimbus filtrée ; `946f0e7` — base `main` du candidat Atlas ; `ef48292` — candidat Atlas vérifié localement |
+| Environnement | macOS Darwin 27.0.0 arm64, OrbStack 29.4.0, Node 24.18.0, npm 11.16.0, Python 3.12.13 ; CI GitHub Actions Ubuntu en attente sur la PR #1 |
+| Version livrée | F02, F03 et F04 partielles ; thèmes sombre et clair sélectionnables ; routes dédiées de partage et recherche ; documentation Nimbus publique filtrée ; candidate statique Atlas non déployée |
 
 ## Résumé
 
