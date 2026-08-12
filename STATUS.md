@@ -9,16 +9,22 @@ Snapshot de l'état réellement vérifié. Il ne remplace ni le contrat stable d
 | --- | --- |
 | Vérifié le | 2026-08-12 |
 | Par | Codex |
-| Branche | `codex/atlas-postgres-compatibility`, base `db088b8` ; PR non encore créée |
+| Branche | `codex/atlas-postgres-compatibility`, base `db088b8` ; draft PR [#3](https://github.com/nclsppr/parkventory/pull/3) |
 | Commits applicatifs | `e069d04` — backend persistant et Mailpit ; `9f7b9be` — frontend local réel ; `c748d32` — logo SVG canonique ; `47ee871` — routes Partager et Trouver ; `25d3197` — narration et interactions de la landing ; `835515a` — stabilisation du parcours CI ; `75c6a37` — thèmes sombre et clair sélectionnables ; `e53ae9a` — stabilisation de la gate et audit npm ; `c5b9dc5` — audit de lisibilité du thème clair ; `c61fb2e` — publication Nimbus filtrée ; `db088b8` — sécurisation du candidat statique Atlas sur `main` |
-| Environnement | macOS Darwin 27.0.0 arm64, OrbStack 29.4.0, Node 24.18.0, npm 11.16.0, Python 3.12.13 ; CI GitHub Actions Ubuntu en attente sur cette branche |
-| Version livrée | F02, F03 et F04 partielles ; thèmes sombre et clair sélectionnables ; routes dédiées de partage et recherche ; documentation Nimbus publique filtrée ; candidate statique Atlas non déployée |
+| Environnement | macOS Darwin 27.0.0 arm64, OrbStack 29.4.0, Node 24.18.0, npm 11.16.0, Python 3.12.13 |
+| Version livrée | F02, F03 et F04 partielles ; thèmes sombre et clair sélectionnables ; routes dédiées de partage et recherche ; documentation Nimbus publique filtrée ; démo statique matérialisée sur Atlas en préflight HTTP, sans DNS ni HTTPS publics |
 
 ## Résumé
 
 Au 2026-08-12, une cible Atlas distincte construit la démo publique à la racine
 et produit une archive OCI avec inventaire de routes déterministe. Cette cible
-n'a pas été déployée depuis ce dépôt. Elle ne contient aucun backend, secret ou
+a été matérialisée immuablement sur Atlas depuis la source
+`db088b831ad09092e07a42c5cf54ff28676c284c`. L'artefact site
+`sha256:799d8dfa9e3a5b4b169e984575cea05a02b92522258531db267ada1f2472d614`
+et l'inventaire de routes
+`sha256:d31ae39ba0a4399a637b8fdbcc0bf4d6a3595b29509e85fb3e75cfee219568fc`
+ont passé le préflight HTTP sur Atlas. Le DNS et le HTTPS publics ne sont pas
+encore basculés. Cette démo ne contient aucun backend dynamique, secret ou
 stockage distant et ne change pas la cible GitHub Pages sous `/parkventory/`.
 
 Une gate de préparation vérifie maintenant les migrations V1 puis V2 et les
@@ -92,7 +98,7 @@ graphe local intégré.
 | Démo Pages | Landing animée, dashboard, partage et recherche statiques sous `/parkventory/` | Run Pages `31490845612` et cinq routes publiques HTTP 200 sur `c5b9dc5` | Aucun compte, email ou stockage distant |
 | Documentation Nimbus | Vision, parcours, rôles et règles produit sous `/parkventory/docs/` | Run Pages `31499873475`, routes publiques HTTP 200 et routes exclues HTTP 404 sur `c61fb2e` | Seule la collection produit est publique ; le corpus complet reste local |
 | CI | Gate Foundation, docs, audit, React, Quarkus et smoke Compose | Run Verify `31499873532` réussi sur `c61fb2e` | Aucune gate de production |
-| Candidate Atlas | Même démo statique construite sous `/`, avec routes directes et artefacts OCI déterministes | `npm run atlas:build`, double construction de l'archive et de l'inventaire | Non déployée dans ce dépôt ; aucune API ni persistance |
+| Démo Atlas statique | Même démo construite sous `/`, avec routes directes et artefacts OCI déterministes | Source `db088b831ad09092e07a42c5cf54ff28676c284c`, artefacts exacts matérialisés immuablement et préflight HTTP réussi sur Atlas | DNS et HTTPS publics non basculés ; aucune API ni persistance |
 
 ## État opérationnel
 
@@ -109,7 +115,7 @@ graphe local intégré.
 | Démo publique | `https://nclsppr.github.io/parkventory/`, `/app/`, `/app/partager/` et `/app/trouver/` | Toutes les entrées HTTP 200 ; route inconnue HTTP 404 |
 | Documentation publique | `https://nclsppr.github.io/parkventory/docs/` | Accueil, produit, recherche, agents et variantes Markdown HTTP 200 ; routes internes testées HTTP 404 |
 | Production | Aucune URL | Non provisionnée |
-| Démo Atlas candidate | Domaine cible `parkventory.com` | Build et artefacts préparés ; promotion, DNS, TLS et probe public non exécutés dans ce dépôt |
+| Démo Atlas statique | Domaine cible `parkventory.com` | Release immuable présente et préflight HTTP réussi sur Atlas ; DNS et HTTPS publics non basculés, aucun backend dynamique |
 
 La stack locale de développement est laissée active à la fin de cette
 livraison. `npm run compose:down` l'arrête en conservant les volumes.
@@ -118,6 +124,7 @@ livraison. `npm run compose:down` l'arrête en conservant les volumes.
 
 | Date | Commande ou contrôle | Résultat | Portée de la preuve |
 | --- | --- | --- | --- |
+| 2026-08-12 | Inspection des manifestes OCI et état de déploiement Atlas transmis par l'opérateur | Source `db088b831ad09092e07a42c5cf54ff28676c284c`, site `sha256:799d8dfa9e3a5b4b169e984575cea05a02b92522258531db267ada1f2472d614`, routes `sha256:d31ae39ba0a4399a637b8fdbcc0bf4d6a3595b29509e85fb3e75cfee219568fc`, matérialisation immuable et préflight HTTP réussis | Démo statique Atlas seulement ; DNS, HTTPS public, API et persistance non activés |
 | 2026-08-12 | `mise exec -- npm run postgres:verify` | Test V1 dédié puis quatre tests V2, version serveur, `btree_gist` et exclusions réussis sur PostgreSQL 17.10 et 18.3 par digest exact | Compatibilité locale arm64 ; aucune décision de version, base Atlas, sauvegarde ou production |
 | 2026-08-11 | GitHub Actions Verify `31499873532` et Pages `31499873475` sur `c61fb2e` | Deux workflows réussis au premier passage ; artefact combiné déployé | Gate distante complète et publication filtrée de Nimbus |
 | 2026-08-11 | Probes Nimbus publiques après `c61fb2e` | Accueil, aperçu, quatre pages produit, recherche, agents, sitemap, `robots.txt`, favicon et variantes Markdown HTTP 200 ; `project` et `docs/internal/open-questions` HTTP 404 | Disponibilité publique ponctuelle et frontière d'audience de l'artefact ; pas une supervision continue |

@@ -28,6 +28,15 @@ command -v python3 >/dev/null 2>&1 || {
   exit 1
 }
 
+python3 - <<'PY' || {
+import sys
+
+raise SystemExit(0 if sys.version_info >= (3, 9) else 1)
+PY
+  echo "Python >= 3.9 est requis pour lire le contrat PostgreSQL." >&2
+  exit 1
+}
+
 docker info >/dev/null 2>&1 || {
   echo "Le moteur Docker doit être démarré pour la matrice PostgreSQL." >&2
   exit 1
@@ -66,7 +75,8 @@ verify_variant() {
   ready="false"
   for ((_attempt = 1; _attempt <= 60; _attempt += 1)); do
     if docker exec "${container}" \
-      pg_isready --username=postgres --dbname="${database}" >/dev/null 2>&1; then
+      psql --tuples-only --no-align --username=postgres --dbname="${database}" \
+        --command='SELECT 1' >/dev/null 2>&1; then
       ready="true"
       break
     fi
