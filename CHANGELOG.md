@@ -119,7 +119,8 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 - attente de la base PostgreSQL de compatibilité par une requête réelle sur la
   base cible, au lieu d'un simple signal serveur qui pouvait précéder sa
-  création en CI, avec refus explicite de Python antérieur à 3.9 ;
+  création en CI, avec refus explicite de Python antérieur à 3.9 et propagation
+  du rejet d'un contrat invalide jusqu'au statut de la gate ;
 - audit de lisibilité du thème clair : logo original protégé par une plaque
   sombre, placeholders et focus de champs renforcés, frontières d'accent
   mesurables, états actifs compatibles avec les couleurs forcées et aperçu

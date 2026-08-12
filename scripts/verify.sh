@@ -107,6 +107,8 @@ if not required.issubset(actual):
     raise SystemExit("L'inventaire Atlas ne contient pas toutes les routes directes.")
 PY
 
+"${SCRIPT_DIR}/test_postgres_compatibility_contract.sh"
+
 command -v docker >/dev/null 2>&1 || {
   echo "Docker est requis pour les tests PostgreSQL de Quarkus." >&2
   exit 1

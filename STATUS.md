@@ -124,6 +124,7 @@ livraison. `npm run compose:down` l'arrête en conservant les volumes.
 
 | Date | Commande ou contrôle | Résultat | Portée de la preuve |
 | --- | --- | --- | --- |
+| 2026-08-12 | `scripts/test_postgres_compatibility_contract.sh` | Une décision de production falsifiée est rejetée avec un statut non nul avant Docker et aucun message de succès | Preuve négative du chemin shell ; les autres mutations invalides restent couvertes par les validations du même parseur |
 | 2026-08-12 | Inspection des manifestes OCI et état de déploiement Atlas transmis par l'opérateur | Source `db088b831ad09092e07a42c5cf54ff28676c284c`, site `sha256:799d8dfa9e3a5b4b169e984575cea05a02b92522258531db267ada1f2472d614`, routes `sha256:d31ae39ba0a4399a637b8fdbcc0bf4d6a3595b29509e85fb3e75cfee219568fc`, matérialisation immuable et préflight HTTP réussis | Démo statique Atlas seulement ; DNS, HTTPS public, API et persistance non activés |
 | 2026-08-12 | `mise exec -- npm run postgres:verify` | Test V1 dédié puis quatre tests V2, version serveur, `btree_gist` et exclusions réussis sur PostgreSQL 17.10 et 18.3 par digest exact | Compatibilité locale arm64 ; aucune décision de version, base Atlas, sauvegarde ou production |
 | 2026-08-11 | GitHub Actions Verify `31499873532` et Pages `31499873475` sur `c61fb2e` | Deux workflows réussis au premier passage ; artefact combiné déployé | Gate distante complète et publication filtrée de Nimbus |
