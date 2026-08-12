@@ -7,7 +7,7 @@
 | Nom | Parkventory |
 | Propriétaire | nclsppr |
 | Classe | Critique |
-| Surface de production | Aucune ; application locale persistante, démo statique et documentation publique au 2026-08-11 |
+| Surface de production | Aucune ; application locale persistante, démo Pages et documentation publique, candidate statique Atlas séparée du backend |
 | Socle adopté | [`FOUNDATION.md`](FOUNDATION.md) |
 
 ## Problème
@@ -183,6 +183,7 @@ ni contrat, ni données, ni autre module, et son retrait est local.
 | Développement applicatif | Docker Compose sur macOS ou Linux | `compose.yaml`, `.env.example` | Web `5173`, API `8080`, Mailpit `8025`/`1025`, PostgreSQL `5434` | `npm run dev` et `npm run compose:verify` |
 | Démo publique | GitHub Pages | `.github/workflows/pages.yml`, base `/parkventory/`, données statiques | `https://nclsppr.github.io/parkventory/` | Tests frontend, build puis probes publics |
 | Documentation publique | GitHub Pages | collection Nimbus `product`, base `/parkventory/docs/` | `https://nclsppr.github.io/parkventory/docs/` | Build public, lint, contrôle d'audience et probes HTTP |
+| Démo Atlas | Atlas, cible autorisée mais non déployée dans ce dépôt | `.github/workflows/vps-release.yml`, base `/`, données statiques | Domaine cible `parkventory.com` | Tests frontend, artefacts OCI déterministes, promotion et probes publics requis |
 | CI | GitHub Actions | `.github/workflows/verify.yml` | Exécuté à chaque push sur `main` | Même commande `verify` |
 | Production | Non provisionnée | Décision d'exploitation future | Aucune URL | Runbook et probes requis avant ouverture |
 
@@ -215,12 +216,15 @@ page 404 explicite.
 | Vérifier | `mise exec -- npm run verify` | Documentation, Compose, audit npm, React, Quarkus et migration PostgreSQL valides |
 | Construire la documentation | `npm run build --prefix docs-nimbus` | Site statique dérivé dans `docs-nimbus/dist/` |
 | Construire les surfaces Pages | `npm run pages:build` | Frontend statique sous `/parkventory/`, routes directes et documentation Nimbus publique sous `/parkventory/docs/` |
+| Construire la démo Atlas | `npm run atlas:build` | Frontend statique à la racine, toujours en mode démo et sans backend |
+| Construire les artefacts Atlas | `./scripts/build-vps-release.sh frontend/dist <sortie> <révision>` | Archive et inventaire de routes déterministes liés à un commit complet |
 
 Les commandes manuelles utilisent uniquement les services locaux autorisés.
 La démo et la documentation publique GitHub Pages sont déployées automatiquement
-depuis `main` dans un artefact unique ; elles ne constituent pas une cible de
-production. Aucun déploiement backend n'existe tant qu'une cible de production
-n'est pas explicitement décidée et autorisée.
+depuis `main` dans un artefact unique. La cible Atlas publie le même mode
+statique à la racine après promotion explicite de ses artefacts. Ces surfaces
+ne constituent pas une production applicative. Aucun déploiement backend
+n'existe tant que ses gates de production ne sont pas satisfaites.
 
 ## Données, sécurité et confidentialité
 

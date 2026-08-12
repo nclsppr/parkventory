@@ -22,6 +22,14 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 - palette sémantique séparant les aplats vert acide et bleu glacier de leurs
   encres accessibles sur fond clair, avec tests React et revue responsive des
   deux thèmes ;
+- build statique Atlas à la racine, séparé du build GitHub Pages sous
+  `/parkventory/`, avec mode démo obligatoire et routes directes ;
+- archive et inventaire de routes déterministes pour une publication OCI par
+  digest, workflow de provenance GitHub et intégration Caddy partagée ;
+- ADR-0006 qui borne `parkventory.com` à une démo sans backend, secret, port
+  applicatif ou donnée persistée ;
+- verrouillage transitif de `nanoid` en `3.3.18` pour corriger l'alerte de
+  sécurité du générateur personnalisé sans changer l'API applicative ;
 - attente CI ciblée et bornée pour le parcours d’affectation d’une place, qui
   couvre sa mutation puis le rechargement du tableau de bord sans modifier les
   délais de toute la suite de tests ;
@@ -116,10 +124,12 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Limites
 
-- la démo GitHub Pages reste volontairement statique, sans compte ni email ;
+- les démos GitHub Pages et Atlas restent volontairement statiques, sans compte
+  ni email ;
 - la recherche locale expose l'agenda réel des sept prochains jours ; le filtre
   d'un intervalle arbitraire attend encore son contrat API dédié ;
-- aucun hébergement ou domaine de production n'est livré ;
+- aucun backend ou domaine de production applicative n'est livré ; la cible
+  Atlas statique exige encore promotion, DNS, TLS et probe public ;
 - les droits de publication des cinq JPEG restent à confirmer ; le SVG fourni
   ne contient ni wordmark vectoriel ni variante monochrome ;
 - le fournisseur OIDC, le fournisseur d'email et l'infrastructure de production
