@@ -1,0 +1,11 @@
+[
+  {
+    "labels": {
+      "application": "parkventory",
+      "environment": "production"
+    },
+    "targets": [
+      "parkventory-backend:8080"
+    ]
+  }
+]

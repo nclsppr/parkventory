@@ -1,0 +1,40 @@
+{
+  "application": "parkventory",
+  "compose_project": "parkventory",
+  "compose_file": "compose.yaml",
+  "contract": "parkventory.vps-integration",
+  "migration": {
+    "entrypoint": "/opt/parkventory/bin/backend-migrate",
+    "published_in_backend_image": true,
+    "runtime_auto_migrate": false
+  },
+  "image_variables": {
+    "backend": "PARKVENTORY_BACKEND_IMAGE",
+    "frontend": "PARKVENTORY_FRONTEND_IMAGE"
+  },
+  "networks": [
+    "app_parkventory",
+    "db_parkventory"
+  ],
+  "public_hosts": [
+    "parkventory.com",
+    "www.parkventory.com"
+  ],
+  "route_owner": "compose",
+  "runtime_services": [
+    "backend",
+    "frontend"
+  ],
+  "schema": 1,
+  "secrets": [
+    "parkventory-postgres-migrator-password",
+    "parkventory-postgres-runtime-password",
+    "parkventory-smtp-password",
+    "parkventory-smtp-username"
+  ],
+  "source_repository": "nclsppr/parkventory",
+  "source_revision": "__SOURCE_REVISION__",
+  "transient_services": [
+    "migrator"
+  ]
+}
