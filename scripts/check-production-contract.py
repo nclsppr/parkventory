@@ -165,7 +165,15 @@ def validate_integration_sources() -> None:
             fail(f"le Compose applicatif contient une primitive interdite : {forbidden}")
     if compose.count("image: ${PARKVENTORY_BACKEND_IMAGE:?") != 2:
         fail("le backend et le migrateur n'utilisent pas exactement la même image")
-    probes = json.loads((ROOT / "deploy/vps/probes.json").read_text(encoding="ascii"))
+    probes_path = ROOT / "deploy/vps/probes.json"
+    probes_raw = probes_path.read_bytes()
+    probes = json.loads(probes_raw.decode("ascii"))
+    canonical_probes = (
+        json.dumps(probes, ensure_ascii=True, separators=(",", ":"), sort_keys=True)
+        + "\n"
+    ).encode("ascii")
+    if probes_raw != canonical_probes:
+        fail("le contrat de probes n'est pas du JSON canonique compact")
     if probes.get("contract") != "parkventory.probes" or probes.get("schema") != 1:
         fail("contrat de probes invalide")
     paths = {probe["path"] for probe in probes.get("public", [])}

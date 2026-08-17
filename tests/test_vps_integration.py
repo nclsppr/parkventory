@@ -99,7 +99,8 @@ class VpsIntegrationTest(unittest.TestCase):
                     )
                 contract = json.load(archive.extractfile("integration/contract.json"))
                 migrations = json.load(archive.extractfile("integration/migrations.json"))
-                probes = json.load(archive.extractfile("integration/probes.json"))
+                probes_raw = archive.extractfile("integration/probes.json").read()
+                probes = json.loads(probes_raw)
 
             self.assertEqual(contract["source_revision"], revision)
             self.assertFalse(contract["migration"]["runtime_auto_migrate"])
@@ -112,6 +113,18 @@ class VpsIntegrationTest(unittest.TestCase):
                 },
             )
             self.assertEqual(migrations["source_revision"], revision)
+            self.assertEqual(
+                probes_raw,
+                (
+                    json.dumps(
+                        probes,
+                        ensure_ascii=True,
+                        separators=(",", ":"),
+                        sort_keys=True,
+                    )
+                    + "\n"
+                ).encode("ascii"),
+            )
             self.assertEqual(probes["contract"], "parkventory.probes")
             self.assertIn(
                 "/.well-known/parkventory-release",
