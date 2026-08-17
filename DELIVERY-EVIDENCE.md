@@ -810,3 +810,57 @@ choisit pas la version de production et ne crée aucune base distante.
 OrbStack 29.4.0 et Java 25. Les conteneurs de schéma et Testcontainers ont été
 retirés après le passage. Aucune valeur de production, donnée utilisateur,
 route publique ou ressource Atlas n'a été lue ou modifiée.
+
+## Extension : producteur applicatif Atlas du 2026-08-17
+
+Cette tranche part de `origin/main` au SHA complet
+`c7c82c11fe98d2578e61d5b4fc010bcea1474a4e` sur la branche locale
+`codex/parkventory-fullstack-release`. Elle prépare la publication de
+l'application React/Java complète tout en conservant la démo statique et son
+workflow sans modification. L'implémentation est enregistrée dans le commit
+local `0396c77` ; aucun commit de cette branche n'est poussé.
+
+### Contrat livré localement
+
+| Élément | Contrat vérifié |
+| --- | --- |
+| Images | Backend Quarkus et frontend Nginx `linux/amd64`, bases par digest, utilisateurs `10001:10001` et `101:101`, fichiers en lecture seule et capacités retirées |
+| Migrations | Même image backend, entrypoint `/opt/parkventory/bin/backend-migrate`, Flyway automatique forcé à `false` dans le runtime et rôle migrateur séparé |
+| Compose VPS | Services exacts `backend`, `frontend`, `migrator` ; aucune construction, port ou volume ; secrets fichiers, réseaux externes, santé, CPU, mémoire, PIDs et logs bornés |
+| Intégration | Archive déterministe avec Compose, Caddy, Prometheus, probes, contrat et inventaire hashé des migrations V1/V2, tous liés au SHA source |
+| Release | Descripteur canonique `vps-infra.application-release.v1` liant les deux images, `vps-integration`, `migrations.json` et `probes.json` au même SHA |
+| Workflow | PR : validation sans publication. Push `main` : scans bloquants, SBOM, provenance, attestations, revalidation des digests poussés puis job final `Publish immutable application release` |
+
+### Preuves locales
+
+| Contrôle | Résultat observé | Frontière de preuve |
+| --- | --- | --- |
+| `python3 -m unittest -v tests.test_vps_compose tests.test_vps_integration` | 7 tests réussis : Compose rendu, allowlists, déterminisme, symlink rejeté, références mutables rejetées, JSON canonique et forme du manifeste OCI | Les fixtures OCI sont locales ; le roundtrip registre s'exécute seulement dans GitHub Actions |
+| ORAS 1.3.0 sur un layout OCI local | Roundtrip réel des manifests `vps-integration` à deux layers et `application-release` à un layer ; types, titres, annotations, digests et config OCI vide conformes | Layout local sans authentification ni registre distant ; le pullback GHCR reste à exécuter dans GitHub Actions |
+| Parseur `application_release.py` de `vps-infra` | Le descripteur Parkventory produit avec backend/frontend/intégration par digest et hashes préfixés a été accepté pour le SHA exact | Checkout Atlas local courant ; aucune requête registre ou GitHub |
+| `validate-compose parkventory --expected-images` de `vps-infra` | Le rendu Docker Compose avec backend/frontend/migrator liés aux digests attendus a été accepté | Secrets représentés uniquement par leurs chemins ; aucune valeur secrète lue |
+| `actionlint` 1.7.12 | `application-release.yml` accepté sans diagnostic | Analyse statique ; ne remplace pas un run Actions |
+| `mise exec -- npm run production:images:test` | Build amd64 réussi ; frontend/backend non-root ; migrateur applique V1/V2 et quitte ; backend read-only sain ; le rôle runtime ne peut pas créer de table | PostgreSQL 17.10 et conteneurs éphémères locaux ; aucun scan Trivy distant |
+| `mise exec -- ./scripts/verify.sh` | Gate complète réussie : documentation/Nimbus, audit npm, 35 tests React, builds Pages/Atlas, 7 tests contractuels, matrices Quarkus PostgreSQL 17.10/18.3 et smoke Compose | Exécution locale macOS arm64/OrbStack ; pas une preuve de publication ou disponibilité distante |
+
+Le premier build image a révélé que le wrapper Maven retéléchargeait la même
+distribution déjà contenue dans l'image Maven et échouait son contrôle dans ce
+contexte. Le Dockerfile utilise désormais le binaire Maven 3.9.16 de l'image de
+build verrouillée, vérifie explicitement sa version puis compile ; le wrapper
+et son hash restent la source canonique des commandes hôte.
+
+### Limites et actions non réalisées
+
+- aucun commit n'a été poussé et aucun workflow GitHub n'a encore exécuté cette
+  tranche ;
+- aucun package backend, frontend, `vps-integration` ou `application-release`
+  n'a été publié dans GHCR ;
+- aucun scan Trivy distant, SBOM, provenance ou attestation réelle n'existe
+  avant le premier run vert sur `main` ;
+- aucun secret, base, service Compose, route, DNS ou certificat n'a été créé sur
+  Atlas ;
+- le test local provisionne explicitement les rôles et grants DML avant de
+  prouver l'absence de DDL côté runtime ; Atlas devra créer ces grants et les
+  default privileges équivalents avant toute activation ;
+- le choix PostgreSQL, RLS, fournisseurs OIDC/email, sauvegarde/restauration,
+  applicateur et cutover restent des gates externes distinctes.

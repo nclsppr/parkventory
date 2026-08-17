@@ -7,14 +7,27 @@ Snapshot de l'état réellement vérifié. Il ne remplace ni le contrat stable d
 
 | Champ | Valeur |
 | --- | --- |
-| Vérifié le | 2026-08-12 |
+| Vérifié le | 2026-08-17 |
 | Par | Codex |
-| Branche | `codex/atlas-postgres-compatibility`, base `db088b8` ; draft PR [#3](https://github.com/nclsppr/parkventory/pull/3) |
-| Commits applicatifs | `e069d04` — backend persistant et Mailpit ; `9f7b9be` — frontend local réel ; `c748d32` — logo SVG canonique ; `47ee871` — routes Partager et Trouver ; `25d3197` — narration et interactions de la landing ; `835515a` — stabilisation du parcours CI ; `75c6a37` — thèmes sombre et clair sélectionnables ; `e53ae9a` — stabilisation de la gate et audit npm ; `c5b9dc5` — audit de lisibilité du thème clair ; `c61fb2e` — publication Nimbus filtrée ; `db088b8` — sécurisation du candidat statique Atlas sur `main` |
+| Branche | `codex/parkventory-fullstack-release`, base exacte `origin/main` à `c7c82c11fe98d2578e61d5b4fc010bcea1474a4e` ; travail local non poussé |
+| Commits applicatifs | `e069d04` — backend persistant et Mailpit ; `9f7b9be` — frontend local réel ; `c748d32` — logo SVG canonique ; `47ee871` — routes Partager et Trouver ; `25d3197` — narration et interactions de la landing ; `835515a` — stabilisation du parcours CI ; `75c6a37` — thèmes sombre et clair sélectionnables ; `e53ae9a` — stabilisation de la gate et audit npm ; `c5b9dc5` — audit de lisibilité du thème clair ; `c61fb2e` — publication Nimbus filtrée ; `db088b8` — sécurisation du candidat statique Atlas sur `main` ; `0396c77` — producteur applicatif Atlas immuable local |
 | Environnement | macOS Darwin 27.0.0 arm64, OrbStack 29.4.0, Node 24.18.0, npm 11.16.0, Python 3.12.13 |
-| Version livrée | F02, F03 et F04 partielles ; thèmes sombre et clair sélectionnables ; routes dédiées de partage et recherche ; documentation Nimbus publique filtrée ; démo statique matérialisée sur Atlas en préflight HTTP, sans DNS ni HTTPS publics |
+| Version livrée | F02, F03 et F04 partielles ; démo statique Atlas inchangée ; producteur OCI React/Java et contrat Compose préparés localement, sans publication GHCR, activation Atlas, DNS ni HTTPS public |
 
 ## Résumé
+
+Au 2026-08-17, le dépôt sait construire deux images de production
+`linux/amd64` non-root, exécuter Flyway depuis la même image backend dans un job
+dédié, produire un bundle `vps-integration` déterministe et assembler le digest
+unique `vps-infra.application-release.v1` attendu par Atlas. Le Compose embarqué
+est app-only : aucun port, build ou volume, secrets fichiers sous
+`/etc/vps/secrets/parkventory`, réseaux externes, santé et ressources bornées.
+
+La gate locale complète et le scénario des images ont réussi. Le parseur de
+release et le validateur Compose actuels de `vps-infra` ont accepté les sorties
+exactes. Aucun push, workflow distant, package GHCR, secret, hôte Atlas, DNS ou
+route active n'a été créé ou modifié. La démo statique décrite ci-dessous reste
+donc l'unique état Atlas historiquement matérialisé.
 
 Au 2026-08-12, une cible Atlas distincte construit la démo publique à la racine
 et produit une archive OCI avec inventaire de routes déterministe. Cette cible
@@ -89,7 +102,7 @@ graphe local intégré.
 | --- | --- | --- | --- |
 | Identité locale | Lien 256 bits, hash en base, durée 15 min, consommation unique, session `HttpOnly` 7 jours | Tests Quarkus, smoke Compose, parcours navigateur | Adaptateur HTTP local, pas OIDC de production |
 | Communauté | Invitation exacte prioritaire, sinon organisation communautaire unique par domaine | PostgreSQL réel et tests d'intégration | Domaine partagé/filiales et liste anti-abus à durcir |
-| Application React | Connexion, dashboard de synthèse, routes dédiées de partage et recherche, réservation, invitation, chargements, erreurs, états vides et choix clair/sombre persistant | 34 tests Vitest, build, navigation History API et navigateur sans erreur console | Client OpenAPI encore manuel ; recherche limitée à l'agenda de sept jours |
+| Application React | Connexion, dashboard de synthèse, routes dédiées de partage et recherche, réservation, invitation, chargements, erreurs, états vides et choix clair/sombre persistant | 35 tests Vitest, build, navigation History API et navigateur sans erreur console | Client OpenAPI encore manuel ; recherche limitée à l'agenda de sept jours |
 | Identité visuelle | Master SVG fourni utilisé dans les huit emplacements React, les favicons, le header Nimbus et les cartes Open Graph ; palettes sombre et claire sémantiques ; plaque de contraste claire sans recoloration du master | Gate anti-dérive, tests de ratios et revue des deux thèmes desktop/mobile | Symbole seul ; aucun wordmark vectoriel ni variante monochrome |
 | API Quarkus | Session, dashboard, place, partage, réservation idempotente et invitation | Un test V1 dédié puis quatre tests sur chacune des images exactes PostgreSQL 17.10 et 18.3, contrat OpenAPI `0.2.0` | Annulation et administration absentes |
 | PostgreSQL | Schéma multi-tenant, sessions, outbox, audit, idempotence et exclusions GiST | V1 isolée, V1 vers V2 avec Flyway, `btree_gist` et trois exclusions vérifiés sur 17.10 et 18.3 | Compatibilité ne vaut pas choix de production ; RLS et rôle applicatif non propriétaire non livrés |
@@ -97,7 +110,8 @@ graphe local intégré.
 | Environnement | Quatre services Compose, images par digest, healthchecks et volumes | Checker indépendant, smoke complet et stack locale saine | Docker ou OrbStack requis |
 | Démo Pages | Landing animée, dashboard, partage et recherche statiques sous `/parkventory/` | Run Pages `31490845612` et cinq routes publiques HTTP 200 sur `c5b9dc5` | Aucun compte, email ou stockage distant |
 | Documentation Nimbus | Vision, parcours, rôles et règles produit sous `/parkventory/docs/` | Run Pages `31499873475`, routes publiques HTTP 200 et routes exclues HTTP 404 sur `c61fb2e` | Seule la collection produit est publique ; le corpus complet reste local |
-| CI | Gate Foundation, docs, audit, React, Quarkus et smoke Compose | Run Verify `31499873532` réussi sur `c61fb2e` | Aucune gate de production |
+| Producteur applicatif Atlas | Images backend/frontend amd64 non-root, migrateur dédié, Compose app-only, intégration déterministe et release canonique | 7 tests contractuels, scénario images réel, parseurs Atlas et gate locale complète du 2026-08-17 | Workflow non exécuté à distance ; aucun digest GHCR publié ou admis |
+| CI | Gate Foundation, docs, audit, React, Quarkus et smoke Compose ; workflow `Application release` préparé | Run Verify `31499873532` réussi sur `c61fb2e`, puis gate locale complète le 2026-08-17 | Nouveau workflow non exécuté tant que la branche n'est pas poussée/mergée |
 | Démo Atlas statique | Même démo construite sous `/`, avec routes directes et artefacts OCI déterministes | Source `db088b831ad09092e07a42c5cf54ff28676c284c`, artefacts exacts matérialisés immuablement et préflight HTTP réussi sur Atlas | DNS et HTTPS publics non basculés ; aucune API ni persistance |
 
 ## État opérationnel
@@ -114,16 +128,20 @@ graphe local intégré.
 | PostgreSQL | `127.0.0.1:5434` | Healthy, Flyway V2 |
 | Démo publique | `https://nclsppr.github.io/parkventory/`, `/app/`, `/app/partager/` et `/app/trouver/` | Toutes les entrées HTTP 200 ; route inconnue HTTP 404 |
 | Documentation publique | `https://nclsppr.github.io/parkventory/docs/` | Accueil, produit, recherche, agents et variantes Markdown HTTP 200 ; routes internes testées HTTP 404 |
+| Candidat applicatif | GHCR attendu sous `application-release:sha-$HEAD` | Contrat local vert ; aucun package publié |
 | Production | Aucune URL | Non provisionnée |
 | Démo Atlas statique | Domaine cible `parkventory.com` | Release immuable présente et préflight HTTP réussi sur Atlas ; DNS et HTTPS publics non basculés, aucun backend dynamique |
 
-La stack locale de développement est laissée active à la fin de cette
-livraison. `npm run compose:down` l'arrête en conservant les volumes.
+Les projets Docker isolés des validations du 2026-08-17 ont été retirés par
+leurs traps de nettoyage. Aucun service de production n'a été démarré.
 
 ## Validations récentes
 
 | Date | Commande ou contrôle | Résultat | Portée de la preuve |
 | --- | --- | --- | --- |
+| 2026-08-17 | `mise exec -- ./scripts/verify.sh` | Gate complète réussie : 39 Markdown, Nimbus, 7 tests contractuels, audit npm, 35 tests React, builds statiques, Quarkus/PostgreSQL 17.10 et 18.3, puis parcours Compose | Preuve locale ; ne publie ni image, ni release, ni déploiement |
+| 2026-08-17 | `mise exec -- npm run production:images:test` | Images backend/frontend amd64 construites depuis les digests verrouillés ; utilisateurs non-root, migrateur V1/V2 one-shot, runtime en lecture seule sain et rôle PostgreSQL runtime sans DDL | Conteneurs locaux éphémères ; pas de scan distant, SBOM ou attestation avant le workflow |
+| 2026-08-17 | Tests contractuels, ORAS 1.3.0 en layout OCI local, `actionlint` 1.7.12 et validateurs `vps-infra` | Bundle et release déterministes ; manifests `vps-integration` et `application-release` exacts ; Compose rendu accepté avec les trois images attendues | Validation locale sans authentification ; aucun roundtrip GHCR ni admission live exécuté |
 | 2026-08-12 | `scripts/test_postgres_compatibility_contract.sh` | Une décision de production falsifiée est rejetée avec un statut non nul avant Docker et aucun message de succès | Preuve négative du chemin shell ; les autres mutations invalides restent couvertes par les validations du même parseur |
 | 2026-08-12 | Inspection des manifestes OCI et état de déploiement Atlas transmis par l'opérateur | Source `db088b831ad09092e07a42c5cf54ff28676c284c`, site `sha256:799d8dfa9e3a5b4b169e984575cea05a02b92522258531db267ada1f2472d614`, routes `sha256:d31ae39ba0a4399a637b8fdbcc0bf4d6a3595b29509e85fb3e75cfee219568fc`, matérialisation immuable et préflight HTTP réussis | Démo statique Atlas seulement ; DNS, HTTPS public, API et persistance non activés |
 | 2026-08-12 | `mise exec -- npm run postgres:verify` | Test V1 dédié puis quatre tests V2, version serveur, `btree_gist` et exclusions réussis sur PostgreSQL 17.10 et 18.3 par digest exact | Compatibilité locale arm64 ; aucune décision de version, base Atlas, sauvegarde ou production |
@@ -176,6 +194,8 @@ livraison. `npm run compose:down` l'arrête en conservant les volumes.
 | --- | --- | --- | --- |
 | Fournisseurs OIDC et email non choisis | Interdit de présenter l'identité locale comme prête pour la production | nclsppr | ADR, contrat, région, coût et retrait validés |
 | Production applicative non décidée | Bloque toute API, identité ou persistance publique | nclsppr | Architecture d'exploitation, services externes et gates du runbook validés |
+| Applicateur et cutover Compose non livrés | Le digest producteur ne peut pas remplacer la démo statique en sécurité | nclsppr | Matérialisation, secrets, migration, rollback et probes publics testés sur Atlas sans bascule implicite |
+| Privilèges PostgreSQL de production non provisionnés | Le migrateur possède le schéma et le runtime doit recevoir uniquement les droits DML/usage nécessaires, y compris les default privileges des migrations futures | nclsppr | Rôles, grants et rotation créés par Atlas puis test négatif DDL rejoué avec les identités de production |
 | Version PostgreSQL Atlas non alignée par ADR | Interdit d'utiliser la preuve 17.10 comme décision de production | nclsppr | Choix 17 ou 18, rôles, migration, sauvegarde et restauration approuvés dans les deux dépôts |
 | Droits des cinq JPEG non documentés | Interdit leur publication comme assets servis | nclsppr | Confirmer origine et droits ; le site sert une création originale |
 
@@ -188,7 +208,7 @@ livraison. `npm run compose:down` l'arrête en conservant les volumes.
 | Défense anti-abus | Refus minimal de domaines personnels | Spam et tenant indésirable | Rate limit, liste versionnée et réponses/timings comparés |
 | Intégrité temporelle complète | Contraintes GiST et conflits testés séquentiellement | Course, annulation ou DST mal traitée | Tests parallèles, annulation et matrice de fuseaux |
 | Recherche d'un intervalle arbitraire | Route dédiée alimentée par l'agenda réel à sept jours | Besoin non couvert au-delà de cette fenêtre | Ajouter un contrat de recherche borné avant d'afficher des filtres date/site |
-| Identité de production | Adaptateur local Mailpit | Mauvais usage hors boucle locale | OIDC, cookie `Secure`, PKCE, CSRF et révocation de migration |
+| Identité de production | Adaptateur local Mailpit ; cookie `Secure` forcé dans le profil prod | Mauvais usage hors boucle locale | OIDC, PKCE, CSRF et révocation de migration |
 
 ## Risques et hypothèses
 
