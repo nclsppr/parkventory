@@ -7,6 +7,22 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Ajouté
 
+- publication de la PR #4 sur `main` au SHA
+  `583e0e2b63701097aa4894ecc4fb3de8ad325346`, avec les workflows Verify,
+  Pages, release statique et release applicative tous réussis ;
+- enregistrement du snapshot de mise en service Atlas, antérieur à cette
+  consolidation documentaire, avec le site statique
+  `sha256:eb4596ac08e76bf59dc0c1ed6982f8cad6a25e98bc09b507790a78107e41553c`
+  et de ses routes
+  `sha256:47673d6906494ed128616357efe305e7be372e06022f4a2a794dcdc164ecbe7a`,
+  avec apex HTTPS 200, redirection `www` unique et réconciliation automatique
+  désormais active ; les prochains pushes produisent de nouveaux tuples ;
+- première release applicative canonique publiée et attestée au digest
+  `sha256:384f736a81089a9a91a7ff55b21d552a6d803d65ab8e33daa296b54d990209a3`,
+  distincte de toute activation Compose ;
+- consolidation opérationnelle de l'état Atlas, des preuves de publication,
+  des statuts `ready`/`pending`/`blocked`, du dispatch, de la suspension, de la
+  recovery, de la rotation de clé et du cutover exclusif statique vers Compose ;
 - producteur applicatif Atlas séparé de la démo statique, avec images OCI
   backend Java/Quarkus et frontend React `linux/amd64`, non-root et construites
   depuis des bases verrouillées par digest ;
@@ -155,9 +171,11 @@ la source du diff technique et les ADR expliquent les décisions importantes.
   ni email ;
 - la recherche locale expose l'agenda réel des sept prochains jours ; le filtre
   d'un intervalle arbitraire attend encore son contrat API dédié ;
-- aucun backend ou domaine de production applicative n'est livré ; la démo
-  Atlas statique a passé son préflight HTTP, mais le DNS et le HTTPS publics ne
-  sont pas encore basculés ;
+- aucun backend ou domaine de production applicative n'est livré ;
+  `parkventory.com` sert publiquement la démo Atlas statique en HTTPS ;
+- le contrôleur applicatif est fusionné dans `vps-infra`, mais Parkventory reste
+  désactivé, sa convergence live n'est pas prouvée et aucune base, aucun secret,
+  aucune migration ou bascule Compose n'a été exécuté ;
 - les droits de publication des cinq JPEG restent à confirmer ; le SVG fourni
   ne contient ni wordmark vectoriel ni variante monochrome ;
 - le fournisseur OIDC, le fournisseur d'email et l'infrastructure de production
