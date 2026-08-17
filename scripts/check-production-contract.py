@@ -80,6 +80,10 @@ def validate_dockerfiles() -> None:
 
 
 def validate_runtime_contract() -> None:
+    require_text(
+        "backend/pom.xml",
+        ("<artifactId>quarkus-micrometer-registry-prometheus</artifactId>",),
+    )
     properties = require_text(
         "backend/src/main/resources/application.properties",
         (
@@ -167,6 +171,20 @@ def validate_integration_sources() -> None:
     paths = {probe["path"] for probe in probes.get("public", [])}
     if "/.well-known/parkventory-release" not in paths:
         fail("probe public de distinction statique/dynamique absente")
+    prometheus_targets = json.loads(
+        (ROOT / "deploy/vps/prometheus/targets.json").read_text(encoding="ascii")
+    )
+    if prometheus_targets != [
+        {
+            "labels": {
+                "__metrics_path__": "/q/metrics",
+                "application": "parkventory",
+                "environment": "production",
+            },
+            "targets": ["parkventory-backend:8080"],
+        }
+    ]:
+        fail("la cible Prometheus ne pointe pas exactement vers le endpoint Micrometer")
 
 
 def validate_workflow() -> None:

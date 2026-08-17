@@ -148,7 +148,7 @@ inventory = {
 )
 
 tar_path = output / "integration.tar"
-with tarfile.open(tar_path, "w", format=tarfile.GNU_FORMAT) as archive:
+with tarfile.open(tar_path, "w", format=tarfile.USTAR_FORMAT) as archive:
     for directory in ["integration", "integration/caddy", "integration/prometheus"]:
         info = tarfile.TarInfo(directory)
         info.type = tarfile.DIRTYPE

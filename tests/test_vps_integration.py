@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gzip
 import hashlib
 import json
 import os
@@ -46,6 +47,8 @@ class VpsIntegrationTest(unittest.TestCase):
                 (first / "inventory.json").read_bytes(),
                 (second / "inventory.json").read_bytes(),
             )
+            tar_bytes = gzip.decompress((first / "integration.tar.gz").read_bytes())
+            self.assertEqual(tar_bytes[257:265], b"ustar\x0000")
 
             inventory = json.loads((first / "inventory.json").read_text(encoding="ascii"))
             self.assertEqual(

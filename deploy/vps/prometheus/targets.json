@@ -1,6 +1,7 @@
 [
   {
     "labels": {
+      "__metrics_path__": "/q/metrics",
       "application": "parkventory",
       "environment": "production"
     },
