@@ -125,7 +125,8 @@ Ces lectures partent d'un poste déjà authentifié à GitHub :
 
 ```bash
 gh run list --repo nclsppr/vps-infra --workflow deploy-static-releases.yml --limit 5
-gh run view <run-id> --repo nclsppr/vps-infra
+gh run view <run-id> --repo nclsppr/vps-infra --verbose
+gh run view <run-id> --repo nclsppr/vps-infra --log
 
 for url in https://parkventory.com/ https://www.parkventory.com/; do
   curl \
