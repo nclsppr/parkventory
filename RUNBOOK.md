@@ -4,7 +4,9 @@ Ce document prépare une future mise en production applicative. Il n'autorise
 aucune action externe et reste non exécutable tant que la cible, les secrets,
 les sauvegardes et les commandes canoniques ne sont pas décidés et testés. La
 démo statique Atlas de l'ADR-0007 est une livraison distincte sans backend ni
-donnée persistée ; elle ne satisfait aucun checkpoint de ce runbook.
+donnée persistée ; elle ne satisfait aucun checkpoint de ce runbook. Le
+producteur OCI de l'ADR-0008 prépare des digests applicatifs, mais ne contient
+aucune commande d'activation ou de cutover.
 
 ## Nature du document
 
@@ -47,7 +49,8 @@ rollback vérifié.
 ### Limites et exclusions
 
 - Aucun fournisseur, compte, domaine, région ou budget n'est choisi.
-- Aucune commande de déploiement n'existe.
+- Aucune commande de déploiement ou d'activation n'existe ; seules les commandes
+  de construction et de validation du candidat sont disponibles.
 - Aucune sauvegarde ni restauration n'est possible avant création de la base.
 - Ce runbook ne permet pas de provisionner implicitement un service.
 - La compatibilité PostgreSQL 17.10 ne remplace pas la décision de version, les
@@ -78,8 +81,8 @@ rollback vérifié.
 
 - Configuration canonique : fichiers de déploiement et variables documentées,
   à créer avec l'ADR d'exploitation.
-- Validation canonique : `./scripts/verify.sh`, étendue au frontend, backend,
-  migrations et image de production.
+- Validation canonique : `./scripts/verify.sh`, étendue au contrat producteur,
+  puis `npm run production:images:test` pour les images de production.
 - Accès : rôles séparés et minimaux pour CI, runtime et administration.
 - Secrets : références de gestionnaire, jamais valeurs dans ce dépôt.
 - Fenêtre : définie avant toute migration ou bascule.
@@ -114,7 +117,7 @@ rollback vérifié.
 
 | Étape | Action | Commande canonique | Résultat attendu | Arrêt immédiat si |
 | --- | --- | --- | --- | --- |
-| 1 | Construire les artefacts | À créer en F02 | Frontend et image backend identifiés immuablement | Build non reproductible |
+| 1 | Construire les artefacts | Workflow `Application release` de l'ADR-0008 | Digest `application-release` liant frontend, backend, intégration et inventaires au même SHA | Build non reproductible, scan rouge ou attestation absente |
 | 2 | Vérifier migrations | À créer avec Flyway | Migration réussie sur copie représentative | Destruction non planifiée |
 | 3 | Déployer sans bascule | À créer avec l'infrastructure | Nouvelle version saine mais non exposée | Probe ou logs en erreur |
 | 4 | Basculer le trafic | À créer avec le reverse proxy | Même origine HTTPS active | TLS, session ou route incorrecte |

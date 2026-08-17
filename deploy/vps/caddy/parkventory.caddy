@@ -1,0 +1,22 @@
+parkventory.com {
+	log
+	import security_headers
+
+	handle /.well-known/parkventory-release {
+		header Content-Type text/plain
+		respond "parkventory-compose-v1\n" 200
+	}
+
+	handle /api/* {
+		reverse_proxy parkventory-backend:8080
+	}
+
+	handle {
+		reverse_proxy parkventory-frontend:8080
+	}
+}
+
+www.parkventory.com {
+	import security_headers
+	redir https://parkventory.com{uri} 308
+}

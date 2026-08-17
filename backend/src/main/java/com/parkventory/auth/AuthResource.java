@@ -11,6 +11,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 import static com.parkventory.auth.AuthModels.*;
@@ -22,10 +23,16 @@ import static com.parkventory.auth.AuthModels.*;
 public class AuthResource {
     private final AuthService authService;
     private final SessionService sessionService;
+    private final boolean secureCookie;
 
-    public AuthResource(AuthService authService, SessionService sessionService) {
+    public AuthResource(
+            AuthService authService,
+            SessionService sessionService,
+            @ConfigProperty(name = "parkventory.cookie.secure", defaultValue = "false")
+                    boolean secureCookie) {
         this.authService = authService;
         this.sessionService = sessionService;
+        this.secureCookie = secureCookie;
     }
 
     @POST
@@ -45,11 +52,8 @@ public class AuthResource {
                 context.normalizedEmail(),
                 context.organizationName(),
                 context.role());
-        String cookie = SessionService.COOKIE_NAME
-                + "="
-                + verified.rawSessionToken()
-                + "; Path=/; HttpOnly; SameSite=Lax; Max-Age="
-                + authService.sessionMaxAgeSeconds();
+        String cookie = sessionCookie(
+                verified.rawSessionToken(), authService.sessionMaxAgeSeconds(), secureCookie);
         return Response.ok(view)
                 .header(HttpHeaders.SET_COOKIE, cookie)
                 .build();
@@ -76,8 +80,16 @@ public class AuthResource {
         return Response.ok(new AuthAction(true, "Vous êtes déconnecté."))
                 .header(
                         HttpHeaders.SET_COOKIE,
-                        SessionService.COOKIE_NAME
-                                + "=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0")
+                        sessionCookie("", 0, secureCookie))
                 .build();
+    }
+
+    static String sessionCookie(String value, long maxAgeSeconds, boolean secure) {
+        return SessionService.COOKIE_NAME
+                + "="
+                + value
+                + "; Path=/; HttpOnly; SameSite=Lax; Max-Age="
+                + maxAgeSeconds
+                + (secure ? "; Secure" : "");
     }
 }

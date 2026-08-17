@@ -7,6 +7,21 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Ajouté
 
+- producteur applicatif Atlas séparé de la démo statique, avec images OCI
+  backend Java/Quarkus et frontend React `linux/amd64`, non-root et construites
+  depuis des bases verrouillées par digest ;
+- migrateur Flyway dédié dans la même image backend, runtime explicitement sans
+  migration automatique et test du rôle PostgreSQL runtime privé de DDL ;
+- Compose VPS app-only sans port, build ni volume, avec secrets fichiers,
+  réseaux externes, healthchecks, ressources et logs bornés ;
+- bundle `vps-integration` déterministe lié au SHA, inventaires exacts des
+  migrations V1/V2 et probes, puis descripteur canonique
+  `vps-infra.application-release.v1` liant tous les digests ;
+- workflow de publication après gate complète, scans bloquants, SBOM,
+  provenance et attestations, avec revalidation des images réellement poussées
+  avant `Publish immutable application release` ;
+- ADR-0008 qui sépare explicitement la publication d'un candidat full-stack de
+  tout cutover de la démo statique ou déploiement live ;
 - matrice PostgreSQL liée aux digests exacts 17.10 et 18.3, avec application
   isolée de V1 puis V2, vérification de `btree_gist` et des exclusions GiST, et
   exécution complète des tests Quarkus sur chaque version ;

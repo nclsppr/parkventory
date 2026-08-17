@@ -26,6 +26,8 @@
     "frontend:test": "npm run test --workspace @parkventory/frontend",
     "pages:build": "./scripts/build_pages.sh",
     "atlas:build": "./scripts/build_atlas.sh",
+    "production:check": "python3 scripts/check-production-contract.py && python3 -m unittest discover -s tests -p 'test_*.py'",
+    "production:images:test": "./scripts/test-production-images.sh",
     "backend:test": "cd backend && mise exec -- ./mvnw verify",
     "docs:build": "npm run build --prefix docs-nimbus",
     "verify": "./scripts/verify.sh"

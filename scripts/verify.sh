@@ -72,6 +72,12 @@ fi
 git -C "${PROJECT_ROOT}" diff --check
 git -C "${PROJECT_ROOT}" diff --cached --check
 
+echo "Vérification du contrat producteur applicatif"
+python3 "${SCRIPT_DIR}/check-production-contract.py"
+python3 -m unittest discover \
+  -s "${PROJECT_ROOT}/tests" \
+  -p 'test_*.py'
+
 echo "Vérification du frontend React"
 npm ci --prefix "${PROJECT_ROOT}" --ignore-scripts --no-audit --no-fund
 npm audit --prefix "${PROJECT_ROOT}" --audit-level=high

@@ -1,0 +1,145 @@
+name: parkventory
+
+services:
+  migrator:
+    image: ${PARKVENTORY_BACKEND_IMAGE:?PARKVENTORY_BACKEND_IMAGE must be an immutable digest reference}
+    profiles:
+      - migration
+    entrypoint:
+      - /opt/parkventory/bin/backend-migrate
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      PARKVENTORY_DB_PASSWORD_FILE: /run/secrets/parkventory_postgres_migrator_password
+      PARKVENTORY_DB_USER: ${PARKVENTORY_DB_MIGRATOR_USER:?PARKVENTORY_DB_MIGRATOR_USER is required}
+      PARKVENTORY_JDBC_URL: ${PARKVENTORY_JDBC_URL:?PARKVENTORY_JDBC_URL is required}
+    secrets:
+      - parkventory_postgres_migrator_password
+    networks:
+      db_parkventory: {}
+    restart: "no"
+    stop_grace_period: 120s
+    cpus: 0.5
+    mem_limit: 512m
+    pids_limit: 128
+    logging:
+      driver: local
+      options:
+        max-file: "3"
+        max-size: 10m
+
+  backend:
+    image: ${PARKVENTORY_BACKEND_IMAGE:?PARKVENTORY_BACKEND_IMAGE must be an immutable digest reference}
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      PARKVENTORY_DB_PASSWORD_FILE: /run/secrets/parkventory_postgres_runtime_password
+      PARKVENTORY_DB_USER: ${PARKVENTORY_DB_RUNTIME_USER:?PARKVENTORY_DB_RUNTIME_USER is required}
+      PARKVENTORY_JDBC_URL: ${PARKVENTORY_JDBC_URL:?PARKVENTORY_JDBC_URL is required}
+      PARKVENTORY_MIGRATION_ONLY: "false"
+      PARKVENTORY_SMTP_FROM: ${PARKVENTORY_SMTP_FROM:?PARKVENTORY_SMTP_FROM is required}
+      PARKVENTORY_SMTP_HOST: ${PARKVENTORY_SMTP_HOST:?PARKVENTORY_SMTP_HOST is required}
+      PARKVENTORY_SMTP_PASSWORD_FILE: /run/secrets/parkventory_smtp_password
+      PARKVENTORY_SMTP_PORT: ${PARKVENTORY_SMTP_PORT:?PARKVENTORY_SMTP_PORT is required}
+      PARKVENTORY_SMTP_USERNAME_FILE: /run/secrets/parkventory_smtp_username
+      PARKVENTORY_WEB_BASE_URL: ${PARKVENTORY_WEB_BASE_URL:?PARKVENTORY_WEB_BASE_URL is required}
+      QUARKUS_FLYWAY_MIGRATE_AT_START: "false"
+      QUARKUS_HTTP_HOST: 0.0.0.0
+      QUARKUS_PROFILE: prod
+    secrets:
+      - parkventory_postgres_runtime_password
+      - parkventory_smtp_password
+      - parkventory_smtp_username
+    networks:
+      app_parkventory:
+        aliases:
+          - parkventory-backend
+      db_parkventory: {}
+    healthcheck:
+      test:
+        - CMD
+        - /opt/parkventory/bin/backend-healthcheck
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    stop_grace_period: 30s
+    cpus: 1.0
+    mem_limit: 768m
+    pids_limit: 256
+    logging:
+      driver: local
+      options:
+        max-file: "3"
+        max-size: 10m
+
+  frontend:
+    image: ${PARKVENTORY_FRONTEND_IMAGE:?PARKVENTORY_FRONTEND_IMAGE must be an immutable digest reference}
+    user: "101:101"
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      app_parkventory:
+        aliases:
+          - parkventory-frontend
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - --quiet
+        - --output-document=-
+        - http://127.0.0.1:8080/__health
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    stop_grace_period: 15s
+    cpus: 0.5
+    mem_limit: 128m
+    pids_limit: 128
+    logging:
+      driver: local
+      options:
+        max-file: "3"
+        max-size: 10m
+
+networks:
+  app_parkventory:
+    external: true
+    name: app_parkventory
+  db_parkventory:
+    external: true
+    name: db_parkventory
+
+secrets:
+  parkventory_postgres_migrator_password:
+    name: parkventory_postgres_migrator_password
+    file: /etc/vps/secrets/parkventory/parkventory-postgres-migrator-password
+  parkventory_postgres_runtime_password:
+    name: parkventory_postgres_runtime_password
+    file: /etc/vps/secrets/parkventory/parkventory-postgres-runtime-password
+  parkventory_smtp_password:
+    name: parkventory_smtp_password
+    file: /etc/vps/secrets/parkventory/parkventory-smtp-password
+  parkventory_smtp_username:
+    name: parkventory_smtp_username
+    file: /etc/vps/secrets/parkventory/parkventory-smtp-username

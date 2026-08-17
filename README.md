@@ -86,6 +86,27 @@ La matrice peut être rejouée seule avec `mise exec -- npm run postgres:verify`
 Son succès prouve une compatibilité technique bornée. Il ne choisit pas la
 version de production et n'autorise ni création de base, ni déploiement.
 
+## Vérifier le candidat applicatif Atlas
+
+Le dépôt prépare séparément les images de production React et Java/Quarkus, le
+migrateur Flyway dédié et le contrat OCI commun attendu par Atlas :
+
+```bash
+npm run production:check
+npm run production:images:test
+```
+
+La seconde commande construit et exerce les images `linux/amd64` avec Docker :
+utilisateurs non-root, backend en lecture seule, frontend sain, migration
+one-shot et rôle PostgreSQL runtime sans DDL. Après validation de `main`, le
+workflow `Application release` publie un digest canonique sous
+`ghcr.io/nclsppr/parkventory/application-release:sha-$HEAD` avec SBOM,
+provenance et attestations vérifiées.
+
+Cette publication ne déploie rien. La démo statique Pages/Atlas reste intacte ;
+l'activation Compose, le domaine et les données exigent une tranche de cutover
+distincte et les préconditions de `RUNBOOK.md`.
+
 ## Périmètre actuel
 
 - React 19, TypeScript 7 et Vite 8 pour la landing et l'application responsive ;
@@ -104,7 +125,7 @@ version de production et n'autorise ni création de base, ni déploiement.
 - démo frontend statique publiée par le workflow GitHub Pages ;
 - images générées propres au projet, avec source et provenance documentées ;
 - aucun fournisseur OIDC ou email de production et aucun déploiement de
-  production.
+  production ; le producteur OCI applicatif est préparé mais non activé.
 
 ## Documentation essentielle
 

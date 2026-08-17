@@ -7,7 +7,7 @@
 | Nom | Parkventory |
 | Propriétaire | nclsppr |
 | Classe | Critique |
-| Surface de production | Aucune ; application locale persistante, démo Pages et documentation publique, candidate statique Atlas séparée du backend |
+| Surface de production | Aucune ; application locale persistante, démos statiques Pages/Atlas, et producteur OCI full-stack séparé sans activation |
 | Socle adopté | [`FOUNDATION.md`](FOUNDATION.md) |
 
 ## Problème
@@ -105,7 +105,7 @@ Ces cibles ne sont pas des résultats acquis.
 | Sécurité et isolation | [`docs/architecture/security-and-tenancy.md`](docs/architecture/security-and-tenancy.md) | normative | Défense en profondeur |
 | Design system | [`DESIGN.md`](DESIGN.md) et `frontend/src/styles.css` | normative et opérationnelle | Tokens, composants et responsive alignés |
 | Identité de marque | `assets/brand/parkventory-logo-transparent.svg` | normative | Master du symbole ; copies publiques synchronisées et contrôlées |
-| Configuration | `compose.yaml`, `mise.toml`, `mise.lock`, `.env.example` | opérationnelle | Compose porte le parcours intégré ; mise porte les raccourcis hôte |
+| Configuration | `compose.yaml`, `mise.toml`, `mise.lock`, `.env.example`, `config/deployment/images.env` et `deploy/vps/` | opérationnelle | Compose porte le parcours local ; les sources VPS produisent un candidat immuable sans l'activer |
 | Code livré | `frontend/` et `backend/` | opérationnelle locale | Flux F03/F04 partiels et persistants ; pas une production |
 | Opérations | [`RUNBOOK.md`](RUNBOOK.md) | normative cible | Production non provisionnée |
 | Décisions | `docs/decisions/` | normative | ADR acceptées ou proposées |
@@ -184,6 +184,7 @@ ni contrat, ni données, ni autre module, et son retrait est local.
 | Démo publique | GitHub Pages | `.github/workflows/pages.yml`, base `/parkventory/`, données statiques | `https://nclsppr.github.io/parkventory/` | Tests frontend, build puis probes publics |
 | Documentation publique | GitHub Pages | collection Nimbus `product`, base `/parkventory/docs/` | `https://nclsppr.github.io/parkventory/docs/` | Build public, lint, contrôle d'audience et probes HTTP |
 | Démo Atlas | Atlas, cible autorisée mais non déployée dans ce dépôt | `.github/workflows/vps-release.yml`, base `/`, données statiques | Domaine cible `parkventory.com` | Tests frontend, artefacts OCI déterministes, promotion et probes publics requis |
+| Candidat applicatif Atlas | GHCR, non activé | `.github/workflows/application-release.yml`, `infra/images/`, `deploy/vps/` | Aucun accès public | Gate du dépôt, scans, tests des digests poussés, SBOM, provenance et attestations |
 | CI | GitHub Actions | `.github/workflows/verify.yml` | Exécuté à chaque push sur `main` | Même commande `verify` |
 | Production | Non provisionnée | Décision d'exploitation future | Aucune URL | Runbook et probes requis avant ouverture |
 
@@ -218,6 +219,9 @@ page 404 explicite.
 | Construire les surfaces Pages | `npm run pages:build` | Frontend statique sous `/parkventory/`, routes directes et documentation Nimbus publique sous `/parkventory/docs/` |
 | Construire la démo Atlas | `npm run atlas:build` | Frontend statique à la racine, toujours en mode démo et sans backend |
 | Construire les artefacts Atlas | `./scripts/build-vps-release.sh frontend/dist <sortie> <révision>` | Archive et inventaire de routes déterministes liés à un commit complet |
+| Vérifier le contrat applicatif | `npm run production:check` | Images, Compose, bundle et descripteur conformes au contrat producteur exact |
+| Exercer les images applicatives | `npm run production:images:test` | Frontend/backend non-root, migrateur dédié, santé et runtime PostgreSQL sans DDL |
+| Construire le bundle VPS applicatif | `./scripts/build-vps-integration.sh <sortie> <révision>` | Compose app-only, inventaire, migrations V1/V2 et probes déterministes liés au SHA |
 
 Les commandes manuelles utilisent uniquement les services locaux autorisés.
 La démo et la documentation publique GitHub Pages sont déployées automatiquement
@@ -263,8 +267,10 @@ Le détail vit dans
   sur `main` tant que GitHub l'autorise ; si `main` est protégée, pousser une
   branche dédiée et suivre sa revue. Une tranche terminée ne reste pas locale.
 - Convention de commit : préfixes `docs:`, `feat:`, `fix:` ou `chore:`.
-- Artefact cible : frontend statique et image OCI backend identifiés par SHA ou digest.
-- Déploiement : aucun tant qu'une ADR d'exploitation et le runbook ne sont pas exécutables.
+- Artefact cible : digest OCI `application-release` liant les images
+  frontend/backend, le bundle VPS et les inventaires au même SHA.
+- Déploiement : aucun ; l'ADR-0008 autorise la publication du candidat, pas son
+  activation, tant que l'ADR d'exploitation et le runbook ne sont pas exécutables.
 - Rollback : retour à l'artefact immuable précédent ; migrations corrigées vers
   l'avant sauf restauration autorisée et testée.
 - Vérification finale : santé, route, parcours critique, logs et observation.
