@@ -29,6 +29,26 @@ créé, aucun e-mail n'est envoyé et aucune donnée n'est persistée. Nimbus pu
 uniquement la collection produit classée `public` ; les documents internes, les
 décisions et les références restent absents de l'artefact Pages.
 
+## Voir la démo Atlas
+
+- [domaine canonique](https://parkventory.com/) ;
+- [alias `www`](https://www.parkventory.com/), redirigé vers le domaine canonique.
+
+Atlas sert actuellement la même démo statique à la racine. Le snapshot de mise
+en service observé le 2026-08-18, avant cette consolidation documentaire, avait
+pour SHA source actif
+`583e0e2b63701097aa4894ecc4fb3de8ad325346`, avec le site
+`ghcr.io/nclsppr/parkventory-static-site@sha256:eb4596ac08e76bf59dc0c1ed6982f8cad6a25e98bc09b507790a78107e41553c`
+et les routes
+`ghcr.io/nclsppr/parkventory-static-routes@sha256:47673d6906494ed128616357efe305e7be372e06022f4a2a794dcdc164ecbe7a`.
+L'apex répond HTTP 200 et `www` effectue une seule redirection vers l'apex. Cette
+surface ne contient ni API, ni compte, ni base, ni secret Parkventory.
+
+Ce tuple est une preuve historique, pas une valeur à recopier pour un futur
+déploiement. Chaque push ultérieur sur `main`, y compris documentaire, publie un
+nouveau candidat. L'état courant se résout depuis le HEAD et se vérifie dans le
+workflow et l'état protégé Atlas selon `RUNBOOK.md`.
+
 ## Démarrer en local
 
 Le graphe applicatif intégré exige Docker avec Docker Compose `2.20.0` ou plus
@@ -88,7 +108,7 @@ version de production et n'autorise ni création de base, ni déploiement.
 
 ## Vérifier le candidat applicatif Atlas
 
-Le dépôt prépare séparément les images de production React et Java/Quarkus, le
+Le dépôt produit séparément les images de production React et Java/Quarkus, le
 migrateur Flyway dédié et le contrat OCI commun attendu par Atlas :
 
 ```bash
@@ -103,9 +123,20 @@ workflow `Application release` publie un digest canonique sous
 `ghcr.io/nclsppr/parkventory/application-release:sha-$HEAD` avec SBOM,
 provenance et attestations vérifiées.
 
-Cette publication ne déploie rien. La démo statique Pages/Atlas reste intacte ;
-l'activation Compose, le domaine et les données exigent une tranche de cutover
-distincte et les préconditions de `RUNBOOK.md`.
+Le premier candidat publié depuis `main` est lié au même SHA
+`583e0e2b63701097aa4894ecc4fb3de8ad325346` :
+
+```text
+ghcr.io/nclsppr/parkventory/application-release@sha256:384f736a81089a9a91a7ff55b21d552a6d803d65ab8e33daa296b54d990209a3
+```
+
+Le run `Application release` `32071732734` a validé, publié, relu et attesté ce
+digest. Cette publication rend le candidat admissible au contrat, mais ne le
+déploie pas. Le contrôleur transactionnel est fusionné dans `vps-infra`, tandis
+que Parkventory y reste `enabled: false` et que cette révision du contrôleur
+n'est pas prouvée convergée live. La démo statique conserve donc exclusivement
+le domaine ; aucune base, aucun secret et aucune migration de production
+n'existent avant le cutover distinct décrit dans `RUNBOOK.md`.
 
 ## Périmètre actuel
 
@@ -122,10 +153,12 @@ distincte et les préconditions de `RUNBOOK.md`.
 - Compose pour PostgreSQL, Mailpit, Quarkus et Vite, avec images épinglées par
   digest, healthchecks et smoke test ;
 - runtimes hôte épinglés par `mise.toml` / `mise.lock` ;
-- démo frontend statique publiée par le workflow GitHub Pages ;
+- démo frontend statique publiée sur GitHub Pages et automatiquement réconciliée
+  sur Atlas à `parkventory.com` ;
 - images générées propres au projet, avec source et provenance documentées ;
-- aucun fournisseur OIDC ou email de production et aucun déploiement de
-  production ; le producteur OCI applicatif est préparé mais non activé.
+- candidat OCI full-stack publié et attesté, sans activation Compose ;
+- aucun fournisseur OIDC ou email de production, aucune base ou migration de
+  production et aucun backend public.
 
 ## Documentation essentielle
 
@@ -134,6 +167,7 @@ distincte et les préconditions de `RUNBOOK.md`.
 - [`STATUS.md`](STATUS.md) : état réellement vérifié ;
 - [`ROADMAP.md`](ROADMAP.md) : séquencement et sorties ;
 - [`DESIGN.md`](DESIGN.md) : direction artistique et règles UX ;
+- [`RUNBOOK.md`](RUNBOOK.md) : exploitation de la démo Atlas et préconditions du cutover applicatif ;
 - [`docs/product/vision.md`](docs/product/vision.md) : vision produit ;
 - [`docs/product/roles-and-governance.md`](docs/product/roles-and-governance.md) : fonctionnement communautaire ;
 - [`docs/architecture/domain-model.md`](docs/architecture/domain-model.md) : modèle et invariants ;

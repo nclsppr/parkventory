@@ -7,7 +7,7 @@
 | Nom | Parkventory |
 | Propriétaire | nclsppr |
 | Classe | Critique |
-| Surface de production | Aucune ; application locale persistante, démos statiques Pages/Atlas, et producteur OCI full-stack séparé sans activation |
+| Surface de production | Aucune application dynamique ; démos statiques Pages/Atlas publiques et candidat OCI full-stack séparé, publié sans activation Compose |
 | Socle adopté | [`FOUNDATION.md`](FOUNDATION.md) |
 
 ## Problème
@@ -105,15 +105,15 @@ Ces cibles ne sont pas des résultats acquis.
 | Sécurité et isolation | [`docs/architecture/security-and-tenancy.md`](docs/architecture/security-and-tenancy.md) | normative | Défense en profondeur |
 | Design system | [`DESIGN.md`](DESIGN.md) et `frontend/src/styles.css` | normative et opérationnelle | Tokens, composants et responsive alignés |
 | Identité de marque | `assets/brand/parkventory-logo-transparent.svg` | normative | Master du symbole ; copies publiques synchronisées et contrôlées |
-| Configuration | `compose.yaml`, `mise.toml`, `mise.lock`, `.env.example`, `config/deployment/images.env` et `deploy/vps/` | opérationnelle | Compose porte le parcours local ; les sources VPS produisent un candidat immuable sans l'activer |
+| Configuration | `compose.yaml`, `mise.toml`, `mise.lock`, `.env.example`, `config/deployment/images.env` et `deploy/vps/` | opérationnelle | Compose porte le parcours local ; les sources VPS publient les candidats statique et full-stack, tandis que `vps-infra` décide séparément leur activation |
 | Code livré | `frontend/` et `backend/` | opérationnelle locale | Flux F03/F04 partiels et persistants ; pas une production |
-| Opérations | [`RUNBOOK.md`](RUNBOOK.md) | normative cible | Production non provisionnée |
+| Opérations | [`RUNBOOK.md`](RUNBOOK.md) | normative et opérationnelle | Démo statique Atlas active ; production applicative bloquée |
 | Décisions | `docs/decisions/` | normative | ADR acceptées ou proposées |
 | Documentation | `DOCUMENTATION.md`, `documentation.json`, `docs-nimbus/` et catalogue | normative et dérivée | Markdown canonique ; seule la collection `product` est autorisée pour Pages |
 | Références visuelles | [`docs/references/visual-sources.md`](docs/references/visual-sources.md) | référence | JPEG non publiables sans droits |
 | Artefacts générés | Catalogue Nimbus, site Nimbus, copies publiques du logo et futur client TypeScript | dérivée | Sources et commandes à conserver |
 | Archives | Aucune | historique | Ne pas créer sans motif |
-| Démonstration publique | Données statiques portant `demo: true` sur GitHub Pages | expérimentale et signalée | Séparée du parcours local réel |
+| Démonstration publique | Données statiques portant `demo: true` sur GitHub Pages et Atlas | expérimentale et signalée | `parkventory.com` est actuellement servi par Atlas sans backend |
 | Documentation publique | Collection Nimbus `product` sous `/parkventory/docs/` | publique | Allowlist vérifiée ; aucune collection interne ou de référence dans l'artefact |
 
 ## Architecture
@@ -173,7 +173,7 @@ ni contrat, ni données, ni autre module, et son retrait est local.
 | --- | --- | --- | --- | --- |
 | Fournisseur email, non choisi | Liens magiques et notifications | Adresse destinataire, type de message, lien court | File d'outbox en attente ; réservation conservée | Mailpit uniquement en développement |
 | Hébergement PostgreSQL, non choisi | Données applicatives | Identités minimales, organisations, places, intervalles | Application indisponible en écriture | PostgreSQL local pour développement, pas pour production |
-| Hébergement web/API, non choisi | Servir l'application | Requêtes, session, journaux minimisés | Indisponibilité du service | Redéployer l'artefact immuable précédent |
+| Atlas et Caddy partagé | Servir la démo statique puis le futur frontend/API | Requêtes, session et journaux minimisés après cutover | Démo indisponible aujourd'hui ; application indisponible après activation | Nouveau commit descendant statique ou release applicative descendante ; handoff de route contrôlé par `vps-infra` |
 
 ## Environnements
 
@@ -183,10 +183,10 @@ ni contrat, ni données, ni autre module, et son retrait est local.
 | Développement applicatif | Docker Compose sur macOS ou Linux | `compose.yaml`, `.env.example` | Web `5173`, API `8080`, Mailpit `8025`/`1025`, PostgreSQL `5434` | `npm run dev` et `npm run compose:verify` |
 | Démo publique | GitHub Pages | `.github/workflows/pages.yml`, base `/parkventory/`, données statiques | `https://nclsppr.github.io/parkventory/` | Tests frontend, build puis probes publics |
 | Documentation publique | GitHub Pages | collection Nimbus `product`, base `/parkventory/docs/` | `https://nclsppr.github.io/parkventory/docs/` | Build public, lint, contrôle d'audience et probes HTTP |
-| Démo Atlas | Atlas, cible autorisée mais non déployée dans ce dépôt | `.github/workflows/vps-release.yml`, base `/`, données statiques | Domaine cible `parkventory.com` | Tests frontend, artefacts OCI déterministes, promotion et probes publics requis |
-| Candidat applicatif Atlas | GHCR, non activé | `.github/workflows/application-release.yml`, `infra/images/`, `deploy/vps/` | Aucun accès public | Gate du dépôt, scans, tests des digests poussés, SBOM, provenance et attestations |
+| Démo Atlas | Atlas, déploiement contrôlé par `vps-infra` | `.github/workflows/vps-release.yml`, base `/`, données statiques | `https://parkventory.com/` | Snapshot historique avant consolidation : source `583e0e2b63701097aa4894ecc4fb3de8ad325346`, site `sha256:eb4596ac08e76bf59dc0c1ed6982f8cad6a25e98bc09b507790a78107e41553c`, routes `sha256:47673d6906494ed128616357efe305e7be372e06022f4a2a794dcdc164ecbe7a`, apex HTTP 200 et redirection `www` unique vérifiés le 2026-08-18 ; l'état courant se lit dans `vps-infra` et Atlas |
+| Candidat applicatif Atlas | GHCR, publié mais non activé | `.github/workflows/application-release.yml`, `infra/images/`, `deploy/vps/` | Aucun accès public dynamique | Première publication historique : run `32071732734` vert ; `application-release@sha256:384f736a81089a9a91a7ff55b21d552a6d803d65ab8e33daa296b54d990209a3` publié et attesté sur `583e0e2b63701097aa4894ecc4fb3de8ad325346` ; chaque push ultérieur publie un nouveau candidat |
 | CI | GitHub Actions | `.github/workflows/verify.yml` | Exécuté à chaque push sur `main` | Même commande `verify` |
-| Production | Non provisionnée | Décision d'exploitation future | Aucune URL | Runbook et probes requis avant ouverture |
+| Production applicative | Non activée | Contrôleur Compose central désactivé | Aucune URL dynamique ; le domaine sert la démo statique | Base, secrets, migration, cutover exclusif, rollback et probes requis avant ouverture |
 
 ### Routes applicatives actuelles
 
@@ -225,10 +225,12 @@ page 404 explicite.
 
 Les commandes manuelles utilisent uniquement les services locaux autorisés.
 La démo et la documentation publique GitHub Pages sont déployées automatiquement
-depuis `main` dans un artefact unique. La cible Atlas publie le même mode
-statique à la racine après promotion explicite de ses artefacts. Ces surfaces
-ne constituent pas une production applicative. Aucun déploiement backend
-n'existe tant que ses gates de production ne sont pas satisfaites.
+depuis `main` dans un artefact unique. La démo Atlas est réconciliée séparément
+par `vps-infra` depuis les artefacts immuables du HEAD canonique vert. Ces
+surfaces ne constituent pas une production applicative. Le candidat full-stack
+est publié dans GHCR, mais aucun backend, base ou migrateur Parkventory n'est
+actif sur Atlas tant que les gates de production et le cutover exclusif du
+runbook ne sont pas satisfaits.
 
 ## Données, sécurité et confidentialité
 
@@ -269,10 +271,14 @@ Le détail vit dans
 - Convention de commit : préfixes `docs:`, `feat:`, `fix:` ou `chore:`.
 - Artefact cible : digest OCI `application-release` liant les images
   frontend/backend, le bundle VPS et les inventaires au même SHA.
-- Déploiement : aucun ; l'ADR-0008 autorise la publication du candidat, pas son
-  activation, tant que l'ADR d'exploitation et le runbook ne sont pas exécutables.
-- Rollback : retour à l'artefact immuable précédent ; migrations corrigées vers
-  l'avant sauf restauration autorisée et testée.
+- Déploiement : la démo statique est active et automatiquement réconciliée ;
+  l'ADR-0008 autorise la publication du candidat applicatif, pas son activation
+  Compose tant que le runbook n'est pas exécutable.
+- Rollback : après une activation statique réussie, publier un nouveau commit
+  descendant qui restaure le contenu voulu ; ne pas déplacer manuellement
+  `current` vers un ancien digest. Pour l'application, préférer une release
+  descendante compatible avec les migrations ; toute restauration reste
+  explicitement autorisée et testée.
 - Vérification finale : santé, route, parcours critique, logs et observation.
 - Observabilité cible : SmallRye Health, logs JSON, Micrometer et supervision externe.
 - Escalade : propriétaire du dépôt ; suppléant à nommer avant pilote.

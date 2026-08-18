@@ -187,8 +187,13 @@ La topologie cible reste volontairement petite :
 - fournisseur email ;
 - sauvegarde et restauration isolée.
 
-Le fournisseur, la région et les commandes ne sont pas choisis. Une ADR
-d'exploitation et un runbook exécutable sont requis avant tout provisionnement.
+Atlas est la cible retenue pour l'edge et le futur runtime Compose ; il sert déjà
+la démo statique. Les images et le bundle applicatifs sont publiés, et le code
+du contrôleur central est fusionné, mais son entrée Parkventory reste
+désactivée. La base, ses rôles, les secrets, les fournisseurs OIDC/email, la
+sauvegarde et le cutover restent à décider et prouver. La démo statique doit
+cesser d'être propriétaire de `parkventory.com` sous le verrou partagé avant
+toute migration ou activation Compose.
 
 ## Contrôles architecturaux attendus
 

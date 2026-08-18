@@ -818,7 +818,9 @@ Cette tranche part de `origin/main` au SHA complet
 `codex/parkventory-fullstack-release`. Elle prépare la publication de
 l'application React/Java complète tout en conservant la démo statique et son
 workflow sans modification. L'implémentation est enregistrée dans le commit
-local `0396c77` ; aucun commit de cette branche n'est poussé.
+local `0396c77` ; aucun commit de cette branche n'était encore poussé au moment
+de cette preuve locale. Cet état historique est remplacé pour l'état courant par
+l'extension du 2026-08-18 ci-dessous.
 
 ### Contrat livré localement
 
@@ -849,18 +851,83 @@ contexte. Le Dockerfile utilise désormais le binaire Maven 3.9.16 de l'image de
 build verrouillée, vérifie explicitement sa version puis compile ; le wrapper
 et son hash restent la source canonique des commandes hôte.
 
-### Limites et actions non réalisées
+### Limites observées avant fusion
 
-- aucun commit n'a été poussé et aucun workflow GitHub n'a encore exécuté cette
-  tranche ;
+- aucun commit n'avait été poussé et aucun workflow GitHub n'avait encore
+  exécuté cette tranche ;
 - aucun package backend, frontend, `vps-integration` ou `application-release`
-  n'a été publié dans GHCR ;
-- aucun scan Trivy distant, SBOM, provenance ou attestation réelle n'existe
+  n'avait encore été publié dans GHCR ;
+- aucun scan Trivy distant, SBOM, provenance ou attestation réelle n'existait
   avant le premier run vert sur `main` ;
-- aucun secret, base, service Compose, route, DNS ou certificat n'a été créé sur
-  Atlas ;
+- aucun secret, base ou service Compose Parkventory n'avait été créé sur Atlas ;
+  la route, le DNS et le certificat de la démo statique existaient séparément ;
 - le test local provisionne explicitement les rôles et grants DML avant de
   prouver l'absence de DDL côté runtime ; Atlas devra créer ces grants et les
   default privileges équivalents avant toute activation ;
 - le choix PostgreSQL, RLS, fournisseurs OIDC/email, sauvegarde/restauration,
-  applicateur et cutover restent des gates externes distinctes.
+  activation live et cutover restent des gates externes distinctes.
+
+## Extension : publication sur `main` et activation statique du 2026-08-18
+
+Cette extension remplace uniquement les limites de publication et d'état
+externe de la preuve locale précédente. Elle ne transforme pas la démo Atlas en
+application de production et ne prouve aucune activation Compose.
+
+Il s'agit d'un snapshot historique capturé après la PR #4 et avant le commit de
+consolidation documentaire. Tout push ultérieur sur `main`, même documentaire,
+publie de nouveaux candidats et peut remplacer les références actives. Les
+digests ci-dessous ne doivent donc jamais être recopiés comme état courant ; le
+HEAD, les workflows et l'état protégé Atlas doivent être relus à chaque
+opération.
+
+### Source et workflows canoniques
+
+| Preuve | Résultat observé | Frontière de preuve |
+| --- | --- | --- |
+| Source du snapshot | `origin/main` exact à `583e0e2b63701097aa4894ecc4fb3de8ad325346`, fusion de la PR #4 | Commit canonique à cet instant ; ne prouve pas seul un déploiement et ne décrit pas le HEAD futur |
+| Verify | [Run 32071732726](https://github.com/nclsppr/parkventory/actions/runs/32071732726) réussi sur le SHA exact | Gate du dépôt complète |
+| Pages | [Run 32071732707](https://github.com/nclsppr/parkventory/actions/runs/32071732707) réussi sur le SHA exact | Démo et documentation GitHub Pages publiées |
+| Release statique | [Run 32071732693](https://github.com/nclsppr/parkventory/actions/runs/32071732693) réussi sur le SHA exact | Site, routes et attestations publiés ; l'activation Atlas est prouvée séparément |
+| Release applicative | [Run 32071732734](https://github.com/nclsppr/parkventory/actions/runs/32071732734) réussi sur le SHA exact | Images, intégration, descripteur, scans, SBOM, provenance et attestations ; pas d'activation Compose |
+
+### Artefacts immuables
+
+| Artefact | Référence exacte | État |
+| --- | --- | --- |
+| Site statique | `ghcr.io/nclsppr/parkventory-static-site@sha256:eb4596ac08e76bf59dc0c1ed6982f8cad6a25e98bc09b507790a78107e41553c` | Publié, attesté et actif au moment du snapshot |
+| Routes statiques | `ghcr.io/nclsppr/parkventory-static-routes@sha256:47673d6906494ed128616357efe305e7be372e06022f4a2a794dcdc164ecbe7a` | Publiées, attestées et actives au moment du snapshot |
+| Backend | `ghcr.io/nclsppr/parkventory/backend@sha256:69cd7d2f6a388f478e229a82503320a70b79a62a236b50b393b0a959427e7d36` | Publié et attesté ; non démarré sur Atlas |
+| Frontend full-stack | `ghcr.io/nclsppr/parkventory/frontend@sha256:009c60204f86b2c0491ddfe45b5d23e9aba9a89a5336642cadc50b24ccec6bcf` | Publié et attesté ; non démarré sur Atlas |
+| Intégration VPS | `ghcr.io/nclsppr/parkventory/vps-integration@sha256:7f0d64353bc0510cfa0c6e718833d959afe16a8a80da72471bddc46670eabb93` | Publiée et attestée ; non appliquée sur Atlas |
+| Release applicative | `ghcr.io/nclsppr/parkventory/application-release@sha256:384f736a81089a9a91a7ff55b21d552a6d803d65ab8e33daa296b54d990209a3` | Publiée, attestée et admissible par contrat ; non activée |
+
+### État Atlas et frontière d'activation
+
+| Contrôle | Résultat observé le 2026-08-18 | Limite |
+| --- | --- | --- |
+| Tuple statique actif au snapshot | Source `583e0e2b63701097aa4894ecc4fb3de8ad325346`, site et routes exacts ci-dessus | Démo compilée avec `VITE_DEMO_MODE=true` |
+| Apex | `https://parkventory.com/` répond HTTP 200 | Disponibilité ponctuelle, pas supervision continue |
+| Alias | `https://www.parkventory.com/` répond par une seule redirection vers l'apex, qui répond HTTP 200 | Ne prouve pas d'API |
+| État transactionnel statique | Aucune transaction ni quarantaine résiduelle après activation | État ponctuel Atlas |
+| Contrat statique central | Parkventory `enabled: true`, mode `temporary-static-demo` | Autorise uniquement la surface statique |
+| Contrat applicatif central | Parkventory `enabled: false`, mode `compose` | Bloque avant validation runtime et accès réseau |
+| Contrôleur applicatif | Code transactionnel fusionné sur `vps-infra/main` | Aucune convergence live de cette révision prouvée ; aucun workflow ne l'appelle |
+| Ressources dynamiques | Aucun secret, aucune base, aucun service Compose et aucune migration Parkventory sur Atlas | Les migrations sont seulement emballées et testées |
+| Consolidation documentaire | `mise exec -- ./scripts/verify.sh` réussi après mise à jour des sources canoniques | Catalogue/Markdown, Nimbus, contrats, React, PostgreSQL et Compose ; aucune mutation Atlas |
+
+Le candidat applicatif est donc publié et admissible au sens du contrat OCI ;
+il n'est ni admis par une exécution live du contrôleur, ni activé. La démo
+statique possède seule `parkventory.com`. Le futur cutover doit d'abord arrêter
+les promotions statiques, puis transférer la route et l'état sous le verrou
+partagé avant toute migration ou activation Compose.
+
+### Rollback et continuité
+
+- Un échec pendant l'activation statique restaure automatiquement le pointeur
+  précédent et conserve la transaction ou la quarantaine utile au diagnostic.
+- Après une activation réussie, un rollback éditorial passe par un nouveau
+  commit descendant sur `main`, qui produit de nouveaux digests ; il ne repointe
+  pas manuellement `current` vers un ancien SHA.
+- Un futur rollback applicatif doit utiliser une release descendante compatible
+  avec le schéma. Le retour à la démo statique est un cutover plateforme
+  exclusif, jamais l'activation simultanée des deux contrats.
