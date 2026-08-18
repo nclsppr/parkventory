@@ -140,7 +140,7 @@ Le détail et les compromis vivent dans
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Documentation Nimbus | Rendu des Markdown classés | Actuel | Build local complet et GitHub Pages filtré | Nimbus 0.8.2 | `docs-nimbus/` | 13 tests d'adaptateur, 7 pages publiques issues de 4 sources, build/lint et probes, 2026-08-11 | nclsppr |
 | Frontend React | Landing, authentification, dashboard, partage et recherche | Actuel, réel en local et démo publique | Compose ou navigateur statique | React 19.2.8, Vite 8.1.5 | `frontend/` | 34 tests, 24 audits Axe, builds et parcours navigateur, 2026-08-11 | nclsppr |
-| API Java | Identité locale, adaptateur OIDC de production, métier, validation, santé et OpenAPI | Réel en local ; OIDC préparé sans activation | Compose, Maven 3.9.16 et Java 25 | Quarkus 3.33.3 LTS | `backend/` | Claims, profils, PostgreSQL et contrat adversarial testés ; gate images à rejouer, 2026-08-18 | nclsppr |
+| API Java | Identité locale, adaptateur OIDC de production, métier, validation, santé et OpenAPI | Réel en local ; OIDC préparé sans activation | Compose, Maven 3.9.16 et Java 25 | Quarkus 3.33.3 LTS | `backend/` | Claims, profils, PostgreSQL, RLS runtime et contrat adversarial testés, 2026-08-18 | nclsppr |
 | PostgreSQL | Identité, sessions, métier, outbox, contraintes et RLS forcée | Actuel, local | Compose et Testcontainers | PostgreSQL 18.3 | migrations Flyway V1 à V3 | Migration, parcours persisté et rôle RLS adversarial vérifiés, 2026-08-18 | nclsppr |
 | Mailpit | Liens magiques, invitations et notifications locales | Actuel, local uniquement | Compose | Mailpit 1.30.6 | `compose.yaml` | Healthcheck, API et navigateur, 2026-07-30 | nclsppr |
 | Livraison email de production | Magic links et notifications | Cible | Service externe derrière un port | Fournisseur non choisi | module `notifications` | Décision requise avant F05 | nclsppr |
@@ -242,8 +242,9 @@ runbook ne sont pas satisfaits.
 - Secrets : injection par environnement ou gestionnaire de secrets, jamais Git.
 - Authentification : lien magique à usage unique puis session serveur.
 - Autorisation : backend et base, jamais la seule interface.
-- Isolation actuelle : `organization_id`, clés composites et filtres serveur ;
-  PostgreSQL RLS reste la défense cible avant pilote.
+- Isolation actuelle : `organization_id`, clés composites, filtres serveur et
+  PostgreSQL RLS forcée sous rôle runtime non propriétaire ; la configuration
+  Atlas reste à prouver avant pilote.
 - Identité candidate : Auth0 EU Email OTP préparé, claims vérifiés et
   `app_session` interne ; ADR proposée, coût, tenant distant, secrets réels et
   callback public non approuvés ou non provisionnés.

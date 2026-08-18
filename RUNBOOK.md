@@ -287,9 +287,14 @@ interdit de corriger cet échec avec une valeur factice en production.
   OIDC et `parkventory_session` `HttpOnly`, `Secure` et `SameSite=Lax` ;
 - vérifier que l’issuer, l’audience, l’email non vérifié et un state altéré sont
   refusés sans créer de compte, membership ou session ;
+- envoyer une invitation de test et vérifier que son email pointe vers
+  `/api/v1/auth/oidc/login`, sans token Parkventory ni création de
+  `magic_link_request` ;
 - prouver la séquence identité vérifiée → utilisateur interne → membership actif
   → tenant → `SET LOCAL` avant toute requête RLS ;
-- déconnecter : l’`app_session` et les cookies locaux doivent être révoqués.
+- déconnecter avec puis sans cookie OIDC : l’`app_session` et les cookies locaux
+  doivent être révoqués dans les deux cas, et un second appel doit rester
+  idempotent.
   Le cookie Auth0 peut rester : vérifier qu’une nouvelle connexion redemande
   l’email OTP grâce à `connection=email` et `prompt=login`. Ne pas présenter ce
   résultat comme un logout global ; tout futur SSO exige `/v2/logout`, un

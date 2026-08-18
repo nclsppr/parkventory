@@ -16,16 +16,21 @@ from oidc_production_contract import OidcContractError, validate_oidc_contract
 FILES = (
     "backend/pom.xml",
     "backend/src/main/resources/application.properties",
+    "backend/src/main/java/com/parkventory/auth/AuthService.java",
     "backend/src/main/java/com/parkventory/auth/AuthResource.java",
     "backend/src/main/java/com/parkventory/auth/LocalAuthResource.java",
     "backend/src/main/java/com/parkventory/auth/OidcAuthResource.java",
     "backend/src/main/java/com/parkventory/auth/OidcIdentityClaims.java",
     "backend/src/main/java/com/parkventory/auth/OidcIdentityService.java",
+    "backend/src/main/java/com/parkventory/notifications/LocalInvitationAccessMailer.java",
+    "backend/src/main/java/com/parkventory/notifications/OidcInvitationAccessMailer.java",
+    "backend/src/main/java/com/parkventory/notifications/OutboxDeliveryService.java",
     "deploy/vps/compose.yaml",
     "frontend/src/config.ts",
     "frontend/src/pages/AuthPages.tsx",
     "infra/images/backend-entrypoint.sh",
     "infra/images/frontend.Dockerfile",
+    "scripts/test-production-images.sh",
 )
 
 
@@ -71,6 +76,30 @@ class OidcProductionContractTest(unittest.TestCase):
         )
         self.assert_rejected()
 
+    def test_rejects_logout_that_requires_a_live_oidc_cookie(self) -> None:
+        self.replace(
+            "backend/src/main/java/com/parkventory/auth/OidcAuthResource.java",
+            "    @PermitAll\n    public Response logout",
+            "    @Authenticated\n    public Response logout",
+        )
+        self.assert_rejected()
+
+    def test_rejects_proactive_authentication_that_intercepts_invalid_oidc_cookies(self) -> None:
+        self.replace(
+            "backend/src/main/resources/application.properties",
+            "%prod.quarkus.http.auth.proactive=false",
+            "%prod.quarkus.http.auth.proactive=true",
+        )
+        self.assert_rejected()
+
+    def test_rejects_missing_virtual_callback_permission(self) -> None:
+        self.replace(
+            "backend/src/main/resources/application.properties",
+            "%prod.quarkus.http.auth.permission.oidc-callback.policy=authenticated",
+            "%prod.quarkus.http.auth.permission.oidc-callback.policy=permit",
+        )
+        self.assert_rejected()
+
     def test_rejects_pkce_downgrade(self) -> None:
         self.replace(
             "backend/src/main/resources/application.properties",
@@ -100,6 +129,43 @@ class OidcProductionContractTest(unittest.TestCase):
             "infra/images/frontend.Dockerfile",
             "VITE_AUTH_MODE=oidc",
             "VITE_AUTH_MODE=local",
+        )
+        self.assert_rejected()
+
+    def test_rejects_image_probe_without_runtime_oidc_environment(self) -> None:
+        relative = "scripts/test-production-images.sh"
+        path = self.root / relative
+        text = path.read_text(encoding="utf-8")
+        needle = (
+            "  --env PARKVENTORY_OIDC_AUTH_SERVER_URL="
+            "https://tenant.eu.auth0.test/ " + "\\" + "\n"
+        )
+        prefix, separator, suffix = text.rpartition(needle)
+        self.assertEqual(needle, separator)
+        path.write_text(prefix + suffix, encoding="utf-8")
+        self.assert_rejected()
+
+    def test_rejects_image_probe_without_invalid_oidc_cookie_logout(self) -> None:
+        self.replace(
+            "scripts/test-production-images.sh",
+            "q_session=invalid-token-state",
+            "q_session=",
+        )
+        self.assert_rejected()
+
+    def test_rejects_logout_without_explicit_oidc_cookie_expiration(self) -> None:
+        self.replace(
+            "backend/src/main/java/com/parkventory/auth/OidcAuthResource.java",
+            'oidcCookieNames.add("q_session")',
+            "// explicit OIDC cookie expiration removed",
+        )
+        self.assert_rejected()
+
+    def test_rejects_magic_link_invitation_in_production(self) -> None:
+        self.replace(
+            "backend/src/main/java/com/parkventory/notifications/OidcInvitationAccessMailer.java",
+            '"/api/v1/auth/oidc/login"',
+            '"/auth/callback?token=forbidden"',
         )
         self.assert_rejected()
 

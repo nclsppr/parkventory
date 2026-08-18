@@ -1,6 +1,7 @@
 package com.parkventory.auth;
 
 import com.parkventory.tenancy.TenantTransactionContext;
+import io.quarkus.arc.profile.UnlessBuildProfile;
 import io.agroal.api.AgroalDataSource;
 import io.quarkus.mailer.Mail;
 import io.quarkus.mailer.Mailer;
@@ -26,6 +27,7 @@ import java.util.UUID;
 import static com.parkventory.auth.AuthModels.*;
 
 @ApplicationScoped
+@UnlessBuildProfile("prod")
 public class AuthService {
     private final AgroalDataSource dataSource;
     private final SecurityTokens tokens;

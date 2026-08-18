@@ -1,5 +1,6 @@
 package com.parkventory.auth;
 
+import com.parkventory.tenancy.TenantTransactionContext;
 import io.agroal.api.AgroalDataSource;
 import io.quarkus.arc.profile.IfBuildProfile;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -23,14 +24,17 @@ import java.util.UUID;
 public class OidcIdentityService {
     private final AgroalDataSource dataSource;
     private final SecurityTokens tokens;
+    private final TenantTransactionContext tenantContext;
     private final long sessionDays;
 
     public OidcIdentityService(
             AgroalDataSource dataSource,
             SecurityTokens tokens,
+            TenantTransactionContext tenantContext,
             @ConfigProperty(name = "parkventory.auth.session-days") long sessionDays) {
         this.dataSource = dataSource;
         this.tokens = tokens;
+        this.tenantContext = tenantContext;
         this.sessionDays = sessionDays;
     }
 
@@ -38,6 +42,10 @@ public class OidcIdentityService {
     public AuthService.VerifiedSession signIn(OidcIdentityClaims identity) {
         String identityKey = identity.stableIdentityKey(tokens);
         try (Connection connection = dataSource.getConnection()) {
+            tenantContext.applyVerifiedIdentity(
+                    connection,
+                    identity.normalizedEmail(),
+                    ProfessionalEmail.domain(identity.normalizedEmail()));
             lock(connection, "identity:" + identityKey);
             lock(connection, "email:" + identity.normalizedEmail());
             UUID userId = findOrCreateBoundUser(connection, identity, identityKey);
@@ -52,14 +60,16 @@ public class OidcIdentityService {
                     INSERT INTO app_session (
                         user_account_id,
                         active_membership_id,
+                        organization_id,
                         token_hash,
                         expires_at
-                    ) VALUES (?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?)
                     """)) {
                 statement.setObject(1, userId);
                 statement.setObject(2, membership.membershipId());
-                statement.setString(3, tokens.hash(rawSession));
-                statement.setObject(4, OffsetDateTime.ofInstant(expiresAt, ZoneOffset.UTC));
+                statement.setObject(3, organization.organizationId());
+                statement.setString(4, tokens.hash(rawSession));
+                statement.setObject(5, OffsetDateTime.ofInstant(expiresAt, ZoneOffset.UTC));
                 statement.executeUpdate();
             }
 
@@ -76,6 +86,9 @@ public class OidcIdentityService {
                     organization.organizationId());
             return new AuthService.VerifiedSession(rawSession, expiresAt, context);
         } catch (SQLException exception) {
+            if (isUniqueViolation(exception)) {
+                throw identityConflict();
+            }
             throw new IllegalStateException("Impossible d’établir la session OIDC.", exception);
         }
     }
@@ -89,70 +102,24 @@ public class OidcIdentityService {
             OidcIdentityClaims identity,
             String identityKey) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
-                SELECT ua.id,
-                       ua.status,
-                       ue.normalized_email
-                  FROM user_account ua
-                  LEFT JOIN user_email ue
-                    ON ue.user_account_id = ua.id
-                   AND ue.email_type = 'PROFESSIONAL'
-                 WHERE ua.oidc_subject = ?
-                 FOR UPDATE OF ua
-                """)) {
-            statement.setString(1, identityKey);
-            try (ResultSet result = statement.executeQuery()) {
-                if (result.next()) {
-                    requireActiveUser(result.getString("status"));
-                    String boundEmail = result.getString("normalized_email");
-                    if (boundEmail == null || !boundEmail.equals(identity.normalizedEmail())) {
-                        throw identityConflict();
-                    }
-                    activateUser(connection, result.getObject("id", UUID.class));
-                    markEmailVerified(connection, identity.normalizedEmail());
-                    return result.getObject("id", UUID.class);
-                }
-            }
-        }
-
-        try (PreparedStatement statement = connection.prepareStatement("""
-                SELECT ua.id,
-                       ua.oidc_subject,
-                       ua.status
-                  FROM user_email ue
-                  JOIN user_account ua ON ua.id = ue.user_account_id
-                 WHERE ue.normalized_email = ?
-                   AND ue.email_type = 'PROFESSIONAL'
-                 FOR UPDATE OF ua, ue
+                SELECT user_account_id
+                  FROM user_email
+                 WHERE normalized_email = ?
+                   AND email_type = 'PROFESSIONAL'
                 """)) {
             statement.setString(1, identity.normalizedEmail());
             try (ResultSet result = statement.executeQuery()) {
                 if (result.next()) {
-                    UUID userId = result.getObject("id", UUID.class);
-                    String existingIdentity = result.getString("oidc_subject");
-                    requireActiveUser(result.getString("status"));
-                    if (existingIdentity != null && !existingIdentity.equals(identityKey)) {
-                        throw identityConflict();
-                    }
-                    try (PreparedStatement bind = connection.prepareStatement("""
-                            UPDATE user_account
-                               SET oidc_subject = ?, status = 'ACTIVE', updated_at = now()
-                             WHERE id = ?
-                               AND (oidc_subject IS NULL OR oidc_subject = ?)
-                            """)) {
-                        bind.setString(1, identityKey);
-                        bind.setObject(2, userId);
-                        bind.setString(3, identityKey);
-                        if (bind.executeUpdate() != 1) {
-                            throw identityConflict();
-                        }
-                    }
-                    markEmailVerified(connection, identity.normalizedEmail());
+                    UUID userId = result.getObject("user_account_id", UUID.class);
+                    tenantContext.applyIdentityUser(connection, userId);
+                    bindExistingUser(connection, userId, identity.normalizedEmail(), identityKey);
                     return userId;
                 }
             }
         }
 
         UUID userId = UUID.randomUUID();
+        tenantContext.applyIdentityUser(connection, userId);
         try (PreparedStatement statement = connection.prepareStatement("""
                 INSERT INTO user_account (id, oidc_subject, display_name, status)
                 VALUES (?, ?, ?, 'ACTIVE')
@@ -177,6 +144,47 @@ public class OidcIdentityService {
         return userId;
     }
 
+    private void bindExistingUser(
+            Connection connection,
+            UUID userId,
+            String normalizedEmail,
+            String identityKey) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT oidc_subject, status
+                  FROM user_account
+                 WHERE id = ?
+                 FOR UPDATE
+                """)) {
+            statement.setObject(1, userId);
+            try (ResultSet result = statement.executeQuery()) {
+                if (!result.next()) {
+                    throw identityConflict();
+                }
+                requireActiveUser(result.getString("status"));
+                String existingIdentity = result.getString("oidc_subject");
+                if (existingIdentity != null && !existingIdentity.equals(identityKey)) {
+                    throw identityConflict();
+                }
+            }
+        }
+
+        try (PreparedStatement statement = connection.prepareStatement("""
+                UPDATE user_account
+                   SET oidc_subject = ?, status = 'ACTIVE', updated_at = now()
+                 WHERE id = ?
+                   AND status IN ('PENDING', 'ACTIVE')
+                   AND (oidc_subject IS NULL OR oidc_subject = ?)
+                """)) {
+            statement.setString(1, identityKey);
+            statement.setObject(2, userId);
+            statement.setString(3, identityKey);
+            if (statement.executeUpdate() != 1) {
+                throw identityConflict();
+            }
+        }
+        markEmailVerified(connection, normalizedEmail);
+    }
+
     private void markEmailVerified(Connection connection, String normalizedEmail)
             throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
@@ -190,47 +198,35 @@ public class OidcIdentityService {
         }
     }
 
-    private void activateUser(Connection connection, UUID userId) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement("""
-                UPDATE user_account
-                   SET status = 'ACTIVE', updated_at = now()
-                 WHERE id = ?
-                   AND status IN ('PENDING', 'ACTIVE')
-                """)) {
-            statement.setObject(1, userId);
-            if (statement.executeUpdate() != 1) {
-                throw identityConflict();
-            }
-        }
-    }
-
     private OrganizationResolution resolveOrganization(
             Connection connection,
             String normalizedEmail) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
                 SELECT invitation.id, invitation.organization_id
                   FROM invitation
-                  JOIN organization ON organization.id = invitation.organization_id
                  WHERE invitation.normalized_email = ?
                    AND invitation.status = 'PENDING'
                    AND invitation.expires_at > now()
-                   AND organization.status = 'ACTIVE'
                  ORDER BY invitation.created_at
                  LIMIT 1
-                 FOR UPDATE OF invitation
                 """)) {
             statement.setString(1, normalizedEmail);
             try (ResultSet result = statement.executeQuery()) {
                 if (result.next()) {
                     UUID invitationId = result.getObject("id", UUID.class);
                     UUID organizationId = result.getObject("organization_id", UUID.class);
+                    tenantContext.applyTenant(connection, organizationId);
+                    requireActiveOrganization(connection, organizationId);
                     try (PreparedStatement accept = connection.prepareStatement("""
                             UPDATE invitation
                                SET status = 'ACCEPTED', accepted_at = now()
-                             WHERE id = ?
+                             WHERE organization_id = ?
+                               AND id = ?
                                AND status = 'PENDING'
+                               AND expires_at > now()
                             """)) {
-                        accept.setObject(1, invitationId);
+                        accept.setObject(1, organizationId);
+                        accept.setObject(2, invitationId);
                         if (accept.executeUpdate() != 1) {
                             throw identityConflict();
                         }
@@ -247,26 +243,26 @@ public class OidcIdentityService {
             lock.executeQuery().close();
         }
         try (PreparedStatement statement = connection.prepareStatement("""
-                SELECT organization_domain.organization_id
+                SELECT organization_id
                   FROM organization_domain
-                  JOIN organization
-                    ON organization.id = organization_domain.organization_id
-                   AND organization.status = 'ACTIVE'
-                 WHERE organization_domain.normalized_domain = ?
-                   AND organization_domain.status IN ('CLAIMED', 'VERIFIED')
-                 ORDER BY CASE organization_domain.status WHEN 'VERIFIED' THEN 0 ELSE 1 END
+                 WHERE normalized_domain = ?
+                   AND status IN ('CLAIMED', 'VERIFIED')
+                 ORDER BY CASE status WHEN 'VERIFIED' THEN 0 ELSE 1 END
                  LIMIT 1
                 """)) {
             statement.setString(1, domain);
             try (ResultSet result = statement.executeQuery()) {
                 if (result.next()) {
-                    return new OrganizationResolution(
-                            result.getObject("organization_id", UUID.class));
+                    UUID organizationId = result.getObject("organization_id", UUID.class);
+                    tenantContext.applyTenant(connection, organizationId);
+                    requireActiveOrganization(connection, organizationId);
+                    return new OrganizationResolution(organizationId);
                 }
             }
         }
 
         UUID organizationId = UUID.randomUUID();
+        tenantContext.applyTenant(connection, organizationId);
         try (PreparedStatement statement = connection.prepareStatement("""
                 INSERT INTO organization (id, name, mode)
                 VALUES (?, ?, 'COMMUNITY')
@@ -295,6 +291,22 @@ public class OidcIdentityService {
             statement.executeUpdate();
         }
         return new OrganizationResolution(organizationId);
+    }
+
+    private void requireActiveOrganization(Connection connection, UUID organizationId)
+            throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT status
+                  FROM organization
+                 WHERE id = ?
+                """)) {
+            statement.setObject(1, organizationId);
+            try (ResultSet result = statement.executeQuery()) {
+                if (!result.next() || !"ACTIVE".equals(result.getString("status"))) {
+                    throw new ClientErrorException("Cette organisation n’est pas active.", 403);
+                }
+            }
+        }
     }
 
     private Membership findOrCreateMembership(
@@ -462,6 +474,15 @@ public class OidcIdentityService {
         return new ClientErrorException(
                 "Cette identité ne peut pas être liée automatiquement.",
                 409);
+    }
+
+    private static boolean isUniqueViolation(SQLException exception) {
+        for (SQLException current = exception; current != null; current = current.getNextException()) {
+            if ("23505".equals(current.getSQLState())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private record OrganizationResolution(UUID organizationId) {

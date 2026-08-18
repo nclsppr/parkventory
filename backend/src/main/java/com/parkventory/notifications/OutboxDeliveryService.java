@@ -2,7 +2,6 @@ package com.parkventory.notifications;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.parkventory.auth.AuthService;
 import com.parkventory.tenancy.TenantTransactionContext;
 import io.agroal.api.AgroalDataSource;
 import io.quarkus.mailer.Mail;
@@ -23,19 +22,19 @@ public class OutboxDeliveryService {
 
     private final AgroalDataSource dataSource;
     private final ObjectMapper objectMapper;
-    private final AuthService authService;
+    private final InvitationAccessMailer invitationAccessMailer;
     private final Mailer mailer;
     private final TenantTransactionContext tenantContext;
 
     public OutboxDeliveryService(
             AgroalDataSource dataSource,
             ObjectMapper objectMapper,
-            AuthService authService,
+            InvitationAccessMailer invitationAccessMailer,
             Mailer mailer,
             TenantTransactionContext tenantContext) {
         this.dataSource = dataSource;
         this.objectMapper = objectMapper;
-        this.authService = authService;
+        this.invitationAccessMailer = invitationAccessMailer;
         this.mailer = mailer;
         this.tenantContext = tenantContext;
     }
@@ -124,7 +123,11 @@ public class OutboxDeliveryService {
     private void deliver(Connection connection, PendingEvent event) throws SQLException {
         String email = requiredText(event.payload(), "email");
         if ("INVITATION_REQUESTED".equals(event.eventType())) {
-            authService.sendInvitationMagicLink(connection, email);
+            invitationAccessMailer.send(
+                    connection,
+                    email,
+                    requiredText(event.payload(), "inviterName"),
+                    requiredText(event.payload(), "organizationName"));
             return;
         }
         if ("RESERVATION_CONFIRMED".equals(event.eventType())) {
