@@ -101,8 +101,10 @@ paths:
         callback vérifié, la même route provisionne l’adhésion, crée
         l’app_session et redirige vers /app.
       responses:
+        "302":
+          description: Challenge anonyme redirigé vers Auth0
         "303":
-          description: Redirection vers Auth0 ou vers l’application authentifiée
+          description: Session créée puis redirection vers l’application authentifiée
         "401":
           description: Claims absents, email non vérifié ou issuer incohérent
         "409":
@@ -130,12 +132,11 @@ paths:
       description: >-
         Révoque app_session et supprime les cookies locaux. Le cookie Auth0 peut
         rester ; connection=email et prompt=login empêchent une reconnexion
-        silencieuse. Ce n’est pas un logout fournisseur global.
+        silencieuse. L'opération reste idempotente si le cookie OIDC local est
+        déjà absent ou expiré. Ce n’est pas un logout fournisseur global.
       responses:
         "200":
           description: Session Parkventory fermée et cookies locaux expirés
-        "401":
-          description: Session OIDC locale absente ou expirée
   /dashboard:
     get:
       tags: [Dashboard]

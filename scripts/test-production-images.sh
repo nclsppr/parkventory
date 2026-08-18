@@ -210,6 +210,40 @@ forced_rls_tables=$(docker exec "${postgres_container}" psql \
   --command "SELECT count(*) FROM pg_class WHERE relnamespace = 'public'::regnamespace AND relrowsecurity AND relforcerowsecurity")
 [[ ${forced_rls_tables} == "17" ]]
 
+# Seed one application session as the database owner. The logout probe below
+# sends this valid Parkventory cookie together with an invalid Quarkus OIDC
+# token-state cookie and must still reach the revocation transaction.
+docker exec -i "${postgres_container}" psql \
+  --set ON_ERROR_STOP=1 \
+  --username postgres \
+  --dbname parkventory <<'SQL'
+INSERT INTO organization (id, name)
+VALUES ('00000000-0000-0000-0000-000000000101', 'Logout image test');
+INSERT INTO user_account (id, display_name)
+VALUES ('00000000-0000-0000-0000-000000000102', 'Logout image test');
+INSERT INTO membership (id, organization_id, user_account_id)
+VALUES (
+  '00000000-0000-0000-0000-000000000103',
+  '00000000-0000-0000-0000-000000000101',
+  '00000000-0000-0000-0000-000000000102'
+);
+INSERT INTO app_session (
+  id,
+  user_account_id,
+  active_membership_id,
+  organization_id,
+  token_hash,
+  expires_at
+) VALUES (
+  '00000000-0000-0000-0000-000000000104',
+  '00000000-0000-0000-0000-000000000102',
+  '00000000-0000-0000-0000-000000000103',
+  '00000000-0000-0000-0000-000000000101',
+  '243a223c70bef29c1a5571a740e38f6f4cfb715877ba1e8cbe4f142f9a894165',
+  now() + interval '1 day'
+);
+SQL
+
 if docker exec \
   --env PGPASSWORD=runtime-password-local-test \
   "${postgres_container}" \
@@ -231,6 +265,12 @@ docker run --detach --rm \
   --env PARKVENTORY_JDBC_URL=jdbc:postgresql://postgres:5432/parkventory \
   --env PARKVENTORY_DB_USER=parkventory_runtime \
   --env PARKVENTORY_DB_PASSWORD_FILE=/run/secrets/postgres-password \
+  --env PARKVENTORY_OIDC_AUTH_SERVER_URL=https://tenant.eu.auth0.test/ \
+  --env PARKVENTORY_OIDC_CLIENT_ID=parkventory-image-test \
+  --env PARKVENTORY_OIDC_CLIENT_SECRET_FILE=/run/secrets/oidc-client-secret \
+  --env PARKVENTORY_OIDC_ISSUER=https://tenant.eu.auth0.test/ \
+  --env PARKVENTORY_OIDC_STATE_SECRET_FILE=/run/secrets/oidc-state-secret \
+  --env PARKVENTORY_OIDC_TOKEN_ENCRYPTION_SECRET_FILE=/run/secrets/oidc-token-secret \
   --env PARKVENTORY_SMTP_HOST=127.0.0.1 \
   --env PARKVENTORY_SMTP_PORT=2525 \
   --env PARKVENTORY_SMTP_USERNAME_FILE=/run/secrets/smtp-username \
@@ -277,6 +317,28 @@ PROBE
 )
 [[ ${local_logout_status} == 405 ]]
 
+oidc_logout_headers=$(docker exec -i "${backend_container}" bash -s <<'PROBE'
+exec 3<>/dev/tcp/127.0.0.1/8080
+printf 'POST /api/v1/auth/oidc/logout HTTP/1.0\r\nHost: parkventory.test\r\nCookie: parkventory_session=image-logout-session-token; q_session=invalid-token-state\r\n\r\n' >&3
+while IFS= read -r line <&3; do
+  printf '%s\n' "${line}"
+  [[ ${line} == $'\r' ]] && break
+done
+PROBE
+)
+grep -Eq '^HTTP/1\.[01] 200' <<<"${oidc_logout_headers}"
+grep -Eiq '^set-cookie: parkventory_session=.*Max-Age=0' <<<"${oidc_logout_headers}"
+grep -Eiq '^set-cookie: q_session=.*Max-Age=0' <<<"${oidc_logout_headers}"
+grep -Eiq '^clear-site-data: "cookies"' <<<"${oidc_logout_headers}"
+
+logout_session_revoked=$(docker exec "${postgres_container}" psql \
+  --tuples-only \
+  --no-align \
+  --username postgres \
+  --dbname parkventory \
+  --command "SELECT (revoked_at IS NOT NULL)::text FROM app_session WHERE id = '00000000-0000-0000-0000-000000000104'")
+[[ ${logout_session_revoked} == "true" ]]
+
 oidc_login_headers=$(docker exec -i "${backend_container}" bash -s <<'PROBE'
 exec 3<>/dev/tcp/127.0.0.1/8080
 printf 'GET /api/v1/auth/oidc/login HTTP/1.0\r\nHost: parkventory.test\r\n\r\n' >&3
@@ -291,6 +353,48 @@ grep -Eiq '^location: https://tenant\.eu\.auth0\.test/authorize\?' <<<"${oidc_lo
 for oidc_parameter in connection=email prompt=login code_challenge= code_challenge_method=S256 nonce= state=; do
   grep -Fq "${oidc_parameter}" <<<"${oidc_login_headers}"
 done
+
+oidc_state_cookie=$(awk '
+  tolower($0) ~ /^set-cookie: q_auth=/ {
+    sub(/^[^:]*: /, "")
+    sub(/;.*/, "")
+    gsub(/\r/, "")
+    print
+    exit
+  }
+' <<<"${oidc_login_headers}")
+oidc_authorize_location=$(awk '
+  tolower($0) ~ /^location: / {
+    sub(/^[^:]*: /, "")
+    gsub(/\r/, "")
+    print
+    exit
+  }
+' <<<"${oidc_login_headers}")
+[[ ${oidc_state_cookie} == q_auth=* ]]
+oidc_callback_state=${oidc_authorize_location#*state=}
+oidc_callback_state=${oidc_callback_state%%&*}
+[[ -n ${oidc_callback_state} ]]
+
+oidc_callback_headers=$(docker exec -i \
+  --env "OIDC_STATE_COOKIE=${oidc_state_cookie}" \
+  --env "OIDC_CALLBACK_STATE=${oidc_callback_state}" \
+  "${backend_container}" bash -s <<'PROBE'
+exec 3<>/dev/tcp/127.0.0.1/8080
+printf 'GET /api/v1/auth/oidc/callback?code=image-test-invalid-code&state=%s HTTP/1.0\r\nHost: parkventory.test\r\nCookie: %s\r\n\r\n' \
+  "${OIDC_CALLBACK_STATE}" "${OIDC_STATE_COOKIE}" >&3
+while IFS= read -r line <&3; do
+  printf '%s\n' "${line}"
+  [[ ${line} == $'\r' ]] && break
+done
+PROBE
+)
+if grep -Eq '^HTTP/1\.[01] 404' <<<"${oidc_callback_headers}"; then
+  echo "Le callback virtuel OIDC n'est pas intercepté par le code flow." >&2
+  exit 1
+fi
+grep -Eq '^HTTP/1\.[01] (400|401|500|502|503)' <<<"${oidc_callback_headers}"
+grep -Eiq '^set-cookie: q_auth=.*Max-Age=0' <<<"${oidc_callback_headers}"
 
 docker run --detach --rm \
   --platform linux/amd64 \

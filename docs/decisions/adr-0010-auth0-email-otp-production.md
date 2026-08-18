@@ -1,7 +1,7 @@
 # ADR-0010 — Auth0 EU et email OTP pour l’identité de production
 
 - Statut : proposé
-- Statut d'implémentation : candidat technique localement vérifié ; décision et tenant absents
+- Statut d'implémentation : candidat intégré à la RLS et localement vérifié ; décision et tenant absents
 - Date : 2026-08-18
 - Dernière vérification : Quarkus 3.33.3, tests de profils, claims et PostgreSQL le 2026-08-18
 - Décision requise de : propriétaire Parkventory
@@ -45,6 +45,10 @@ production. Cette tranche ne crée aucun tenant et n’autorise aucune activatio
 - L’invitation exacte est prioritaire ; sinon le domaine professionnel résout
   ou crée l’organisation communautaire. Une adhésion suspendue ou quittée
   n’est jamais réactivée automatiquement.
+- L’email d’invitation de production ne crée aucun magic-link Parkventory : il
+  pointe vers `/api/v1/auth/oidc/login`, puis l’email vérifié par le fournisseur
+  permet de réclamer l’invitation en base. Le lien local avec token reste
+  confiné aux profils hors production.
 - Une `app_session` serveur reste le pont vers le code métier existant. Son
   cookie est `HttpOnly`, `Secure`, `SameSite=Lax` et aucune donnée OIDC n’est
   accessible à la SPA.
@@ -57,8 +61,18 @@ Les adaptateurs sont mutuellement exclusifs au build :
   seulement ; `/auth/oidc/login` et `/auth/oidc/logout` sont absents en local.
 
 La déconnexion de cette tranche révoque l’`app_session`, expire son cookie et
-supprime seulement le token-state OIDC local géré par Quarkus. Sans
-`end-session-path`, `OidcSession.logout()` ne visite pas Auth0 et le cookie IdP
+supprime seulement le token-state OIDC local géré par Quarkus. Elle reste
+idempotente lorsque ce token-state est déjà absent ou expiré ; la révocation
+Parkventory ne dépend donc jamais d’un cookie fournisseur encore valide. La
+réponse demande aussi au navigateur d’effacer les cookies de la même origine.
+L’authentification proactive Quarkus est désactivée explicitement dans les trois
+profils construits et le code flow est sélectionné sur le seul endpoint de
+login : un cookie OIDC invalide ne peut ainsi intercepter le POST public de
+déconnexion. Une permission HTTP dédiée force aussi le callback virtuel à
+passer dans le mécanisme `code`, même en authentification différée. Le logout
+expire explicitement `q_session` et ses éventuels cookies fragmentés, en plus
+de `Clear-Site-Data`.
+Sans `end-session-path`, `OidcSession.logout()` ne visite pas Auth0 et le cookie IdP
 peut rester dans le navigateur. Ce n’est donc pas un logout global. Le risque
 de reconnexion silencieuse sur un poste partagé est traité par
 `connection=email` et `prompt=login`, qui redemandent le parcours email OTP à
@@ -89,18 +103,22 @@ précondition, pas une configuration distante déjà appliquée.
 
 ## Contrat avec l’isolation PostgreSQL
 
-Cette tranche prépare le compte, l’adhésion et l’`app_session`, mais ne déclare
-pas la RLS livrée. L’intégration avec l’ADR-0009 RLS doit respecter cet ordre dans une même
-frontière contrôlée :
+Le candidat est intégré au contrat de l’ADR-0009 dans une seule transaction
+exécutée par le rôle runtime non propriétaire :
 
-1. valider cryptographiquement l’identité OIDC et `email_verified` ;
-2. résoudre l’utilisateur interne par `(issuer, subject)` ;
-3. résoudre ou provisionner une adhésion active ;
-4. choisir l’organisation issue de cette adhésion, jamais d’un paramètre client ;
-5. ouvrir la transaction métier avec le rôle runtime non propriétaire ;
-6. exécuter `SET LOCAL app.organization_id` et, si la politique l’exige,
-   `SET LOCAL app.membership_id` ;
-7. seulement alors exécuter une requête sur une table protégée par RLS forcée.
+1. Quarkus valide cryptographiquement l’identité OIDC, puis l’application exige
+   `issuer`, `subject`, l’email professionnel et `email_verified=true` ;
+2. l’application pose par `SET LOCAL` l’email et le domaine déjà vérifiés ;
+   les policies bootstrap ne rendent alors visibles que leurs lignes exactes ;
+3. elle résout le compte par cet email, pose l’identifiant utilisateur local,
+   puis lie ou vérifie la clé opaque dérivée de `(issuer, subject)` ; un sujet
+   déjà lié à un autre email, ou l’inverse, produit un conflit explicite ;
+4. elle résout une invitation exacte ou un domaine professionnel, choisit
+   l’organisation issue de la base et pose `SET LOCAL app.organization_id` ;
+5. elle relit ou crée l’adhésion active dans ce tenant ; une adhésion suspendue
+   ou quittée reste refusée ;
+6. elle crée enfin l’`app_session`, liée par clé étrangère composite au
+   triplet organisation, adhésion et utilisateur.
 
 Une requête protégée sans identité vérifiée, utilisateur interne, adhésion
 active ou contexte `SET LOCAL` doit échouer fermée.
@@ -117,7 +135,8 @@ La préparation locale ne prouve pas :
 - la délivrabilité OTP, les quotas, l’anti-bot ou la récupération de compte ;
 - la rotation réelle des trois secrets ;
 - le callback public derrière Caddy ;
-- la RLS, le rôle runtime final ou l’absence de fuite entre deux tenants ;
+- l’exécution sur le rôle runtime Atlas ni l’absence de fuite dans la
+  configuration live ;
 - le logout d’une future session SSO fournisseur.
 
 L’activation reste interdite tant que cette ADR, ces points, les conditions
@@ -128,11 +147,14 @@ acceptés par le propriétaire.
 
 Les tests refusent les claims dégradés, construisent le profil `prod`, prouvent
 que les routes locales y répondent `404`, prouvent que l’OIDC répond `404` hors
-production, vérifient la liaison/provisionnement idempotents sur PostgreSQL et
-mutent le contrat de configuration pour s’assurer qu’un downgrade est rejeté.
-Le test d’image, ajouté mais restant à rejouer après correction de son assertion
-fail-closed, contrôle en plus la redirection Auth0 et la présence de
-`connection=email`, `prompt=login`, PKCE, nonce et state.
+production, vérifient la liaison/provisionnement idempotents et l’`app_session`
+tenant sur PostgreSQL avec un rôle non propriétaire, non-superuser et sans
+`BYPASSRLS`. Ils prouvent aussi qu’une invitation de production pointe vers
+l’entrée OIDC sans créer de magic-link, et que le logout révoque une
+`app_session` même sans cookie OIDC. Le contrat de configuration muté s’assure
+qu’un downgrade est rejeté. Le test d’image contrôle la redirection Auth0, le
+logout idempotent et la présence de `connection=email`, `prompt=login`, PKCE,
+nonce et state.
 
 Le retour arrière consiste à ne pas activer Compose ou à publier une release
 descendante qui désactive les nouvelles connexions. Il ne faut jamais réexposer

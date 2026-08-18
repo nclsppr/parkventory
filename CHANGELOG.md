@@ -28,6 +28,16 @@ la source du diff technique et les ADR expliquent les décisions importantes.
   Quarkus OIDC fail-closed, PKCE/state/nonce, claims vérifiés, pont
   `app_session`, secrets Compose par fichiers et adaptateurs local/production
   mutuellement exclusifs au build ;
+- intégration du candidat OIDC au bootstrap RLS transactionnel : email et
+  domaine vérifiés, liaison issuer/sujet conflictuelle par défaut, tenant issu
+  de la base et session liée à l'organisation, exercés sous un rôle runtime
+  non propriétaire et sans `BYPASSRLS` ;
+- invitations séparées par profil : magic-link Mailpit uniquement hors
+  production, email de production vers l’entrée OIDC sans token ni ligne
+  `magic_link_request` ;
+- logout OIDC idempotent qui révoque l’`app_session` même si le token-state
+  Quarkus est absent, expire le cookie applicatif et demande l’effacement des
+  cookies de la même origine ;
 - interface de production limitée à « Continuer par e-mail », sans Mailpit ni
   routes magic-link locales, avec contrat adversarial de configuration,
   d’exposition des profils et de liaison/provisionnement PostgreSQL ;

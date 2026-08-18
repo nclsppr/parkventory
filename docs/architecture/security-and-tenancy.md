@@ -51,7 +51,10 @@ défaut.
 
 Le logout de l’adaptateur actuel révoque l’`app_session`, expire son cookie et
 supprime uniquement le token-state OIDC local Quarkus. Il n’efface pas le
-cookie Auth0 résiduel. Chaque nouvelle autorisation force toutefois
+cookie Auth0 résiduel. Le endpoint est idempotent et reste accessible lorsque
+le token-state Quarkus est déjà absent : une session Parkventory ne peut donc
+pas survivre uniquement parce que la session OIDC locale a expiré. Chaque
+nouvelle autorisation force toutefois
 `connection=email` et `prompt=login`, donc un nouveau parcours email OTP au
 lieu d’une reconnexion silencieuse. Tout SSO, social login ou fédération exige
 un logout fournisseur `/v2/logout` avec retour HTTPS allowlisté.
@@ -72,7 +75,8 @@ d'identité peut authentifier des membres de plusieurs organisations.
 
 Après authentification :
 
-- `user_account` est résolu par le couple issuer + subject ;
+- `user_account` est résolu par l'email vérifié, puis lié de façon idempotente
+  à la clé opaque dérivée du couple issuer + subject ;
 - `membership` est chargé depuis PostgreSQL ;
 - le tenant actif est choisi parmi les adhésions autorisées ;
 - chaque service reçoit explicitement `OrganizationId` et `MembershipId` ;
@@ -121,13 +125,19 @@ vérification de l'identité seulement, l'application pose l'email et le domaine
 normalisés ; RLS ne laisse alors voir que l'invitation active exacte et le
 rattachement de ce domaine. Le hash d'un lien magique ou d'une session ne rend
 visible que sa propre ligne. Après résolution, toute mutation tenant exige
-`app.organization_id`. Ce contrat est indépendant de l'adaptateur : le futur
-OIDC l'utilisera après validation de `issuer`, `subject` et `email_verified`.
+`app.organization_id`. Ce contrat est indépendant de l'adaptateur : le candidat
+OIDC l'utilise après validation de `issuer`, `subject` et `email_verified`, et
+la suite d'intégration l'exerce sous un rôle non propriétaire sans `BYPASSRLS`.
 
 L'outbox utilise `outbox_dispatch`, index global sans payload ni email, pour
 verrouiller le prochain identifiant et son tenant. Le worker pose ensuite le
 contexte avant de lire `outbox_event`, protégé par RLS. Un retry recopie la même
 échéance dans les deux tables.
+
+La livraison d’invitation est elle aussi séparée au build. Hors production,
+elle crée le magic-link Mailpit local. En production, elle n’écrit aucun
+`magic_link_request` et envoie uniquement l’entrée OIDC ; l’invitation exacte
+est ensuite résolue par l’email professionnel vérifié.
 
 RLS est une seconde barrière. Les tests de services et repositories restent
 obligatoires. Le runtime de production doit être non propriétaire, non

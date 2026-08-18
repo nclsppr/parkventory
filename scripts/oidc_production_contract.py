@@ -52,6 +52,9 @@ def validate_oidc_contract(root: Path = ROOT) -> None:
     expected = {
         "%dev.quarkus.oidc.tenant-enabled": "false",
         "%test.quarkus.oidc.tenant-enabled": "false",
+        "%dev.quarkus.http.auth.proactive": "false",
+        "%test.quarkus.http.auth.proactive": "false",
+        "%prod.quarkus.http.auth.proactive": "false",
         "%prod.quarkus.oidc.tenant-enabled": "true",
         "%prod.quarkus.oidc.application-type": "web-app",
         "%prod.quarkus.oidc.auth-server-url": "${PARKVENTORY_OIDC_AUTH_SERVER_URL}",
@@ -81,6 +84,9 @@ def validate_oidc_contract(root: Path = ROOT) -> None:
         "%prod.quarkus.oidc.token-state-manager.encryption-required": "true",
         "%prod.quarkus.oidc.token-state-manager.encryption-secret": "${PARKVENTORY_OIDC_TOKEN_ENCRYPTION_SECRET}",
         "%prod.parkventory.oidc.expected-issuer": "${PARKVENTORY_OIDC_ISSUER}",
+        "%prod.quarkus.http.auth.permission.oidc-callback.paths": "/api/v1/auth/oidc/callback",
+        "%prod.quarkus.http.auth.permission.oidc-callback.policy": "authenticated",
+        "%prod.quarkus.http.auth.permission.oidc-callback.auth-mechanism": "code",
     }
     for key, expected_value in expected.items():
         if values.get(key) != expected_value:
@@ -106,6 +112,14 @@ def validate_oidc_contract(root: Path = ROOT) -> None:
                 f"{common_resource_path} réexpose une route magic-link locale"
             )
 
+    local_service_path = "backend/src/main/java/com/parkventory/auth/AuthService.java"
+    _require(
+        _read(root, local_service_path),
+        local_service_path,
+        '@UnlessBuildProfile("prod")',
+        "sendInvitationMagicLink",
+    )
+
     oidc_resource_path = "backend/src/main/java/com/parkventory/auth/OidcAuthResource.java"
     oidc_resource = _read(root, oidc_resource_path)
     _require(
@@ -115,10 +129,24 @@ def validate_oidc_contract(root: Path = ROOT) -> None:
         '@Path("/login")',
         '@Path("/logout")',
         "@Authenticated",
+        "@AuthorizationCodeFlow",
         "OidcIdentityClaims.from(idToken, expectedIssuer)",
         "oidcSession.logout()",
+        "@PermitAll",
+        'header("Clear-Site-Data", "\\\"cookies\\\"")',
+        'Pattern.compile("q_session(?:_chunk_[0-9]+)?")',
+        'oidcCookieNames.add("q_session")',
+        "expiredOidcCookie",
         'HttpHeaders.CACHE_CONTROL, "no-store"',
     )
+    if oidc_resource.count("@Authenticated") != 1:
+        raise OidcContractError(
+            f"{oidc_resource_path} doit protéger seulement le login, jamais le logout local"
+        )
+    if oidc_resource.count("@AuthorizationCodeFlow") != 1:
+        raise OidcContractError(
+            f"{oidc_resource_path} doit sélectionner le code flow seulement pour le login"
+        )
     oidc_service_path = "backend/src/main/java/com/parkventory/auth/OidcIdentityService.java"
     _require(
         _read(root, oidc_service_path),
@@ -136,6 +164,33 @@ def validate_oidc_contract(root: Path = ROOT) -> None:
         "Boolean.TRUE.equals(emailVerified)",
         '"oidc-v1:"',
     )
+
+    local_invitation_path = (
+        "backend/src/main/java/com/parkventory/notifications/LocalInvitationAccessMailer.java"
+    )
+    _require(
+        _read(root, local_invitation_path),
+        local_invitation_path,
+        '@UnlessBuildProfile("prod")',
+        "authService.sendInvitationMagicLink",
+    )
+    oidc_invitation_path = (
+        "backend/src/main/java/com/parkventory/notifications/OidcInvitationAccessMailer.java"
+    )
+    _require(
+        _read(root, oidc_invitation_path),
+        oidc_invitation_path,
+        '@IfBuildProfile("prod")',
+        '"/api/v1/auth/oidc/login"',
+        "Un code à usage unique vous sera demandé",
+    )
+    outbox_path = "backend/src/main/java/com/parkventory/notifications/OutboxDeliveryService.java"
+    outbox = _read(root, outbox_path)
+    _require(outbox, outbox_path, "invitationAccessMailer.send")
+    if "authService.sendInvitationMagicLink" in outbox:
+        raise OidcContractError(
+            f"{outbox_path} contourne l'adaptateur d'invitation par profil"
+        )
 
     compose_path = "deploy/vps/compose.yaml"
     _require(
@@ -160,6 +215,22 @@ def validate_oidc_contract(root: Path = ROOT) -> None:
         "PARKVENTORY_OIDC_TOKEN_ENCRYPTION_SECRET_FILE",
         "read_long_secret",
         "OIDC auth server URL and issuer must match exactly",
+    )
+    image_test_path = "scripts/test-production-images.sh"
+    _require(
+        _read(root, image_test_path),
+        image_test_path,
+        """--env PARKVENTORY_DB_PASSWORD_FILE=/run/secrets/postgres-password \\
+  --env PARKVENTORY_OIDC_AUTH_SERVER_URL=https://tenant.eu.auth0.test/ \\
+  --env PARKVENTORY_OIDC_CLIENT_ID=parkventory-image-test \\
+  --env PARKVENTORY_OIDC_CLIENT_SECRET_FILE=/run/secrets/oidc-client-secret \\
+  --env PARKVENTORY_OIDC_ISSUER=https://tenant.eu.auth0.test/ \\
+  --env PARKVENTORY_OIDC_STATE_SECRET_FILE=/run/secrets/oidc-state-secret \\
+  --env PARKVENTORY_OIDC_TOKEN_ENCRYPTION_SECRET_FILE=/run/secrets/oidc-token-secret \\""",
+        "q_session=invalid-token-state",
+        "set-cookie: q_session=",
+        "GET /api/v1/auth/oidc/callback?code=image-test-invalid-code&state=",
+        "SELECT (revoked_at IS NOT NULL)::text FROM app_session",
     )
 
     dockerfile_path = "infra/images/frontend.Dockerfile"

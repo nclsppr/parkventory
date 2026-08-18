@@ -35,6 +35,7 @@ public class OidcProductionTestProfile implements QuarkusTestProfile {
                 Map.entry("PARKVENTORY_SMTP_HOST", "127.0.0.1"),
                 Map.entry("PARKVENTORY_SMTP_PASSWORD", "disabled"),
                 Map.entry("PARKVENTORY_SMTP_PORT", "9"),
-                Map.entry("PARKVENTORY_SMTP_USERNAME", "disabled"));
+                Map.entry("PARKVENTORY_SMTP_USERNAME", "disabled"),
+                Map.entry("PARKVENTORY_WEB_BASE_URL", "https://parkventory.test"));
     }
 }
