@@ -14,7 +14,7 @@ import {
 import { ApiError, inviteColleague } from "../api/client";
 import { AppLink } from "../components/AppLink";
 import type { NoticeTone } from "../components/AppShell";
-import { demoContext, findUrl, isPublicDemo, shareUrl } from "../config";
+import { demoContext, findUrl, isOidcIdentity, isPublicDemo, shareUrl } from "../config";
 import type { AvailabilityItem, DashboardData } from "../types";
 
 const personalDomains = ["gmail.com", "outlook.com", "hotmail.com", "yahoo.com", "icloud.com"];
@@ -54,7 +54,9 @@ export function DashboardPage({ data, onNotify, onSessionExpired }: DashboardPag
     setInviteMessage(null);
     try {
       const response = await inviteColleague({ email: normalized });
-      setInviteMessage(response.message);
+      setInviteMessage(isOidcIdentity
+        ? `L’invitation a été enregistrée pour ${normalized}.`
+        : response.message);
       if (response.accepted) setInviteEmail("");
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
@@ -169,7 +171,9 @@ export function DashboardPage({ data, onNotify, onSessionExpired }: DashboardPag
           <p id="invite-message" className="invite-message" role={inviteMessage ? "status" : undefined}>
             {inviteMessage ?? (isPublicDemo
               ? `Aucun e-mail réel n’est envoyé depuis la ${demoContext}.`
-              : "L’invitation sera capturée dans Mailpit.")}
+              : isOidcIdentity
+                ? "L’invitation sera envoyée à cette adresse professionnelle."
+                : "L’invitation sera capturée dans Mailpit.")}
           </p>
         </form>
 

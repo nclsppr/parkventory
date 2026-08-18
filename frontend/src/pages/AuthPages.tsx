@@ -8,7 +8,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { requestMagicLink, verifyMagicLink } from "../api/client";
-import { appUrl, homeUrl } from "../config";
+import { appUrl, homeUrl, isOidcIdentity, oidcLoginUrl } from "../config";
 import { Logo } from "../components/Logo";
 import { ThemeToggle } from "../components/Theme";
 import type { SessionData } from "../types";
@@ -31,6 +31,43 @@ function verifyMagicLinkOnce(token: string): Promise<SessionData> {
 }
 
 export function SignInPage({ reason }: { reason?: string }) {
+  return isOidcIdentity
+    ? <OidcSignInPage reason={reason} />
+    : <LocalSignInPage reason={reason} />;
+}
+
+function OidcSignInPage({ reason }: { reason?: string }) {
+  return (
+    <main className="auth-page">
+      <div className="auth-backdrop" aria-hidden="true" />
+      <a className="auth-brand" href={homeUrl} aria-label="Parkventory, accueil">
+        <Logo />
+      </a>
+      <ThemeToggle className="auth-theme-toggle" />
+      <section className="auth-panel" aria-labelledby="auth-title">
+        <div className="auth-icon"><Mail aria-hidden="true" /></div>
+        <p className="section-index">Accès à l’espace parking</p>
+        <h1 id="auth-title">Connectez-vous sans mot de passe.</h1>
+        <p className="auth-intro">
+          Votre adresse professionnelle sera vérifiée avant l’accès à votre espace.
+        </p>
+        {reason && <div className="auth-message" role="alert"><span>{reason}</span></div>}
+        <a className="button button-primary" href={oidcLoginUrl}>
+          Continuer par e-mail <ArrowRight aria-hidden="true" />
+        </a>
+        <p className="auth-trust">
+          <ShieldCheck aria-hidden="true" />
+          Parkventory ne reçoit jamais votre code de vérification.
+        </p>
+      </section>
+      <a className="auth-home-link" href={homeUrl}>
+        <ArrowLeft aria-hidden="true" /> Revenir à la présentation
+      </a>
+    </main>
+  );
+}
+
+function LocalSignInPage({ reason }: { reason?: string }) {
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(reason ?? null);
@@ -120,6 +157,29 @@ export function SignInPage({ reason }: { reason?: string }) {
 }
 
 export function AuthCallbackPage() {
+  return isOidcIdentity ? <OidcRestartPage /> : <LocalAuthCallbackPage />;
+}
+
+function OidcRestartPage() {
+  return (
+    <main className="auth-page">
+      <div className="auth-backdrop" aria-hidden="true" />
+      <a className="auth-brand" href={homeUrl} aria-label="Parkventory, accueil"><Logo /></a>
+      <ThemeToggle className="auth-theme-toggle" />
+      <section className="auth-panel auth-callback-panel" aria-labelledby="callback-title">
+        <div className="auth-icon"><Mail aria-hidden="true" /></div>
+        <p className="section-index">Connexion</p>
+        <h1 id="callback-title">Reprenez votre connexion.</h1>
+        <p className="auth-intro">Le parcours précédent n’est plus actif.</p>
+        <a className="button button-primary" href={oidcLoginUrl}>
+          Continuer par e-mail <ArrowRight aria-hidden="true" />
+        </a>
+      </section>
+    </main>
+  );
+}
+
+function LocalAuthCallbackPage() {
   const token = new URLSearchParams(window.location.search).get("token");
   const [state, setState] = useState<"verifying" | "success" | "error">("verifying");
   const [message, setMessage] = useState("Validation de votre lien sécurisé…");

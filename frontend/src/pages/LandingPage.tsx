@@ -16,7 +16,16 @@ import { DashboardPreview } from "../components/DashboardPreview";
 import { Logo } from "../components/Logo";
 import { ThemeToggle } from "../components/Theme";
 import { requestMagicLink } from "../api/client";
-import { appUrl, demoLabel, findUrl, homeUrl, isPublicDemo, shareUrl } from "../config";
+import {
+  appUrl,
+  demoLabel,
+  findUrl,
+  homeUrl,
+  isOidcIdentity,
+  isPublicDemo,
+  oidcLoginUrl,
+  shareUrl,
+} from "../config";
 import { useLandingMotion } from "../hooks/useLandingMotion";
 
 const personalDomains = ["gmail.com", "outlook.com", "hotmail.com", "yahoo.com", "icloud.com"];
@@ -264,7 +273,14 @@ export function LandingPage() {
             <p className="section-index">Prêt à partager ?</p>
             <h2 id="start-title">Votre prochaine place libre peut déjà aider quelqu’un.</h2>
           </div>
-          <form className="registration-form" data-reveal onSubmit={handleRegistration} noValidate>
+          {isOidcIdentity ? (
+            <div className="registration-form" data-reveal>
+              <a className="button button-primary" href={oidcLoginUrl}>
+                Continuer par e-mail <ArrowUpRight aria-hidden="true" />
+              </a>
+              <p>Votre adresse professionnelle sera vérifiée avant l’accès.</p>
+            </div>
+          ) : <form className="registration-form" data-reveal onSubmit={handleRegistration} noValidate>
             <label htmlFor="professional-email">Adresse e-mail professionnelle</label>
             <div className="registration-control">
               <input
@@ -289,7 +305,7 @@ export function LandingPage() {
                 : "Local : ouvrez l’e-mail capturé dans Mailpit sur http://127.0.0.1:8025."}
             </p>
             {registrationMessage && <p id="registration-message" className="registration-message" role="status">{registrationMessage}</p>}
-          </form>
+          </form>}
         </section>
       </main>
 

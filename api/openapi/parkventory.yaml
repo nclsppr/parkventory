@@ -1,10 +1,11 @@
 openapi: 3.1.0
 info:
   title: Parkventory API
-  version: 0.2.0
+  version: 0.3.0
   description: >-
-    Contrat de l’API locale persistante. L’identité par lien magique et Mailpit
-    sont des adaptateurs de développement ; la cible de production reste OIDC.
+    Contrat des adaptateurs d’identité exclusifs par profil. Le lien magique et
+    Mailpit existent hors production ; Auth0 Universal Login Email OTP existe
+    dans le build prod seulement. Les deux établissent une app_session interne.
 servers:
   - url: http://127.0.0.1:5173/api/v1
     description: Même origine locale via le proxy Vite
@@ -17,6 +18,7 @@ tags:
   - name: Invitations
 paths:
   /auth/requests:
+    x-build-profile: non-prod
     post:
       tags: [Identity]
       operationId: requestMagicLink
@@ -37,6 +39,7 @@ paths:
         "400":
           description: Adresse absente, invalide ou personnelle
   /auth/verify:
+    x-build-profile: non-prod
     post:
       tags: [Identity]
       operationId: verifyMagicLink
@@ -78,6 +81,7 @@ paths:
         "401":
           description: Session absente, expirée ou révoquée
     delete:
+      x-build-profile: non-prod
       tags: [Identity]
       operationId: logout
       security:
@@ -85,6 +89,54 @@ paths:
       responses:
         "200":
           description: Session révoquée et cookie expiré
+  /auth/oidc/login:
+    x-build-profile: prod
+    get:
+      tags: [Identity]
+      operationId: startOidcLogin
+      summary: Démarre ou termine le code flow Auth0 Email OTP
+      description: >-
+        Quarkus redirige une session anonyme vers l’issuer exact avec
+        connection=email, prompt=login, PKCE S256, state et nonce. Après le
+        callback vérifié, la même route provisionne l’adhésion, crée
+        l’app_session et redirige vers /app.
+      responses:
+        "302":
+          description: Challenge anonyme redirigé vers Auth0
+        "303":
+          description: Session créée puis redirection vers l’application authentifiée
+        "401":
+          description: Claims absents, email non vérifié ou issuer incohérent
+        "409":
+          description: Identité déjà liée à un autre email vérifié
+  /auth/oidc/callback:
+    x-build-profile: prod
+    get:
+      tags: [Identity]
+      operationId: completeOidcLogin
+      summary: Callback technique géré par Quarkus OIDC
+      description: >-
+        Route virtuelle réservée au middleware. Le frontend ne lit jamais le
+        code, les tokens, le state ou le nonce.
+      responses:
+        "302":
+          description: Code flow validé puis chemin /auth/oidc/login restauré
+        "401":
+          description: Code flow, state, nonce, issuer, audience ou signature refusé
+  /auth/oidc/logout:
+    x-build-profile: prod
+    post:
+      tags: [Identity]
+      operationId: logoutOidcSession
+      summary: Ferme les sessions locales Parkventory et Quarkus
+      description: >-
+        Révoque app_session et supprime les cookies locaux. Le cookie Auth0 peut
+        rester ; connection=email et prompt=login empêchent une reconnexion
+        silencieuse. L'opération reste idempotente si le cookie OIDC local est
+        déjà absent ou expiré. Ce n’est pas un logout fournisseur global.
+      responses:
+        "200":
+          description: Session Parkventory fermée et cookies locaux expirés
   /dashboard:
     get:
       tags: [Dashboard]

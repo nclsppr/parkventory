@@ -6,6 +6,8 @@ import re
 import stat
 from pathlib import Path
 
+from oidc_production_contract import OidcContractError, validate_oidc_contract
+
 
 ROOT = Path(__file__).resolve().parent.parent
 DIGEST_IMAGE = re.compile(r"^[a-z0-9./_-]+:[A-Za-z0-9_.-]+@sha256:[0-9a-f]{64}$")
@@ -269,6 +271,10 @@ def main() -> None:
     validate_workflow()
     validate_executable_scripts()
     validate_production_image_wait()
+    try:
+        validate_oidc_contract(ROOT)
+    except OidcContractError as error:
+        fail(str(error))
     print("Contrat producteur Parkventory valide : images, migrateur, intégration et release exactes.")
 
 
