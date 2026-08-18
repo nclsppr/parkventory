@@ -62,6 +62,23 @@ Après authentification :
 Un en-tête ou paramètre `organization_id` ne suffit jamais à autoriser une
 requête.
 
+### Contrat identité vers tenant
+
+1. L'adaptateur prouve l'identité ; le lien magique local consomme son hash et
+   le futur OIDC devra valider `issuer`, `subject` et `email_verified`.
+2. Le bootstrap borné résout une invitation exacte ou un domaine, sans révéler
+   le reste du tenant.
+3. Parkventory crée ou relit le compte et l'adhésion active dans PostgreSQL ;
+   les rôles proviennent toujours de cette adhésion, jamais d'un header ou d'un
+   claim non recoupé.
+4. La session serveur lie `user_account_id`, `active_membership_id` et
+   `organization_id` par clé étrangère composite.
+5. Chaque transaction authentifiée relit cette session, puis pose
+   `SET LOCAL app.organization_id` avant toute requête tenant.
+
+Une identité vérifiée sans adhésion résolue n'autorise donc aucune lecture
+métier. Un tenant sans transaction active n'est pas un contexte valide.
+
 ## Défense en profondeur PostgreSQL
 
 Chaque transaction métier :
@@ -73,9 +90,32 @@ Chaque transaction métier :
 
 Les clés étrangères composites empêchent aussi les relations croisées.
 
+La migration V3 applique désormais cette règle aux tables métier, d'identité,
+de session, d'audit et d'outbox. `TenantTransactionContext` pose les réglages
+avec `set_config(..., true)` et refuse une connexion en autocommit. Les services
+reçoivent toujours `OrganizationId` depuis la session serveur : aucun header ou
+paramètre client ne devient le contexte PostgreSQL.
+
+La résolution précédant le tenant est bornée par des réglages distincts. Après
+vérification de l'identité seulement, l'application pose l'email et le domaine
+normalisés ; RLS ne laisse alors voir que l'invitation active exacte et le
+rattachement de ce domaine. Le hash d'un lien magique ou d'une session ne rend
+visible que sa propre ligne. Après résolution, toute mutation tenant exige
+`app.organization_id`. Ce contrat est indépendant de l'adaptateur : le futur
+OIDC l'utilisera après validation de `issuer`, `subject` et `email_verified`.
+
+L'outbox utilise `outbox_dispatch`, index global sans payload ni email, pour
+verrouiller le prochain identifiant et son tenant. Le worker pose ensuite le
+contexte avant de lire `outbox_event`, protégé par RLS. Un retry recopie la même
+échéance dans les deux tables.
+
 RLS est une seconde barrière. Les tests de services et repositories restent
-obligatoires, car le propriétaire de table ou un rôle `BYPASSRLS` contournerait
-les politiques.
+obligatoires. Le runtime de production doit être non propriétaire, non
+superuser et sans `BYPASSRLS`. Un credential runtime compromis peut encore poser
+un réglage arbitraire ; les requêtes paramétrées, l'autorisation objet et la
+séparation des secrets restent donc indispensables. La décision et les
+exceptions sont détaillées dans
+[`ADR-0009`](../decisions/adr-0009-rls-et-contextes-tenant-transactionnels.md).
 
 ## Résolution de domaine
 

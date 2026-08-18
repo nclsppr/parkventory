@@ -143,6 +143,11 @@ class VpsIntegrationTest(unittest.TestCase):
                         "sha256": "02903ba50a33030ac2ab60a4f5b30725d40f6ce182c37b9b41c05b3cdd5be1ec",
                         "version": 2,
                     },
+                    {
+                        "path": "backend/src/main/resources/db/migration/V3__tenant_row_level_security.sql",
+                        "sha256": "12ff4aa7286aa05ca192a10594d55283c41f40b191c1aa4e77a11faaba8334ca",
+                        "version": 3,
+                    },
                 ],
             )
 

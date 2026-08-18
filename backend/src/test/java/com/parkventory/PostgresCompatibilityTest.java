@@ -26,7 +26,7 @@ class PostgresCompatibilityTest {
         try (Connection connection = dataSource.getConnection();
              Statement statement = connection.createStatement()) {
             assertEquals(expectedVersion, scalar(statement, "SHOW server_version"));
-            assertEquals("2", scalar(statement, """
+            assertEquals("3", scalar(statement, """
                     SELECT version
                     FROM flyway_schema_history
                     WHERE success
@@ -47,6 +47,38 @@ class PostgresCompatibilityTest {
                         'reservation_no_active_overlap',
                         'availability_offer_no_published_overlap'
                       )
+                    """));
+            assertEquals("17", scalar(statement, """
+                    SELECT count(*)
+                    FROM pg_class
+                    WHERE relnamespace = 'public'::regnamespace
+                      AND relrowsecurity
+                      AND relforcerowsecurity
+                      AND relname IN (
+                        'user_account',
+                        'user_email',
+                        'magic_link_request',
+                        'app_session',
+                        'organization',
+                        'organization_domain',
+                        'membership',
+                        'invitation',
+                        'admin_claim',
+                        'parking_site',
+                        'parking_spot',
+                        'spot_assignment',
+                        'availability_offer',
+                        'reservation',
+                        'idempotency_record',
+                        'outbox_event',
+                        'audit_event'
+                      )
+                    """));
+            assertEquals("1", scalar(statement, """
+                    SELECT count(*)
+                    FROM information_schema.tables
+                    WHERE table_schema = 'public'
+                      AND table_name = 'outbox_dispatch'
                     """));
         }
     }
