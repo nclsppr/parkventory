@@ -43,6 +43,11 @@ pas l’ADR OIDC. Le cookie n’emploie pas `Secure` sur l’origine HTTP de bou
 locale ; toute surface HTTPS non locale doit utiliser la configuration OIDC et
 un cookie sécurisé avant ouverture.
 
+Depuis l’ADR-0010, la classe REST qui porte `/auth/requests` et `/auth/verify`
+est supprimée au build du profil `prod`. L’adaptateur OIDC est inversement
+absent des profils local et test : une release ne peut pas choisir les deux par
+simple variable runtime.
+
 ## Conséquences
 
 ### Positives
@@ -92,6 +97,7 @@ retirées seulement après migration et vérification de toutes les sessions.
 ## Références
 
 - [ADR-0003 : OIDC passwordless et isolation métier](adr-0003-authentication-et-isolation.md)
+- [ADR-0010 : Auth0 EU et email OTP](adr-0010-auth0-email-otp-production.md)
 - [Documentation Docker Mailpit](https://mailpit.axllent.org/docs/install/docker/)
 - [Healthchecks Mailpit](https://mailpit.axllent.org/docs/integration/healthcheck/)
 - [Quarkus Mailer](https://quarkus.io/guides/mailer-reference)

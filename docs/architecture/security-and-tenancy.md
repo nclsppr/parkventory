@@ -10,17 +10,22 @@
 
 ## Authentification passwordless
 
-Le choix accepté est un fournisseur OIDC compatible passwordless email, intégré
-avec l'Authorization Code Flow de Quarkus en mode `web-app`.
+Le candidat recommandé par l’ADR-0010 proposée est Auth0 EU avec Universal
+Login Email OTP, intégré avec l'Authorization Code Flow de Quarkus en mode
+`web-app`. Le fournisseur n’est pas approuvé, le tenant n’est pas provisionné
+et cette préparation n’est pas une preuve externe.
 
 Flux :
 
-1. l'utilisateur demande une connexion avec une réponse générique ;
-2. le fournisseur envoie et valide le lien à usage unique ;
-3. Quarkus termine le code flow comme client confidentiel avec PKCE ;
-4. le claim d'email vérifié est contrôlé ;
+1. l'utilisateur choisit « Continuer par e-mail » ;
+2. Auth0 Universal Login vérifie le code email à usage unique ;
+3. Quarkus termine le code flow comme client confidentiel avec PKCE, `state`
+   et `nonce` ;
+4. issuer, audience, signature, sujet, email et booléen `email_verified` sont
+   contrôlés ;
 5. Parkventory résout le compte et l'adhésion dans sa propre base ;
-6. Quarkus établit une session via cookie sécurisé.
+6. Quarkus établit son token state chiffré puis Parkventory une `app_session`
+   référencée par cookie sécurisé.
 
 Contraintes :
 
@@ -32,18 +37,33 @@ Contraintes :
 - expiration courte du flux et rate limiting email/IP ;
 - aucun log d'email complet, code, token ou cookie.
 
-Le fournisseur exact n'est pas encore choisi. Il doit permettre export,
-suppression, région adaptée, rotation des clés et retrait sans perdre les
-comptes internes.
+La configuration fixe `connection=email`, `prompt=login`, les endpoints Auth0 et l’issuer
+exact. Le compte interne conserve une clé opaque dérivée de `(issuer, subject)`
+afin qu’un changement de fournisseur reste une migration explicite. La région
+effective, le traitement des données, l’export, la suppression, les quotas et
+le coût doivent être vérifiés avant de créer le tenant.
+
+Les routes sont séparées au build. Le profil `prod` ne contient pas
+`/auth/requests` ni `/auth/verify`; les autres profils ne contiennent pas
+`/auth/oidc/login` ni `/auth/oidc/logout`. Les trois secrets OIDC sont des
+fichiers Compose distincts et aucune expression de production n’a de valeur par
+défaut.
+
+Le logout de l’adaptateur actuel révoque l’`app_session`, expire son cookie et
+supprime uniquement le token-state OIDC local Quarkus. Il n’efface pas le
+cookie Auth0 résiduel. Chaque nouvelle autorisation force toutefois
+`connection=email` et `prompt=login`, donc un nouveau parcours email OTP au
+lieu d’une reconnexion silencieuse. Tout SSO, social login ou fédération exige
+un logout fournisseur `/v2/logout` avec retour HTTPS allowlisté.
 
 ### État local actuel
 
-Le parcours Compose utilise temporairement l'adaptateur accepté par
+Le parcours Compose de développement utilise l'adaptateur accepté par
 [`ADR-0005`](../decisions/adr-0005-adaptateur-identite-mailpit-local.md) :
 jeton aléatoire de 256 bits, hash SHA-256 en base, consommation atomique,
-session de sept jours en cookie `HttpOnly` et Mailpit. Il exerce les frontières
-applicatives mais ne prouve pas OIDC, `Secure`, PKCE, rate limiting, protection
-CSRF complète ou délivrabilité.
+session de sept jours en cookie `HttpOnly` et Mailpit. Cet adaptateur reste
+fonctionnel hors production seulement. Il ne prouve pas le tenant Auth0, la
+délivrabilité OTP, le rate limiting ou la protection CSRF complète.
 
 ## Tenant métier
 
@@ -65,7 +85,7 @@ requête.
 ### Contrat identité vers tenant
 
 1. L'adaptateur prouve l'identité ; le lien magique local consomme son hash et
-   le futur OIDC devra valider `issuer`, `subject` et `email_verified`.
+   le candidat OIDC valide `issuer`, `subject` et `email_verified`.
 2. Le bootstrap borné résout une invitation exacte ou un domaine, sans révéler
    le reste du tenant.
 3. Parkventory crée ou relit le compte et l'adhésion active dans PostgreSQL ;
@@ -241,5 +261,7 @@ pas un texte libre contenant des données personnelles inutiles.
 
 - [Authorization Code Flow Quarkus](https://quarkus.io/guides/security-oidc-code-flow-authentication)
 - [Configuration OIDC Quarkus](https://quarkus.io/guides/security-oidc-configuration-properties-reference)
+- [Auth0 Passwordless avec Universal Login](https://auth0.com/docs/authenticate/passwordless/passwordless-with-universal-login)
+- [ADR-0010 : Auth0 EU et email OTP](../decisions/adr-0010-auth0-email-otp-production.md)
 - [Vue d'ensemble de la sécurité Quarkus](https://quarkus.io/guides/security-overview)
 - [Row-Level Security PostgreSQL 18](https://www.postgresql.org/docs/18/ddl-rowsecurity.html)

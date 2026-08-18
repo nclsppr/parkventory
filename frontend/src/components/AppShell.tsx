@@ -13,6 +13,7 @@ import {
   demoLabel,
   findUrl,
   homeUrl,
+  isOidcIdentity,
   isPublicDemo,
   shareUrl,
 } from "../config";
@@ -45,7 +46,11 @@ export function EnvironmentStatus({ loading }: { loading: boolean }) {
   return (
     <span
       className="demo-status"
-      title={isPublicDemo ? "Les données sont fictives et non persistées." : "Les données viennent de PostgreSQL local."}
+      title={isPublicDemo
+        ? "Les données sont fictives et non persistées."
+        : isOidcIdentity
+          ? "Les données de votre espace sont persistées."
+          : "Les données viennent de PostgreSQL local."}
     >
       <i /> {loading ? "Actualisation…" : demoLabel}
     </span>

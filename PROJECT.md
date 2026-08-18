@@ -100,7 +100,7 @@ Ces cibles ne sont pas des résultats acquis.
 | Roadmap | `ROADMAP.md` | normative | Autorité de séquencement |
 | Historique | `CHANGELOG.md` | historique | Changements livrés |
 | Architecture | [`docs/architecture/overview.md`](docs/architecture/overview.md) | normative | Cible, pas état livré |
-| Contrat API | `api/openapi/parkventory.yaml` | normative actuelle | Authentification locale et parcours métier versionnés |
+| Contrat API | `api/openapi/parkventory.yaml` | normative actuelle | Authentification locale/OIDC et parcours métier versionnés |
 | Schéma de données | [`docs/architecture/domain-model.md`](docs/architecture/domain-model.md) et `backend/src/main/resources/db/migration/` | normative et opérationnelle | Migrations V1 à V3 et parcours runtime non propriétaire testés sur PostgreSQL 17.10 et 18.3 ; aucune migration Atlas exécutée |
 | Sécurité et isolation | [`docs/architecture/security-and-tenancy.md`](docs/architecture/security-and-tenancy.md) | normative | Défense en profondeur |
 | Design system | [`DESIGN.md`](DESIGN.md) et `frontend/src/styles.css` | normative et opérationnelle | Tokens, composants et responsive alignés |
@@ -140,7 +140,7 @@ Le détail et les compromis vivent dans
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Documentation Nimbus | Rendu des Markdown classés | Actuel | Build local complet et GitHub Pages filtré | Nimbus 0.8.2 | `docs-nimbus/` | 13 tests d'adaptateur, 7 pages publiques issues de 4 sources, build/lint et probes, 2026-08-11 | nclsppr |
 | Frontend React | Landing, authentification, dashboard, partage et recherche | Actuel, réel en local et démo publique | Compose ou navigateur statique | React 19.2.8, Vite 8.1.5 | `frontend/` | 34 tests, 24 audits Axe, builds et parcours navigateur, 2026-08-11 | nclsppr |
-| API Java | Identité locale, métier, validation, santé et OpenAPI | Actuel, local | Compose, Maven 3.9.16 et Java 25 | Quarkus 3.33.3 LTS | `backend/` | Tests PostgreSQL et smoke Compose, 2026-07-30 | nclsppr |
+| API Java | Identité locale, adaptateur OIDC de production, métier, validation, santé et OpenAPI | Réel en local ; OIDC préparé sans activation | Compose, Maven 3.9.16 et Java 25 | Quarkus 3.33.3 LTS | `backend/` | Claims, profils, PostgreSQL et contrat adversarial testés ; gate images à rejouer, 2026-08-18 | nclsppr |
 | PostgreSQL | Identité, sessions, métier, outbox, contraintes et RLS forcée | Actuel, local | Compose et Testcontainers | PostgreSQL 18.3 | migrations Flyway V1 à V3 | Migration, parcours persisté et rôle RLS adversarial vérifiés, 2026-08-18 | nclsppr |
 | Mailpit | Liens magiques, invitations et notifications locales | Actuel, local uniquement | Compose | Mailpit 1.30.6 | `compose.yaml` | Healthcheck, API et navigateur, 2026-07-30 | nclsppr |
 | Livraison email de production | Magic links et notifications | Cible | Service externe derrière un port | Fournisseur non choisi | module `notifications` | Décision requise avant F05 | nclsppr |
@@ -172,6 +172,7 @@ ni contrat, ni données, ni autre module, et son retrait est local.
 | Dépendance | Usage | Données transmises | Mode d'échec | Alternative |
 | --- | --- | --- | --- | --- |
 | Fournisseur email, non choisi | Liens magiques et notifications | Adresse destinataire, type de message, lien court | File d'outbox en attente ; réservation conservée | Mailpit uniquement en développement |
+| Auth0 EU, candidat non approuvé et non provisionné | Universal Login Email OTP et identité OIDC | Adresse professionnelle, métadonnées du flow et identifiant fournisseur | Nouvelles connexions indisponibles ; sessions applicatives existantes bornées par leur TTL | Rejeter le candidat ou changer de fournisseur par migration issuer/subject contrôlée |
 | Hébergement PostgreSQL, non choisi | Données applicatives | Identités minimales, organisations, places, intervalles | Application indisponible en écriture | PostgreSQL local pour développement, pas pour production |
 | Atlas et Caddy partagé | Servir la démo statique puis le futur frontend/API | Requêtes, session et journaux minimisés après cutover | Démo indisponible aujourd'hui ; application indisponible après activation | Nouveau commit descendant statique ou release applicative descendante ; handoff de route contrôlé par `vps-infra` |
 
@@ -219,8 +220,8 @@ page 404 explicite.
 | Construire les surfaces Pages | `npm run pages:build` | Frontend statique sous `/parkventory/`, routes directes et documentation Nimbus publique sous `/parkventory/docs/` |
 | Construire la démo Atlas | `npm run atlas:build` | Frontend statique à la racine, toujours en mode démo et sans backend |
 | Construire les artefacts Atlas | `./scripts/build-vps-release.sh frontend/dist <sortie> <révision>` | Archive et inventaire de routes déterministes liés à un commit complet |
-| Vérifier le contrat applicatif | `npm run production:check` | Images, Compose, bundle et descripteur conformes au contrat producteur exact |
-| Exercer les images applicatives | `npm run production:images:test` | Frontend/backend non-root, migrateur dédié, santé et runtime PostgreSQL sans DDL |
+| Vérifier le contrat applicatif | `npm run production:check` | Images, Compose, OIDC fail-closed, bundle et descripteur conformes au contrat producteur exact |
+| Exercer les images applicatives | `npm run production:images:test` | Profils OIDC/local exclusifs, redirection Auth0 avec PKCE/state/nonce, frontend sans Mailpit, backend non-root, migrateur dédié, santé et runtime PostgreSQL sans DDL |
 | Construire le bundle VPS applicatif | `./scripts/build-vps-integration.sh <sortie> <révision>` | Compose app-only, inventaire, migrations V1 à V3 et probes déterministes liés au SHA |
 
 Les commandes manuelles utilisent uniquement les services locaux autorisés.
@@ -243,6 +244,9 @@ runbook ne sont pas satisfaits.
 - Autorisation : backend et base, jamais la seule interface.
 - Isolation actuelle : `organization_id`, clés composites et filtres serveur ;
   PostgreSQL RLS reste la défense cible avant pilote.
+- Identité candidate : Auth0 EU Email OTP préparé, claims vérifiés et
+  `app_session` interne ; ADR proposée, coût, tenant distant, secrets réels et
+  callback public non approuvés ou non provisionnés.
 - Rétention : durée exacte à décider avant pilote ; suppression et export
   requis.
 - Sauvegarde : stratégie et restauration isolée obligatoires avant production.

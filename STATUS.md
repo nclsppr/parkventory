@@ -106,14 +106,15 @@ graphe local intégré.
 | Phase roadmap | État observé | Preuve restante avant clôture | Responsable |
 | --- | --- | --- | --- |
 | F02 — Surface et squelette | `in_progress` | Générer le client OpenAPI et rejouer le démarrage depuis un clone propre | nclsppr |
-| F03 — Identité et communauté | `in_progress` | Anti-abus et adaptateur OIDC de production ; matrice tenant A/B et RLS désormais vérifiées localement | nclsppr |
+| F03 — Identité et communauté | `in_progress` | Anti-abus, décision fournisseur OIDC et OTP externe ; matrice tenant A/B et RLS vérifiées localement | nclsppr |
 | F04 — Partager et réserver | `in_progress` | Test réellement concurrent, annulation, fuseaux et heure d'été | nclsppr |
 
 ## Livré et vérifié
 
 | Capacité | Périmètre réel | Preuve | Limite connue |
 | --- | --- | --- | --- |
-| Identité locale | Lien 256 bits, hash en base, durée 15 min, consommation unique, session `HttpOnly` 7 jours | Tests Quarkus, smoke Compose, parcours navigateur | Adaptateur HTTP local, pas OIDC de production |
+| Identité locale | Lien 256 bits, hash en base, durée 15 min, consommation unique, session `HttpOnly` 7 jours | Tests Quarkus, smoke Compose, parcours navigateur | Endpoints supprimés du build `prod` |
+| Identité OIDC candidate | Auth0 EU Universal Login Email OTP, client confidentiel, PKCE/state/nonce, issuer/audience exacts, claims vérifiés et pont `app_session` | Tests de profils, claims, provisioning PostgreSQL et contrat adversarial ; gate images à rejouer | ADR non approuvée ; coût, tenant, secrets réels, callback public et flux OTP externe absents |
 | Communauté | Invitation exacte prioritaire, sinon organisation communautaire unique par domaine | PostgreSQL réel et tests d'intégration | Domaine partagé/filiales et liste anti-abus à durcir |
 | Application React | Connexion, dashboard de synthèse, routes dédiées de partage et recherche, réservation, invitation, chargements, erreurs, états vides et choix clair/sombre persistant | 35 tests Vitest, build, navigation History API et navigateur sans erreur console | Client OpenAPI encore manuel ; recherche limitée à l'agenda de sept jours |
 | Identité visuelle | Master SVG fourni utilisé dans les huit emplacements React, les favicons, le header Nimbus et les cartes Open Graph ; palettes sombre et claire sémantiques ; plaque de contraste claire sans recoloration du master | Gate anti-dérive, tests de ratios et revue des deux thèmes desktop/mobile | Symbole seul ; aucun wordmark vectoriel ni variante monochrome |
@@ -214,7 +215,7 @@ Compose, PostgreSQL ou migrateur Parkventory n'a été démarré sur Atlas.
 
 | Blocage | Impact | Propriétaire | Condition de reprise |
 | --- | --- | --- | --- |
-| Fournisseurs OIDC et email non choisis | Interdit de présenter l'identité locale comme prête pour la production | nclsppr | ADR, contrat, région, coût et retrait validés |
+| Auth0 EU non approuvé et fournisseur email non choisi | Interdit de présenter le candidat OIDC préparé comme une connexion de production active | nclsppr | ADR/coût/région/conditions approuvés, puis tenant, callback, secrets, OTP réel et retrait testés |
 | Production applicative non décidée | Bloque toute API, identité ou persistance publique | nclsppr | Architecture d'exploitation, services externes et gates du runbook validés |
 | Contrôleur Compose non activé et cutover plateforme non livré | Le candidat publié ne peut pas remplacer la démo statique en sécurité ; le code du contrôleur central est fusionné mais son entrée reste désactivée | nclsppr | Convergence live prouvée, base et secrets provisionnés, migration compatible, route transférée exclusivement sous le verrou partagé, rollback et probes publics testés |
 | Privilèges PostgreSQL de production non provisionnés | Le migrateur possède le schéma et le runtime doit recevoir uniquement les droits DML/usage nécessaires, y compris les default privileges des migrations futures | nclsppr | Rôles, grants et rotation créés par Atlas puis test négatif DDL rejoué avec les identités de production |
@@ -230,7 +231,7 @@ Compose, PostgreSQL ou migrateur Parkventory n'a été démarré sur Atlas.
 | Défense anti-abus | Refus minimal de domaines personnels | Spam et tenant indésirable | Rate limit, liste versionnée et réponses/timings comparés |
 | Intégrité temporelle complète | Contraintes GiST et conflits testés séquentiellement | Course, annulation ou DST mal traitée | Tests parallèles, annulation et matrice de fuseaux |
 | Recherche d'un intervalle arbitraire | Route dédiée alimentée par l'agenda réel à sept jours | Besoin non couvert au-delà de cette fenêtre | Ajouter un contrat de recherche borné avant d'afficher des filtres date/site |
-| Identité de production | Adaptateur local Mailpit ; cookie `Secure` forcé dans le profil prod | Mauvais usage hors boucle locale | OIDC, PKCE, CSRF et révocation de migration |
+| Identité de production | Candidat Auth0 fail-closed préparé ; local et OIDC exclusifs au build | Sous-traitant non approuvé, configuration distante ou intégration RLS incorrecte | Décision fournisseur, puis tenant réel, callback Caddy, anti-abus/CSRF et séquence identité → membership → `SET LOCAL` testés |
 
 ## Risques et hypothèses
 

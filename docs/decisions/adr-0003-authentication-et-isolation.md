@@ -1,13 +1,14 @@
 # ADR-0003 : OIDC passwordless et isolation métier
 
 - Statut : accepté
-- Statut d'implémentation : partiel — isolation RLS implémentée ; adaptateur OIDC non commencé
+- Statut d'implémentation : RLS implémentée et candidat Auth0 préparé ; décision externe et activation absentes
 - Date : 2026-07-30
-- Dernière vérification : documentation Quarkus et PostgreSQL consultée le 2026-07-30
+- Dernière vérification : contrat Quarkus/Auth0 et tests de profils le 2026-08-18
 - Propriétaire : nclsppr
 - Domaine : sécurité et données
 - Remplace : aucune
 - Remplacé par : aucune
+- Proposition de précision : [ADR-0010](adr-0010-auth0-email-otp-production.md)
 
 ## Contexte
 
@@ -65,8 +66,9 @@ mais contredit la self-registration.
 Adopter l'option B.
 
 - Quarkus OIDC en `web-app` et Authorization Code Flow.
-- Fournisseur OIDC capable de passwordless email, à sélectionner avant F05 ou
-  toute ouverture externe.
+- Auth0 EU et Universal Login Email OTP sont le candidat technique de
+  l’ADR-0010, qui reste à approuver ; le fournisseur n’est pas choisi tant que
+  cette décision externe, le coût et les conditions ne sont pas acceptés.
 - PKCE, nonce, état et validation de l'issuer/audience.
 - Cookie de session `HttpOnly`, `Secure` et SameSite approprié.
 - Compte interne lié au couple issuer + subject.
@@ -102,14 +104,12 @@ Adopter l'option B.
 
 ## Mise en œuvre
 
-1. Comparer les fournisseurs sur sécurité, région, coût, export et retrait.
-2. Écrire des tests de contrat OIDC avec claims minimaux.
-3. Configurer Quarkus OIDC `web-app`, PKCE, cookies et logout.
-4. Créer le compte seulement après email vérifié.
-5. Résoudre invitation, domaine, adhésion et tenant dans PostgreSQL.
-6. Appliquer clés composites, RLS forcée et contexte transactionnel.
-7. Tester anti-énumération, rejeu, révocation et tenant A/B.
-8. Documenter rotation des secrets et mode d'indisponibilité.
+1. Approuver ou rejeter le candidat Auth0 EU décrit par l’ADR-0010.
+2. Après approbation seulement, valider et provisionner le tenant.
+3. Injecter et tester les secrets sans les exposer au dépôt.
+4. Appliquer clés composites, RLS forcée et contexte transactionnel.
+5. Tester anti-énumération, rejeu, révocation et tenant A/B.
+6. Documenter et exercer rotation des secrets et mode d'indisponibilité.
 
 L'étape 6 est implémentée par
 [`ADR-0009`](adr-0009-rls-et-contextes-tenant-transactionnels.md). Elle reste
@@ -119,14 +119,16 @@ l'adhésion.
 
 ## Vérification
 
-- Commandes : tests de sécurité, intégration OIDC et PostgreSQL à créer en F03.
+- Commandes : tests de claims, profils et PostgreSQL réussis, contrat d’image
+  ajouté mais à rejouer ; matrice RLS et test avec un tenant Auth0 réel encore
+  requis.
 - Environnements : fournisseur de test ou émulateur contractuel, Testcontainers,
   préproduction.
 - Résultat attendu : email non vérifié refusé, session sécurisée, aucun accès
   inter-tenant et rôle révoqué immédiatement.
-- Preuve observée : compatibilité de Quarkus avec Authorization Code Flow
-  vérifiée dans la documentation officielle.
-- Limites de la preuve : aucun fournisseur ni flux réel n'est encore testé.
+- Preuve observée : configuration fail-closed et contrat du code flow testés ;
+  claims et provisioning testés sur PostgreSQL.
+- Limites de la preuve : aucun tenant Auth0 ni flux OTP externe n'est testé.
 
 ## Rollback
 
