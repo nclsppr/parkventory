@@ -241,6 +241,26 @@ def validate_executable_scripts() -> None:
             fail(f"script absent ou non exécutable : {relative}")
 
 
+def validate_production_image_wait() -> None:
+    image_test = require_text(
+        "scripts/test-production-images.sh",
+        (
+            "postgres_ready=false",
+            "--host 127.0.0.1",
+            '[[ ${postgres_ready} != true ]]',
+            'docker logs --tail 200',
+        ),
+    )
+    readiness_commands = re.findall(
+        r'docker exec "\$\{postgres_container\}" pg_isready \\\n'
+        r'\s+--host 127\.0\.0\.1 \\\n'
+        r'\s+--username postgres',
+        image_test,
+    )
+    if len(readiness_commands) != 1:
+        fail("le test d'image doit sonder une fois le PostgreSQL final par TCP")
+
+
 def main() -> None:
     image_catalog()
     validate_dockerfiles()
@@ -248,6 +268,7 @@ def main() -> None:
     validate_integration_sources()
     validate_workflow()
     validate_executable_scripts()
+    validate_production_image_wait()
     print("Contrat producteur Parkventory valide : images, migrateur, intégration et release exactes.")
 
 

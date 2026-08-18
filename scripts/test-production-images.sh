@@ -98,13 +98,21 @@ docker run --detach --rm \
   --env POSTGRES_PASSWORD=postgres-local-test \
   "${POSTGRES_TEST_IMAGE}" >/dev/null
 
+postgres_ready=false
 for _attempt in {1..60}; do
-  if docker exec "${postgres_container}" pg_isready --username postgres >/dev/null 2>&1; then
+  if docker exec "${postgres_container}" pg_isready \
+    --host 127.0.0.1 \
+    --username postgres >/dev/null 2>&1; then
+    postgres_ready=true
     break
   fi
   sleep 1
 done
-docker exec "${postgres_container}" pg_isready --username postgres >/dev/null
+if [[ ${postgres_ready} != true ]]; then
+  echo "Le serveur PostgreSQL final n'est pas devenu prêt dans le délai imparti." >&2
+  docker logs --tail 200 "${postgres_container}" >&2 || true
+  exit 1
+fi
 
 docker exec -i "${postgres_container}" psql \
   --set ON_ERROR_STOP=1 \

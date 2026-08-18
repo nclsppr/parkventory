@@ -150,6 +150,9 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Corrigé
 
+- attente du processus PostgreSQL final, et pas du serveur temporaire de
+  l'entrypoint, avant de tester les images réellement poussées, avec timeout et
+  journaux explicites en cas d'échec ;
 - attente de la base PostgreSQL de compatibilité par une requête réelle sur la
   base cible, au lieu d'un simple signal serveur qui pouvait précéder sa
   création en CI, avec refus explicite de Python antérieur à 3.9 et propagation
