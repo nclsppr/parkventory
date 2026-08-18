@@ -7,7 +7,7 @@ qui doit être tranché avant la phase nommée, sans bloquer la documentation F0
 
 | Question | Pourquoi elle compte | Décision attendue avant | Propriétaire |
 | --- | --- | --- | --- |
-| Quel fournisseur OIDC passwordless ? | Sécurité, région, coût, délivrabilité et retrait | Avant F05/production ; Mailpit couvre uniquement le local | nclsppr |
+| Approuver ou rejeter le candidat Auth0 EU Email OTP de l’ADR-0010 ? | Sous-traitant, sécurité, région, coût, délivrabilité et retrait | Avant tout provisionnement ou F05 ; Mailpit couvre uniquement le local | Propriétaire Parkventory |
 | Quels domaines personnels ou jetables refuser ? | Évite un tenant public et les abus | F03 | nclsppr |
 | Comment traiter filiales, domaines partagés et prestataires ? | Un domaine n'égale pas toujours une société | F03 | nclsppr |
 | Quelle preuve exacte pour le premier administrateur ? | Empêche l'escalade du premier inscrit | F06, prototype possible en F03 | nclsppr |

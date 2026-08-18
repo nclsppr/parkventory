@@ -49,6 +49,12 @@ services:
       PARKVENTORY_DB_USER: ${PARKVENTORY_DB_RUNTIME_USER:?PARKVENTORY_DB_RUNTIME_USER is required}
       PARKVENTORY_JDBC_URL: ${PARKVENTORY_JDBC_URL:?PARKVENTORY_JDBC_URL is required}
       PARKVENTORY_MIGRATION_ONLY: "false"
+      PARKVENTORY_OIDC_AUTH_SERVER_URL: ${PARKVENTORY_OIDC_AUTH_SERVER_URL:?PARKVENTORY_OIDC_AUTH_SERVER_URL is required}
+      PARKVENTORY_OIDC_CLIENT_ID: ${PARKVENTORY_OIDC_CLIENT_ID:?PARKVENTORY_OIDC_CLIENT_ID is required}
+      PARKVENTORY_OIDC_CLIENT_SECRET_FILE: /run/secrets/parkventory_oidc_client_secret
+      PARKVENTORY_OIDC_ISSUER: ${PARKVENTORY_OIDC_ISSUER:?PARKVENTORY_OIDC_ISSUER is required}
+      PARKVENTORY_OIDC_STATE_SECRET_FILE: /run/secrets/parkventory_oidc_state_secret
+      PARKVENTORY_OIDC_TOKEN_ENCRYPTION_SECRET_FILE: /run/secrets/parkventory_oidc_token_encryption_secret
       PARKVENTORY_SMTP_FROM: ${PARKVENTORY_SMTP_FROM:?PARKVENTORY_SMTP_FROM is required}
       PARKVENTORY_SMTP_HOST: ${PARKVENTORY_SMTP_HOST:?PARKVENTORY_SMTP_HOST is required}
       PARKVENTORY_SMTP_PASSWORD_FILE: /run/secrets/parkventory_smtp_password
@@ -60,6 +66,9 @@ services:
       QUARKUS_PROFILE: prod
     secrets:
       - parkventory_postgres_runtime_password
+      - parkventory_oidc_client_secret
+      - parkventory_oidc_state_secret
+      - parkventory_oidc_token_encryption_secret
       - parkventory_smtp_password
       - parkventory_smtp_username
     networks:
@@ -137,6 +146,15 @@ secrets:
   parkventory_postgres_runtime_password:
     name: parkventory_postgres_runtime_password
     file: /etc/vps/secrets/parkventory/parkventory-postgres-runtime-password
+  parkventory_oidc_client_secret:
+    name: parkventory_oidc_client_secret
+    file: /etc/vps/secrets/parkventory/parkventory-oidc-client-secret
+  parkventory_oidc_state_secret:
+    name: parkventory_oidc_state_secret
+    file: /etc/vps/secrets/parkventory/parkventory-oidc-state-secret
+  parkventory_oidc_token_encryption_secret:
+    name: parkventory_oidc_token_encryption_secret
+    file: /etc/vps/secrets/parkventory/parkventory-oidc-token-encryption-secret
   parkventory_smtp_password:
     name: parkventory_smtp_password
     file: /etc/vps/secrets/parkventory/parkventory-smtp-password

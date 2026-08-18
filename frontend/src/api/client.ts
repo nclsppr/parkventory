@@ -1,5 +1,5 @@
 import { demoDashboard } from "../data/demo";
-import { demoContext, isPublicDemo } from "../config";
+import { demoContext, isOidcIdentity, isPublicDemo } from "../config";
 import type {
   ActionResponse,
   DashboardData,
@@ -36,10 +36,17 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "TimeoutError") {
-      throw new ApiError("Le serveur local ne répond pas. Vérifiez Docker Compose.", 0);
+      throw new ApiError(
+        isOidcIdentity
+          ? "Le service met trop de temps à répondre. Réessayez."
+          : "Le serveur local ne répond pas. Vérifiez Docker Compose.",
+        0,
+      );
     }
     throw new ApiError(
-      "Impossible de joindre le serveur local. Vérifiez que `npm run dev` est actif.",
+      isOidcIdentity
+        ? "Impossible de joindre le service. Réessayez dans un instant."
+        : "Impossible de joindre le serveur local. Vérifiez que `npm run dev` est actif.",
       0,
     );
   }
@@ -64,6 +71,9 @@ export async function requestMagicLink(email: string): Promise<ActionResponse> {
         "La démo publique n’envoie aucun e-mail. Ouvrez l’application pour explorer les données fictives.",
     };
   }
+  if (isOidcIdentity) {
+    throw new ApiError("Utilisez la connexion sécurisée par e-mail.", 404);
+  }
   return request<ActionResponse>("/auth/requests", {
     method: "POST",
     body: JSON.stringify({ email }),
@@ -77,6 +87,9 @@ export async function verifyMagicLink(token: string): Promise<SessionData> {
       0,
     );
   }
+  if (isOidcIdentity) {
+    throw new ApiError("Ce mode de connexion n’est pas disponible.", 404);
+  }
   return request<SessionData>("/auth/verify", {
     method: "POST",
     body: JSON.stringify({ token }),
@@ -88,7 +101,10 @@ export function loadSession(): Promise<SessionData> {
 }
 
 export function logout(): Promise<ActionResponse> {
-  return request<ActionResponse>("/auth/session", { method: "DELETE" });
+  return request<ActionResponse>(
+    isOidcIdentity ? "/auth/oidc/logout" : "/auth/session",
+    { method: isOidcIdentity ? "POST" : "DELETE" },
+  );
 }
 
 export async function loadDashboard(): Promise<DashboardData> {

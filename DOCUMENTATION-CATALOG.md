@@ -60,6 +60,7 @@ Moteur déclaré : `nimbus`.
 - [docs/decisions/adr-0007-demo-statique-atlas.md](docs/decisions/adr-0007-demo-statique-atlas.md)
 - [docs/decisions/adr-0008-release-applicative-immuable-atlas.md](docs/decisions/adr-0008-release-applicative-immuable-atlas.md)
 - [docs/decisions/adr-0009-rls-et-contextes-tenant-transactionnels.md](docs/decisions/adr-0009-rls-et-contextes-tenant-transactionnels.md)
+- [docs/decisions/adr-0010-auth0-email-otp-production.md](docs/decisions/adr-0010-auth0-email-otp-production.md)
 
 ## Références visuelles
 

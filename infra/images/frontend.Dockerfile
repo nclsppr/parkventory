@@ -18,6 +18,7 @@ COPY frontend/src ./frontend/src
 
 RUN VITE_BASE_PATH=/ \
     VITE_API_BASE_URL=/api/v1 \
+    VITE_AUTH_MODE=oidc \
     VITE_DEMO_MODE=false \
     npm run frontend:build \
     && printf 'parkventory-frontend-v1\n' >frontend/dist/__health

@@ -23,6 +23,14 @@ la source du diff technique et les ADR expliquent les décisions importantes.
   deux échéances ;
 - ADR-0009 documentant le contrat RLS, les rôles PostgreSQL, les exceptions
   bootstrap/outbox et les limites face à un credential runtime compromis ;
+- candidat d’authentification de production Auth0 EU Universal Login Email OTP,
+  proposé sans activation ni provisionnement fournisseur : client confidentiel
+  Quarkus OIDC fail-closed, PKCE/state/nonce, claims vérifiés, pont
+  `app_session`, secrets Compose par fichiers et adaptateurs local/production
+  mutuellement exclusifs au build ;
+- interface de production limitée à « Continuer par e-mail », sans Mailpit ni
+  routes magic-link locales, avec contrat adversarial de configuration,
+  d’exposition des profils et de liaison/provisionnement PostgreSQL ;
 - clarification du cadenceur de réconciliation Atlas : planification toutes les
   dix minutes en best-effort, avec retards GitHub possibles, et dispatch manuel ;
 - publication de la PR #4 sur `main` au SHA
@@ -199,5 +207,6 @@ la source du diff technique et les ADR expliquent les décisions importantes.
   aucune migration ou bascule Compose n'a été exécuté ;
 - les droits de publication des cinq JPEG restent à confirmer ; le SVG fourni
   ne contient ni wordmark vectoriel ni variante monochrome ;
-- le fournisseur OIDC, le fournisseur d'email et l'infrastructure de production
-  ne sont pas choisis ; Mailpit est réservé au développement.
+- Auth0 EU n’est qu’un candidat OIDC proposé : le sous-traitant, le coût, le
+  tenant, le fournisseur d'email et l'infrastructure de production ne sont pas
+  approuvés ; Mailpit est réservé au développement.
