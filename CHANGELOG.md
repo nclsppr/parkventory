@@ -7,6 +7,8 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Ajouté
 
+- clarification du cadenceur de réconciliation Atlas : planification toutes les
+  dix minutes en best-effort, avec retards GitHub possibles, et dispatch manuel ;
 - publication de la PR #4 sur `main` au SHA
   `583e0e2b63701097aa4894ecc4fb3de8ad325346`, avec les workflows Verify,
   Pages, release statique et release applicative tous réussis ;

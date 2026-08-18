@@ -92,7 +92,7 @@ Parkventory produit les artefacts, mais ne possède aucun secret VPS. Le dépôt
 | Workflow `VPS release` | Run `32071732693` vert | Publie site/routes par digest et leurs attestations |
 | Contrat statique `vps-infra` | Parkventory `enabled: true`, mode `temporary-static-demo` | Autorise la réconciliation statique |
 | Contrat applicatif `vps-infra` | Parkventory `enabled: false`, mode `compose` | Interdit l'admission et l'activation dynamiques |
-| Workflow `Deploy static releases` | Toutes les dix minutes et sur dispatch manuel | Résout le HEAD, ses checks et les digests exacts, puis appelle la gate Atlas |
+| Workflow `Deploy static releases` | Planifié toutes les dix minutes (best-effort, retards GitHub possibles) et sur dispatch manuel | Résout le HEAD, ses checks et les digests exacts, puis appelle la gate Atlas |
 
 Le résolveur classe chaque application :
 
