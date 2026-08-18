@@ -1,5 +1,6 @@
 package com.parkventory.auth;
 
+import com.parkventory.tenancy.TenantTransactionContext;
 import io.agroal.api.AgroalDataSource;
 import io.quarkus.mailer.Mail;
 import io.quarkus.mailer.Mailer;
@@ -29,6 +30,7 @@ public class AuthService {
     private final AgroalDataSource dataSource;
     private final SecurityTokens tokens;
     private final Mailer mailer;
+    private final TenantTransactionContext tenantContext;
     private final String webBaseUrl;
     private final long magicLinkMinutes;
     private final long sessionDays;
@@ -37,12 +39,14 @@ public class AuthService {
             AgroalDataSource dataSource,
             SecurityTokens tokens,
             Mailer mailer,
+            TenantTransactionContext tenantContext,
             @ConfigProperty(name = "parkventory.web.base-url") String webBaseUrl,
             @ConfigProperty(name = "parkventory.auth.magic-link-minutes") long magicLinkMinutes,
             @ConfigProperty(name = "parkventory.auth.session-days") long sessionDays) {
         this.dataSource = dataSource;
         this.tokens = tokens;
         this.mailer = mailer;
+        this.tenantContext = tenantContext;
         this.webBaseUrl = webBaseUrl.replaceAll("/+$", "");
         this.magicLinkMinutes = magicLinkMinutes;
         this.sessionDays = sessionDays;
@@ -55,6 +59,7 @@ public class AuthService {
         Instant expiresAt = Instant.now().plus(Duration.ofMinutes(magicLinkMinutes));
 
         try (Connection connection = dataSource.getConnection()) {
+            tenantContext.applyRequestedEmail(connection, normalizedEmail);
             try (PreparedStatement invalidate = connection.prepareStatement("""
                     UPDATE magic_link_request
                        SET consumed_at = now()
@@ -83,7 +88,13 @@ public class AuthService {
         }
 
         try (Connection connection = dataSource.getConnection()) {
-            MagicLink magicLink = consumeMagicLink(connection, tokens.hash(rawToken));
+            String tokenHash = tokens.hash(rawToken);
+            tenantContext.applyMagicLink(connection, tokenHash);
+            MagicLink magicLink = consumeMagicLink(connection, tokenHash);
+            tenantContext.applyVerifiedIdentity(
+                    connection,
+                    magicLink.normalizedEmail(),
+                    ProfessionalEmail.domain(magicLink.normalizedEmail()));
             UUID userId = findOrCreateUser(connection, magicLink.normalizedEmail());
             OrganizationResolution organization =
                     resolveOrganization(connection, magicLink.normalizedEmail());
@@ -96,14 +107,16 @@ public class AuthService {
                     INSERT INTO app_session (
                         user_account_id,
                         active_membership_id,
+                        organization_id,
                         token_hash,
                         expires_at
-                    ) VALUES (?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?)
                     """)) {
                 statement.setObject(1, userId);
                 statement.setObject(2, membership.membershipId());
-                statement.setString(3, tokens.hash(rawSession));
-                statement.setObject(4, OffsetDateTime.ofInstant(sessionExpiresAt, ZoneOffset.UTC));
+                statement.setObject(3, organization.organizationId());
+                statement.setString(4, tokens.hash(rawSession));
+                statement.setObject(5, OffsetDateTime.ofInstant(sessionExpiresAt, ZoneOffset.UTC));
                 statement.executeUpdate();
             }
 
@@ -128,6 +141,7 @@ public class AuthService {
 
     public void sendInvitationMagicLink(Connection connection, String normalizedEmail)
             throws SQLException {
+        tenantContext.applyRequestedEmail(connection, normalizedEmail);
         String rawToken = tokens.issue();
         insertMagicLink(
                 connection,
@@ -231,6 +245,7 @@ public class AuthService {
             try (ResultSet result = statement.executeQuery()) {
                 if (result.next()) {
                     UUID userId = result.getObject("user_account_id", UUID.class);
+                    tenantContext.applyIdentityUser(connection, userId);
                     try (PreparedStatement update = connection.prepareStatement("""
                             UPDATE user_email
                                SET verified_at = COALESCE(verified_at, now())
@@ -252,17 +267,15 @@ public class AuthService {
             }
         }
 
-        UUID userId;
+        UUID userId = UUID.randomUUID();
+        tenantContext.applyIdentityUser(connection, userId);
         try (PreparedStatement statement = connection.prepareStatement("""
-                INSERT INTO user_account (display_name, status)
-                VALUES (?, 'ACTIVE')
-                RETURNING id
+                INSERT INTO user_account (id, display_name, status)
+                VALUES (?, ?, 'ACTIVE')
                 """)) {
-            statement.setString(1, displayName(normalizedEmail));
-            try (ResultSet result = statement.executeQuery()) {
-                result.next();
-                userId = result.getObject("id", UUID.class);
-            }
+            statement.setObject(1, userId);
+            statement.setString(2, displayName(normalizedEmail));
+            statement.executeUpdate();
         }
         try (PreparedStatement statement = connection.prepareStatement("""
                 INSERT INTO user_email (
@@ -290,20 +303,26 @@ public class AuthService {
                    AND invitation.expires_at > now()
                  ORDER BY invitation.created_at
                  LIMIT 1
-                 FOR UPDATE
                 """)) {
             statement.setString(1, normalizedEmail);
             try (ResultSet result = statement.executeQuery()) {
                 if (result.next()) {
                     UUID invitationId = result.getObject("id", UUID.class);
                     UUID organizationId = result.getObject("organization_id", UUID.class);
+                    tenantContext.applyTenant(connection, organizationId);
                     try (PreparedStatement accept = connection.prepareStatement("""
                             UPDATE invitation
                                SET status = 'ACCEPTED', accepted_at = now()
-                             WHERE id = ?
+                             WHERE organization_id = ?
+                               AND id = ?
+                               AND status = 'PENDING'
+                               AND expires_at > now()
                             """)) {
-                        accept.setObject(1, invitationId);
-                        accept.executeUpdate();
+                        accept.setObject(1, organizationId);
+                        accept.setObject(2, invitationId);
+                        if (accept.executeUpdate() != 1) {
+                            throw invalidLink();
+                        }
                     }
                     return new OrganizationResolution(organizationId);
                 }
@@ -327,23 +346,22 @@ public class AuthService {
             statement.setString(1, domain);
             try (ResultSet result = statement.executeQuery()) {
                 if (result.next()) {
-                    return new OrganizationResolution(
-                            result.getObject("organization_id", UUID.class));
+                    UUID organizationId = result.getObject("organization_id", UUID.class);
+                    tenantContext.applyTenant(connection, organizationId);
+                    return new OrganizationResolution(organizationId);
                 }
             }
         }
 
-        UUID organizationId;
+        UUID organizationId = UUID.randomUUID();
+        tenantContext.applyTenant(connection, organizationId);
         try (PreparedStatement statement = connection.prepareStatement("""
-                INSERT INTO organization (name, mode)
-                VALUES (?, 'COMMUNITY')
-                RETURNING id
+                INSERT INTO organization (id, name, mode)
+                VALUES (?, ?, 'COMMUNITY')
                 """)) {
-            statement.setString(1, organizationName(domain));
-            try (ResultSet result = statement.executeQuery()) {
-                result.next();
-                organizationId = result.getObject("id", UUID.class);
-            }
+            statement.setObject(1, organizationId);
+            statement.setString(2, organizationName(domain));
+            statement.executeUpdate();
         }
         try (PreparedStatement statement = connection.prepareStatement("""
                 INSERT INTO organization_domain (

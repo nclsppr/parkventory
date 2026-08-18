@@ -203,6 +203,47 @@ verify_variant() {
     fi
   )
 
+  runtime_user="parkventory_runtime_${safe_version}_$$"
+  runtime_password="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+  docker exec -i "${container}" \
+    psql --set ON_ERROR_STOP=1 --username=postgres --dbname="${database}" <<SQL
+DELETE FROM outbox_dispatch;
+DELETE FROM outbox_event;
+CREATE ROLE ${runtime_user}
+  LOGIN PASSWORD '${runtime_password}'
+  NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
+GRANT CONNECT ON DATABASE ${database} TO ${runtime_user};
+GRANT USAGE ON SCHEMA public TO ${runtime_user};
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${runtime_user};
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ${runtime_user};
+SQL
+
+  echo "Vérification du parcours Quarkus sous rôle runtime RLS PostgreSQL ${version}"
+  (
+    cd "${PROJECT_ROOT}/backend"
+    if command -v mise >/dev/null 2>&1; then
+      QUARKUS_DATASOURCE_DEVSERVICES_ENABLED=false \
+      QUARKUS_DATASOURCE_JDBC_URL="${jdbc_url}" \
+      QUARKUS_DATASOURCE_USERNAME="${runtime_user}" \
+      QUARKUS_DATASOURCE_PASSWORD="${runtime_password}" \
+      QUARKUS_FLYWAY_MIGRATE_AT_START=false \
+      PARKVENTORY_TEST_POSTGRES_VERSION="${version}" \
+        mise exec -- ./mvnw test \
+          -Dquarkus.analytics.disabled=true \
+          -Dtest=DashboardResourceTest
+    else
+      QUARKUS_DATASOURCE_DEVSERVICES_ENABLED=false \
+      QUARKUS_DATASOURCE_JDBC_URL="${jdbc_url}" \
+      QUARKUS_DATASOURCE_USERNAME="${runtime_user}" \
+      QUARKUS_DATASOURCE_PASSWORD="${runtime_password}" \
+      QUARKUS_FLYWAY_MIGRATE_AT_START=false \
+      PARKVENTORY_TEST_POSTGRES_VERSION="${version}" \
+        ./mvnw test \
+          -Dquarkus.analytics.disabled=true \
+          -Dtest=DashboardResourceTest
+    fi
+  )
+
   docker rm --force "${container}" >/dev/null
   ACTIVE_CONTAINERS="$(printf '%s' "${ACTIVE_CONTAINERS}" | sed "s/ ${container}//")"
 }

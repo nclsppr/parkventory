@@ -53,7 +53,7 @@ applicatif ne l'appelle tant que l'entrée reste désactivée. Le domaine et la
 route restent donc exclusivement détenus par la démo statique jusqu'à une
 bascule plateforme distincte et auditée.
 
-Une gate de préparation vérifie maintenant les migrations V1 puis V2 et les
+Une gate de préparation vérifie maintenant les migrations V1 à V3 et les
 tests Quarkus sur les images exactes PostgreSQL 17.10 et 18.3. PostgreSQL 17.10
 est seulement un candidat de compatibilité pour le cluster partagé Atlas. La
 cible documentaire reste PostgreSQL 18 et la décision de production reste
@@ -106,7 +106,7 @@ graphe local intégré.
 | Phase roadmap | État observé | Preuve restante avant clôture | Responsable |
 | --- | --- | --- | --- |
 | F02 — Surface et squelette | `in_progress` | Générer le client OpenAPI et rejouer le démarrage depuis un clone propre | nclsppr |
-| F03 — Identité et communauté | `in_progress` | Matrice tenant A/B, RLS, anti-abus et adaptateur OIDC de production | nclsppr |
+| F03 — Identité et communauté | `in_progress` | Anti-abus et adaptateur OIDC de production ; matrice tenant A/B et RLS désormais vérifiées localement | nclsppr |
 | F04 — Partager et réserver | `in_progress` | Test réellement concurrent, annulation, fuseaux et heure d'été | nclsppr |
 
 ## Livré et vérifié
@@ -118,7 +118,7 @@ graphe local intégré.
 | Application React | Connexion, dashboard de synthèse, routes dédiées de partage et recherche, réservation, invitation, chargements, erreurs, états vides et choix clair/sombre persistant | 35 tests Vitest, build, navigation History API et navigateur sans erreur console | Client OpenAPI encore manuel ; recherche limitée à l'agenda de sept jours |
 | Identité visuelle | Master SVG fourni utilisé dans les huit emplacements React, les favicons, le header Nimbus et les cartes Open Graph ; palettes sombre et claire sémantiques ; plaque de contraste claire sans recoloration du master | Gate anti-dérive, tests de ratios et revue des deux thèmes desktop/mobile | Symbole seul ; aucun wordmark vectoriel ni variante monochrome |
 | API Quarkus | Session, dashboard, place, partage, réservation idempotente et invitation | Un test V1 dédié puis quatre tests sur chacune des images exactes PostgreSQL 17.10 et 18.3, contrat OpenAPI `0.2.0` | Annulation et administration absentes |
-| PostgreSQL | Schéma multi-tenant, sessions, outbox, audit, idempotence et exclusions GiST | V1 isolée, V1 vers V2 avec Flyway, `btree_gist` et trois exclusions vérifiés sur 17.10 et 18.3 | Compatibilité ne vaut pas choix de production ; RLS et rôle applicatif non propriétaire non livrés |
+| PostgreSQL | Schéma multi-tenant, sessions, outbox, audit, idempotence, exclusions GiST et RLS forcée | V1 isolée, migration jusqu'à V3, `btree_gist`, trois exclusions, test adversarial et parcours sous rôle non propriétaire sur 17.10 et 18.3 | Rôle runtime et migrations Atlas restent à vérifier en live avant activation |
 | Notifications | Invitation et réservation écrites avec l'outbox puis livrées avec reprise bornée | Messages observés dans Mailpit | Délivrabilité externe non prouvée |
 | Environnement | Quatre services Compose, images par digest, healthchecks et volumes | Checker indépendant, smoke complet et stack locale saine | Docker ou OrbStack requis |
 | Démo Pages | Landing animée, dashboard, partage et recherche statiques sous `/parkventory/` | Run Pages `32071732707` réussi sur `583e0e2` | Aucun compte, email ou stockage distant |
@@ -154,6 +154,8 @@ Compose, PostgreSQL ou migrateur Parkventory n'a été démarré sur Atlas.
 
 | Date | Commande ou contrôle | Résultat | Portée de la preuve |
 | --- | --- | --- | --- |
+| 2026-08-18 | `mise exec -- npm run postgres:verify` | V1 puis V2/V3, 11 tests Quarkus et build sur chacune des images PostgreSQL 17.10/18.3 ; parcours métier 3/3 répété sous rôle runtime non propriétaire et sans `BYPASSRLS` | Matrice locale éphémère ; ne crée ni rôle, ni base, ni migration sur Atlas |
+| 2026-08-18 | `mise exec -- ./mvnw test -Dtest=TenantIsolationTest,DashboardResourceTest,PostgresCompatibilityTest` | Migration V3 appliquée ; RLS forcée, absence/mauvais contexte, tenant A/B, bootstrap invitation/domaine, retry outbox et parcours session/métier réussis sur PostgreSQL 18.3 | Preuve locale sous rôle non propriétaire, sans migration Atlas ni activation de production |
 | 2026-08-18 | `mise exec -- ./scripts/verify.sh` après consolidation opérationnelle | Gate complète réussie : catalogue/Markdown, Nimbus, contrats de release, audit npm, 35 tests React, builds Pages/Atlas, PostgreSQL 17.10/18.3 et smoke Compose | Prouve la cohérence du dépôt et des documents modifiés ; ne change aucun état Atlas |
 | 2026-08-18 | État Git et workflows du merge #4 | `origin/main` exact `583e0e2b63701097aa4894ecc4fb3de8ad325346` ; Verify `32071732726` et Pages `32071732707` réussis | Prouve la source canonique et ses gates, pas l'activation Compose |
 | 2026-08-18 | Workflow VPS release `32071732693` | Publication statique réussie ; site `sha256:eb4596ac08e76bf59dc0c1ed6982f8cad6a25e98bc09b507790a78107e41553c` et routes `sha256:47673d6906494ed128616357efe305e7be372e06022f4a2a794dcdc164ecbe7a` | Artefacts immuables du SHA exact ; l'état live est contrôlé séparément |

@@ -3,6 +3,7 @@ package com.parkventory.notifications;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.parkventory.auth.AuthService;
+import com.parkventory.tenancy.TenantTransactionContext;
 import io.agroal.api.AgroalDataSource;
 import io.quarkus.mailer.Mail;
 import io.quarkus.mailer.Mailer;
@@ -24,28 +25,38 @@ public class OutboxDeliveryService {
     private final ObjectMapper objectMapper;
     private final AuthService authService;
     private final Mailer mailer;
+    private final TenantTransactionContext tenantContext;
 
     public OutboxDeliveryService(
             AgroalDataSource dataSource,
             ObjectMapper objectMapper,
             AuthService authService,
-            Mailer mailer) {
+            Mailer mailer,
+            TenantTransactionContext tenantContext) {
         this.dataSource = dataSource;
         this.objectMapper = objectMapper;
         this.authService = authService;
         this.mailer = mailer;
+        this.tenantContext = tenantContext;
     }
 
     @Transactional
     public boolean deliverNext() {
         try (Connection connection = dataSource.getConnection()) {
-            PendingEvent event = lockNext(connection);
-            if (event == null) {
+            PendingDispatch dispatch = lockNextDispatch(connection);
+            if (dispatch == null) {
                 return false;
+            }
+            tenantContext.applyTenant(connection, dispatch.organizationId());
+            PendingEvent event = loadEvent(connection, dispatch);
+            if (event == null) {
+                deleteDispatch(connection, dispatch.eventId());
+                return true;
             }
             try {
                 deliver(connection, event);
                 markDelivered(connection, event.id());
+                deleteDispatch(connection, event.id());
             } catch (RuntimeException | SQLException exception) {
                 LOG.warnf(
                         exception,
@@ -61,13 +72,11 @@ public class OutboxDeliveryService {
         }
     }
 
-    private PendingEvent lockNext(Connection connection) throws SQLException {
+    private PendingDispatch lockNextDispatch(Connection connection) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
-                SELECT id, event_type, payload
-                  FROM outbox_event
-                 WHERE delivered_at IS NULL
-                   AND next_attempt_at <= now()
-                   AND event_type IN ('INVITATION_REQUESTED', 'RESERVATION_CONFIRMED')
+                SELECT event_id, organization_id
+                  FROM outbox_dispatch
+                 WHERE available_at <= now()
                  ORDER BY created_at
                  LIMIT 1
                  FOR UPDATE SKIP LOCKED
@@ -76,13 +85,38 @@ public class OutboxDeliveryService {
             if (!result.next()) {
                 return null;
             }
-            try {
-                return new PendingEvent(
-                        result.getObject("id", UUID.class),
-                        result.getString("event_type"),
-                        objectMapper.readTree(result.getString("payload")));
-            } catch (Exception exception) {
-                throw new IllegalStateException("Payload d’outbox illisible.", exception);
+            return new PendingDispatch(
+                    result.getObject("event_id", UUID.class),
+                    result.getObject("organization_id", UUID.class));
+        }
+    }
+
+    private PendingEvent loadEvent(Connection connection, PendingDispatch dispatch)
+            throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT id, event_type, payload
+                  FROM outbox_event
+                 WHERE organization_id = ?
+                   AND id = ?
+                   AND delivered_at IS NULL
+                   AND next_attempt_at <= now()
+                   AND event_type IN ('INVITATION_REQUESTED', 'RESERVATION_CONFIRMED')
+                 FOR UPDATE
+                """)) {
+            statement.setObject(1, dispatch.organizationId());
+            statement.setObject(2, dispatch.eventId());
+            try (ResultSet result = statement.executeQuery()) {
+                if (!result.next()) {
+                    return null;
+                }
+                try {
+                    return new PendingEvent(
+                            result.getObject("id", UUID.class),
+                            result.getString("event_type"),
+                            objectMapper.readTree(result.getString("payload")));
+                } catch (Exception exception) {
+                    throw new IllegalStateException("Payload d’outbox illisible.", exception);
+                }
             }
         }
     }
@@ -125,11 +159,28 @@ public class OutboxDeliveryService {
 
     private void markForRetry(Connection connection, UUID eventId) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
-                UPDATE outbox_event
-                   SET attempts = attempts + 1,
-                       next_attempt_at = now()
-                           + make_interval(secs => LEAST(300, power(2, attempts + 1)::int))
-                 WHERE id = ?
+                WITH retry AS (
+                    UPDATE outbox_event
+                       SET attempts = attempts + 1,
+                           next_attempt_at = now()
+                               + make_interval(secs => LEAST(300, power(2, attempts + 1)::int))
+                     WHERE id = ?
+                     RETURNING id, next_attempt_at
+                )
+                UPDATE outbox_dispatch dispatch
+                   SET available_at = retry.next_attempt_at
+                  FROM retry
+                 WHERE dispatch.event_id = retry.id
+                """)) {
+            statement.setObject(1, eventId);
+            statement.executeUpdate();
+        }
+    }
+
+    private void deleteDispatch(Connection connection, UUID eventId) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                DELETE FROM outbox_dispatch
+                 WHERE event_id = ?
                 """)) {
             statement.setObject(1, eventId);
             statement.executeUpdate();
@@ -145,5 +196,8 @@ public class OutboxDeliveryService {
     }
 
     private record PendingEvent(UUID id, String eventType, JsonNode payload) {
+    }
+
+    private record PendingDispatch(UUID eventId, UUID organizationId) {
     }
 }

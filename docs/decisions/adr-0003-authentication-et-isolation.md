@@ -1,7 +1,7 @@
 # ADR-0003 : OIDC passwordless et isolation métier
 
 - Statut : accepté
-- Statut d'implémentation : non commencé
+- Statut d'implémentation : partiel — isolation RLS implémentée ; adaptateur OIDC non commencé
 - Date : 2026-07-30
 - Dernière vérification : documentation Quarkus et PostgreSQL consultée le 2026-07-30
 - Propriétaire : nclsppr
@@ -110,6 +110,12 @@ Adopter l'option B.
 6. Appliquer clés composites, RLS forcée et contexte transactionnel.
 7. Tester anti-énumération, rejeu, révocation et tenant A/B.
 8. Documenter rotation des secrets et mode d'indisponibilité.
+
+L'étape 6 est implémentée par
+[`ADR-0009`](adr-0009-rls-et-contextes-tenant-transactionnels.md). Elle reste
+indépendante du fournisseur d'identité : un futur endpoint OIDC devra poser le
+même contexte seulement après validation de l'identité et résolution de
+l'adhésion.
 
 ## Vérification
 

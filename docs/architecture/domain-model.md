@@ -1,7 +1,7 @@
 # Modèle de domaine
 
 Ce document décrit les agrégats et invariants cibles. Les migrations Flyway V1
-et V2 sont la source exécutable du schéma local ; toute divergence est signalée
+à V3 sont la source exécutable du schéma local ; toute divergence est signalée
 et corrigée.
 
 ## Vue d'ensemble
@@ -40,6 +40,7 @@ Chaque notification       -> OutboxEvent
 | `availability_offer` | Intervalle partagé | Affectation, début, fin, statut, auteur |
 | `reservation` | Droit d'usage temporaire | Place, offre, réservataire, intervalle, statut, idempotence |
 | `outbox_event` | Livraison asynchrone fiable | Type, payload minimal, essais, prochaine tentative |
+| `outbox_dispatch` | Ordonnancement global du worker | Tenant, identifiant d'événement et échéance uniquement ; aucun payload |
 | `audit_event` | Trace de sécurité | Acteur, tenant, action, cible, instant, résultat |
 
 ## Identifiants
@@ -65,6 +66,12 @@ Les références importantes utilisent des clés composites :
 
 Une contrainte ou clé étrangère empêche ainsi une relation inter-tenant même si
 une erreur applicative fournit un identifiant d'une autre organisation.
+
+V3 force RLS sur les tables contenant identités, sessions et données tenant.
+`app_session.organization_id` lie la session à son adhésion par une clé étrangère
+composite. `outbox_dispatch` est l'exception globale minimale : elle permet au
+worker de découvrir un tenant, puis `outbox_event` redevient accessible
+uniquement après contexte transactionnel.
 
 ## Temps
 
