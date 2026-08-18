@@ -7,6 +7,8 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Ajouté
 
+- clarification du cadenceur de réconciliation Atlas : planification toutes les
+  dix minutes en best-effort, avec retards GitHub possibles, et dispatch manuel ;
 - publication de la PR #4 sur `main` au SHA
   `583e0e2b63701097aa4894ecc4fb3de8ad325346`, avec les workflows Verify,
   Pages, release statique et release applicative tous réussis ;
@@ -148,6 +150,9 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Corrigé
 
+- attente du processus PostgreSQL final, et pas du serveur temporaire de
+  l'entrypoint, avant de tester les images réellement poussées, avec timeout et
+  journaux explicites en cas d'échec ;
 - attente de la base PostgreSQL de compatibilité par une requête réelle sur la
   base cible, au lieu d'un simple signal serveur qui pouvait précéder sa
   création en CI, avec refus explicite de Python antérieur à 3.9 et propagation
