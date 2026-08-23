@@ -305,7 +305,7 @@ locaux sur la surface publique.
 
 ## Transport e-mail Resend
 
-L'[ADR-0013](docs/decisions/adr-0013-resend-email-beta-publique.md) retient un
+L'[ADR-0014](docs/decisions/adr-0014-resend-email-beta-publique.md) retient un
 seul transport pour l'OTP Auth0 et les messages Quarkus. Le sous-domaine
 `notifications.parkventory.com` évite de modifier le courrier OVH déjà attaché
 au domaine racine.

@@ -62,7 +62,7 @@ Moteur déclaré : `nimbus`.
 - [docs/decisions/adr-0009-rls-et-contextes-tenant-transactionnels.md](docs/decisions/adr-0009-rls-et-contextes-tenant-transactionnels.md)
 - [docs/decisions/adr-0010-auth0-email-otp-production.md](docs/decisions/adr-0010-auth0-email-otp-production.md)
 - [docs/decisions/adr-0011-beta-publique-en-libre-service.md](docs/decisions/adr-0011-beta-publique-en-libre-service.md)
-- [docs/decisions/adr-0013-resend-email-beta-publique.md](docs/decisions/adr-0013-resend-email-beta-publique.md)
+- [docs/decisions/adr-0014-resend-email-beta-publique.md](docs/decisions/adr-0014-resend-email-beta-publique.md)
 
 ## Références visuelles
 

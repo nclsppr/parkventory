@@ -1,4 +1,4 @@
-# ADR-0013 — Resend pour les e-mails de la bêta publique
+# ADR-0014 — Resend pour les e-mails de la bêta publique
 
 - Statut : accepté
 - Statut d'implémentation : configuration applicative prête ; compte, domaine et clés non provisionnés
