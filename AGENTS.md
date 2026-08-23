@@ -35,6 +35,21 @@ durablement l'intention doit aussi mettre à jour la source canonique ou une ADR
 Une divergence entre intention et réalité est signalée, jamais arbitrée
 silencieusement.
 
+## Agent skills
+
+### Issue tracker
+
+Les tickets et les spécifications des skills vivent dans GitHub Issues. Voir `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Le triage utilise les cinq labels canoniques sans renommage. Voir `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Le dépôt utilise le mode `single-context`, fondé sur ses sources de domaine et
+ses ADR. Voir `docs/agents/domain.md`.
+
 ## Règles d'intervention locales
 
 - Inspecter l'état Git et préserver les changements sans rapport.
