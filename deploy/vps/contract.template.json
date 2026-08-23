@@ -29,6 +29,9 @@
   "secrets": [
     "parkventory-postgres-migrator-password",
     "parkventory-postgres-runtime-password",
+    "parkventory-oidc-client-secret",
+    "parkventory-oidc-state-secret",
+    "parkventory-oidc-token-encryption-secret",
     "parkventory-smtp-password",
     "parkventory-smtp-username"
   ],
