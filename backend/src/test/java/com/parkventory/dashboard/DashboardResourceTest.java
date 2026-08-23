@@ -1,7 +1,10 @@
 package com.parkventory.dashboard;
 
 import com.parkventory.auth.SessionService;
+import com.parkventory.auth.SessionContext;
 import com.parkventory.notifications.OutboxDeliveryService;
+import com.parkventory.tenancy.TenantTransactionContext;
+import io.agroal.api.AgroalDataSource;
 import io.quarkus.mailer.Mail;
 import io.quarkus.mailer.MockMailbox;
 import io.quarkus.test.junit.QuarkusTest;
@@ -11,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.sql.PreparedStatement;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Predicate;
@@ -32,6 +36,15 @@ class DashboardResourceTest {
 
     @Inject
     OutboxDeliveryService outbox;
+
+    @Inject
+    SessionService sessions;
+
+    @Inject
+    AgroalDataSource dataSource;
+
+    @Inject
+    TenantTransactionContext tenantContext;
 
     @BeforeEach
     void clearMailbox() {
@@ -218,7 +231,65 @@ class DashboardResourceTest {
                 .statusCode(400);
     }
 
+    @Test
+    void suspendedAccountsAndMembershipsCannotBeReactivatedByLocalSignIn()
+            throws Exception {
+        String accountEmail = "suspended-account@" + uniqueDomain();
+        String accountToken = authenticate(accountEmail);
+        SessionContext account = sessions.require(accountToken);
+        suspendAccount(account);
+
+        String suspendedAccountLink = requestMagicLink(accountEmail);
+        given()
+                .contentType(ContentType.JSON)
+                .body("{\"token\":\"" + suspendedAccountLink + "\"}")
+                .when().post("/api/v1/auth/verify")
+                .then()
+                .statusCode(403);
+
+        String membershipEmail = "suspended-membership@" + uniqueDomain();
+        String membershipToken = authenticate(membershipEmail);
+        SessionContext membership = sessions.require(membershipToken);
+        suspendMembership(membership);
+
+        String suspendedMembershipLink = requestMagicLink(membershipEmail);
+        given()
+                .contentType(ContentType.JSON)
+                .body("{\"token\":\"" + suspendedMembershipLink + "\"}")
+                .when().post("/api/v1/auth/verify")
+                .then()
+                .statusCode(403);
+    }
+
+    @Test
+    void invitationQuotaIsBoundToTheAuthenticatedMembership() {
+        String ownerSession = authenticate("quota-owner@" + uniqueDomain());
+
+        for (int index = 0; index < 2; index += 1) {
+            given()
+                    .cookie(SessionService.COOKIE_NAME, ownerSession)
+                    .contentType(ContentType.JSON)
+                    .body("{\"email\":\"invitee-" + index + "@" + uniqueDomain() + "\"}")
+                    .when().post("/api/v1/invitations")
+                    .then()
+                    .statusCode(200);
+        }
+
+        given()
+                .cookie(SessionService.COOKIE_NAME, ownerSession)
+                .contentType(ContentType.JSON)
+                .body("{\"email\":\"invitee-over-quota@" + uniqueDomain() + "\"}")
+                .when().post("/api/v1/invitations")
+                .then()
+                .statusCode(429);
+    }
+
     private String authenticate(String email) {
+        String rawToken = requestMagicLink(email);
+        return verify(rawToken);
+    }
+
+    private String requestMagicLink(String email) {
         given()
                 .contentType(ContentType.JSON)
                 .body("{\"email\":\"" + email + "\"}")
@@ -227,7 +298,7 @@ class DashboardResourceTest {
                 .statusCode(202)
                 .body("accepted", equalTo(true));
         Mail message = awaitMessages(email, 1).getLast();
-        return verify(tokenFrom(message));
+        return tokenFrom(message);
     }
 
     private String verify(String rawToken) {
@@ -275,6 +346,39 @@ class DashboardResourceTest {
             }
         }
         throw new AssertionError("Aucun e-mail correspondant reçu pour " + email);
+    }
+
+    private void suspendAccount(SessionContext session) throws Exception {
+        try (var connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     UPDATE user_account
+                        SET status = 'SUSPENDED'
+                      WHERE id = ?
+                     """)) {
+            connection.setAutoCommit(false);
+            tenantContext.applyIdentityUser(connection, session.userId());
+            tenantContext.applyTenant(connection, session.organizationId());
+            statement.setObject(1, session.userId());
+            assertEquals(1, statement.executeUpdate());
+            connection.commit();
+        }
+    }
+
+    private void suspendMembership(SessionContext session) throws Exception {
+        try (var connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     UPDATE membership
+                        SET status = 'SUSPENDED'
+                      WHERE organization_id = ?
+                        AND id = ?
+                     """)) {
+            connection.setAutoCommit(false);
+            tenantContext.applyTenant(connection, session.organizationId());
+            statement.setObject(1, session.organizationId());
+            statement.setObject(2, session.membershipId());
+            assertEquals(1, statement.executeUpdate());
+            connection.commit();
+        }
     }
 
     private static String tokenFrom(Mail mail) {

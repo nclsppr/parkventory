@@ -101,7 +101,11 @@ public class AuthService {
             OrganizationResolution organization =
                     resolveOrganization(connection, magicLink.normalizedEmail());
             Membership membership =
-                    findOrCreateMembership(connection, organization.organizationId(), userId);
+                    findOrCreateMembership(
+                            connection,
+                            organization.organizationId(),
+                            userId,
+                            organization.explicitInvitation());
             String rawSession = tokens.issue();
             Instant sessionExpiresAt = Instant.now().plus(Duration.ofDays(sessionDays));
 
@@ -248,6 +252,10 @@ public class AuthService {
                 if (result.next()) {
                     UUID userId = result.getObject("user_account_id", UUID.class);
                     tenantContext.applyIdentityUser(connection, userId);
+                    String status = lockUserStatus(connection, userId);
+                    if (!"ACTIVE".equals(status) && !"PENDING".equals(status)) {
+                        throw new ClientErrorException("Ce compte n’est pas actif.", 403);
+                    }
                     try (PreparedStatement update = connection.prepareStatement("""
                             UPDATE user_email
                                SET verified_at = COALESCE(verified_at, now())
@@ -260,6 +268,7 @@ public class AuthService {
                             UPDATE user_account
                                SET status = 'ACTIVE', updated_at = now()
                              WHERE id = ?
+                               AND status = 'PENDING'
                             """)) {
                         update.setObject(1, userId);
                         update.executeUpdate();
@@ -312,6 +321,7 @@ public class AuthService {
                     UUID invitationId = result.getObject("id", UUID.class);
                     UUID organizationId = result.getObject("organization_id", UUID.class);
                     tenantContext.applyTenant(connection, organizationId);
+                    requireActiveOrganization(connection, organizationId);
                     try (PreparedStatement accept = connection.prepareStatement("""
                             UPDATE invitation
                                SET status = 'ACCEPTED', accepted_at = now()
@@ -326,7 +336,7 @@ public class AuthService {
                             throw invalidLink();
                         }
                     }
-                    return new OrganizationResolution(organizationId);
+                    return new OrganizationResolution(organizationId, true);
                 }
             }
         }
@@ -350,7 +360,8 @@ public class AuthService {
                 if (result.next()) {
                     UUID organizationId = result.getObject("organization_id", UUID.class);
                     tenantContext.applyTenant(connection, organizationId);
-                    return new OrganizationResolution(organizationId);
+                    requireActiveOrganization(connection, organizationId);
+                    return new OrganizationResolution(organizationId, false);
                 }
             }
         }
@@ -384,13 +395,14 @@ public class AuthService {
             statement.setObject(1, organizationId);
             statement.executeUpdate();
         }
-        return new OrganizationResolution(organizationId);
+        return new OrganizationResolution(organizationId, false);
     }
 
     private Membership findOrCreateMembership(
             Connection connection,
             UUID organizationId,
-            UUID userId) throws SQLException {
+            UUID userId,
+            boolean explicitInvitation) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
                 INSERT INTO membership (
                     organization_id,
@@ -399,16 +411,70 @@ public class AuthService {
                     status
                 ) VALUES (?, ?, 'MEMBER', 'ACTIVE')
                 ON CONFLICT (organization_id, user_account_id)
-                DO UPDATE SET status = 'ACTIVE'
-                RETURNING id, role
+                DO UPDATE SET role = membership.role
+                RETURNING id, role, status
                 """)) {
             statement.setObject(1, organizationId);
             statement.setObject(2, userId);
             try (ResultSet result = statement.executeQuery()) {
-                result.next();
-                return new Membership(
-                        result.getObject("id", UUID.class),
-                        result.getString("role"));
+                if (!result.next()) {
+                    throw new IllegalStateException("Impossible de résoudre l’adhésion.");
+                }
+                UUID membershipId = result.getObject("id", UUID.class);
+                String status = result.getString("status");
+                if ("INVITED".equals(status) && explicitInvitation) {
+                    try (PreparedStatement activate = connection.prepareStatement("""
+                            UPDATE membership
+                               SET status = 'ACTIVE'
+                             WHERE organization_id = ?
+                               AND id = ?
+                               AND status = 'INVITED'
+                            """)) {
+                        activate.setObject(1, organizationId);
+                        activate.setObject(2, membershipId);
+                        if (activate.executeUpdate() != 1) {
+                            throw new ClientErrorException(
+                                    "Cette adhésion n’est pas active.", 403);
+                        }
+                    }
+                } else if (!"ACTIVE".equals(status)) {
+                    throw new ClientErrorException(
+                            "Cette adhésion n’est pas active.", 403);
+                }
+                return new Membership(membershipId, result.getString("role"));
+            }
+        }
+    }
+
+    private String lockUserStatus(Connection connection, UUID userId) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT status
+                  FROM user_account
+                 WHERE id = ?
+                 FOR UPDATE
+                """)) {
+            statement.setObject(1, userId);
+            try (ResultSet result = statement.executeQuery()) {
+                if (!result.next()) {
+                    throw new ClientErrorException("Ce compte n’est pas actif.", 403);
+                }
+                return result.getString("status");
+            }
+        }
+    }
+
+    private void requireActiveOrganization(Connection connection, UUID organizationId)
+            throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT status
+                  FROM organization
+                 WHERE id = ?
+                """)) {
+            statement.setObject(1, organizationId);
+            try (ResultSet result = statement.executeQuery()) {
+                if (!result.next() || !"ACTIVE".equals(result.getString("status"))) {
+                    throw new ClientErrorException("Cette organisation n’est pas active.", 403);
+                }
             }
         }
     }
@@ -511,7 +577,7 @@ public class AuthService {
     private record MagicLink(String normalizedEmail) {
     }
 
-    private record OrganizationResolution(UUID organizationId) {
+    private record OrganizationResolution(UUID organizationId, boolean explicitInvitation) {
     }
 
     private record Membership(UUID membershipId, String role) {

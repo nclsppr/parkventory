@@ -18,6 +18,17 @@ la source du diff technique et les ADR expliquent les décisions importantes.
   explicitement suivie ;
 - acceptation d'Auth0 EU Email OTP comme chemin d'identité le plus court vers la
   bêta publique, sans prétendre que le tenant ou les secrets existent déjà ;
+- garde-fous de bêta publique sans allowlist d'entreprises : denylist versionnée
+  des domaines personnels, jetables et racines partagées, normalisation IDNA et
+  admission par défaut des autres domaines valides ;
+- protection des mutations à cookie par origine exacte et Fetch Metadata dans
+  le profil de production, rate limits séparés pour connexion, invitations et
+  mutations, plus quota transactionnel de 20 invitations par adhésion sur 24 h ;
+- CSP Caddy sans script inline, bootstrap de thème servi par la même origine,
+  réécriture de `X-Forwarded-For` et suppression de `code`, `state` et
+  `session_state` des journaux d'accès ;
+- ADR-0012 documentant les compromis, limites et retours arrière de ces
+  protections mono-instance pour l'ouverture publique ;
 - migration Flyway V3 activant et forçant RLS sur les tables d'identité,
   session et données tenant, avec contexte `SET LOCAL` transactionnel et rôle
   runtime non propriétaire testé ;
@@ -198,6 +209,9 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 - attente du sujet de notification de réservation attendu, plutôt que du seul
   nombre d'e-mails déjà présents, afin de supprimer la course entre le mailer
   réactif et l'assertion CI ;
+- refus de toute réactivation implicite d'un compte `SUSPENDED` ou d'une
+  adhésion `SUSPENDED`/`LEFT` dans les parcours local et OIDC ; une adhésion
+  `INVITED` ne devient active qu'après consommation d'une invitation exacte ;
 - attente du processus PostgreSQL final, et pas du serveur temporaire de
   l'entrypoint, avant de tester les images réellement poussées, avec timeout et
   journaux explicites en cas d'échec ;

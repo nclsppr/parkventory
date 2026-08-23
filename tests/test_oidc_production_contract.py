@@ -22,10 +22,12 @@ FILES = (
     "backend/src/main/java/com/parkventory/auth/OidcAuthResource.java",
     "backend/src/main/java/com/parkventory/auth/OidcIdentityClaims.java",
     "backend/src/main/java/com/parkventory/auth/OidcIdentityService.java",
+    "backend/src/main/java/com/parkventory/security/PublicRequestSecurityFilter.java",
     "backend/src/main/java/com/parkventory/notifications/LocalInvitationAccessMailer.java",
     "backend/src/main/java/com/parkventory/notifications/OidcInvitationAccessMailer.java",
     "backend/src/main/java/com/parkventory/notifications/OutboxDeliveryService.java",
     "deploy/vps/compose.yaml",
+    "deploy/vps/caddy/parkventory.caddy",
     "frontend/src/config.ts",
     "frontend/src/pages/AuthPages.tsx",
     "infra/images/backend-entrypoint.sh",
@@ -146,10 +148,13 @@ class OidcProductionContractTest(unittest.TestCase):
         self.assert_rejected()
 
     def test_rejects_image_probe_without_invalid_oidc_cookie_logout(self) -> None:
-        self.replace(
-            "scripts/test-production-images.sh",
-            "q_session=invalid-token-state",
-            "q_session=",
+        relative = "scripts/test-production-images.sh"
+        path = self.root / relative
+        text = path.read_text(encoding="utf-8")
+        self.assertEqual(2, text.count("q_session=invalid-token-state"))
+        path.write_text(
+            text.replace("q_session=invalid-token-state", "q_session="),
+            encoding="utf-8",
         )
         self.assert_rejected()
 
@@ -166,6 +171,22 @@ class OidcProductionContractTest(unittest.TestCase):
             "backend/src/main/java/com/parkventory/notifications/OidcInvitationAccessMailer.java",
             '"/api/v1/auth/oidc/login"',
             '"/auth/callback?token=forbidden"',
+        )
+        self.assert_rejected()
+
+    def test_rejects_missing_same_origin_guard(self) -> None:
+        self.replace(
+            "backend/src/main/java/com/parkventory/security/PublicRequestSecurityFilter.java",
+            'request.getHeaderString("Origin")',
+            'request.getHeaderString("X-Untrusted-Origin")',
+        )
+        self.assert_rejected()
+
+    def test_rejects_caddy_log_without_oidc_state_redaction(self) -> None:
+        self.replace(
+            "deploy/vps/caddy/parkventory.caddy",
+            "\t\t\t\t\tdelete state\n",
+            "",
         )
         self.assert_rejected()
 

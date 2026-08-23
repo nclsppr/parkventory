@@ -17,6 +17,8 @@ change durablement une règle structurante exige une ADR.
 | ORG-008 | Un utilisateur peut avoir plusieurs adhésions, mais toute commande possède un tenant actif explicite et autorisé. |
 | ORG-009 | Une organisation peut fonctionner avec zéro administrateur. |
 | ORG-010 | Le premier inscrit n'est jamais administrateur par défaut. |
+| ORG-011 | Un compte ou une adhésion suspendus ne sont jamais réactivés automatiquement par une nouvelle connexion. |
+| ORG-012 | Les domaines professionnels inconnus sont admis par défaut ; seuls les domaines personnels, jetables ou racines partagées de la denylist versionnée sont refusés. |
 
 ## Places et affectations
 

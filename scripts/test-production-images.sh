@@ -317,9 +317,27 @@ PROBE
 )
 [[ ${local_logout_status} == 405 ]]
 
+cross_origin_logout_status=$(docker exec -i "${backend_container}" bash -s <<'PROBE'
+exec 3<>/dev/tcp/127.0.0.1/8080
+printf 'POST /api/v1/auth/oidc/logout HTTP/1.0\r\nHost: parkventory.test\r\nOrigin: https://evil.test\r\nCookie: parkventory_session=image-logout-session-token; q_session=invalid-token-state\r\n\r\n' >&3
+IFS= read -r status_line <&3
+status_code=${status_line#* }
+printf '%s\n' "${status_code%% *}"
+PROBE
+)
+[[ ${cross_origin_logout_status} == 403 ]]
+
+logout_session_still_active=$(docker exec "${postgres_container}" psql \
+  --tuples-only \
+  --no-align \
+  --username postgres \
+  --dbname parkventory \
+  --command "SELECT (revoked_at IS NULL)::text FROM app_session WHERE id = '00000000-0000-0000-0000-000000000104'")
+[[ ${logout_session_still_active} == "true" ]]
+
 oidc_logout_headers=$(docker exec -i "${backend_container}" bash -s <<'PROBE'
 exec 3<>/dev/tcp/127.0.0.1/8080
-printf 'POST /api/v1/auth/oidc/logout HTTP/1.0\r\nHost: parkventory.test\r\nCookie: parkventory_session=image-logout-session-token; q_session=invalid-token-state\r\n\r\n' >&3
+printf 'POST /api/v1/auth/oidc/logout HTTP/1.0\r\nHost: parkventory.test\r\nOrigin: https://parkventory.test\r\nCookie: parkventory_session=image-logout-session-token; q_session=invalid-token-state\r\n\r\n' >&3
 while IFS= read -r line <&3; do
   printf '%s\n' "${line}"
   [[ ${line} == $'\r' ]] && break
@@ -419,6 +437,8 @@ docker exec "${frontend_container}" wget --quiet --output-document=- \
   http://127.0.0.1:8080/__health | grep -Fxq parkventory-frontend-v1
 docker exec "${frontend_container}" wget --quiet --output-document=- \
   http://127.0.0.1:8080/app | grep -q Parkventory
+docker exec "${frontend_container}" wget --quiet --output-document=- \
+  http://127.0.0.1:8080/theme-init.js | grep -Fq 'parkventory:ui-theme:v1'
 
 frontend_bundle=$(docker exec "${frontend_container}" sh -c \
   'find /usr/share/nginx/html/assets -maxdepth 1 -type f -name "*.js" -exec cat {} +')

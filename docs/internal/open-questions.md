@@ -7,7 +7,6 @@ qui doit être tranché avant la phase nommée, sans bloquer la documentation F0
 
 | Question | Pourquoi elle compte | Décision attendue avant | Propriétaire |
 | --- | --- | --- | --- |
-| Quels domaines personnels ou jetables refuser ? | Évite un tenant public et les abus | F03 | nclsppr |
 | Comment traiter filiales, domaines partagés et prestataires ? | Un domaine n'égale pas toujours une société | F03 | nclsppr |
 | Quelle preuve exacte pour le premier administrateur ? | Empêche l'escalade du premier inscrit | F06, prototype possible en F03 | nclsppr |
 | Quelle politique de rétention et suppression ? | Données professionnelles et habitudes de présence | F03 | nclsppr |
@@ -32,7 +31,6 @@ qui doit être tranché avant la phase nommée, sans bloquer la documentation F0
 | --- | --- | --- |
 | Cutover Atlas statique vers Compose | Même origine sur Atlas ; démo statique seule propriétaire tant que le contrôleur reste désactivé | Procédure exclusive, convergence live et rollback prouvés avant F05 |
 | PostgreSQL managé | Préféré pour sauvegarde et PITR | Avant F05 |
-| Liste de domaines | Source versionnée et contestable | Pendant F03 |
 | Rétention de l'outbox | Courte après succès, longue pour audit agrégé | Avant F04 |
 | Native image Quarkus | Non au MVP | Seulement après mesure |
 | Temps réel | Aucun au MVP | Seulement si polling mesuré insuffisant |

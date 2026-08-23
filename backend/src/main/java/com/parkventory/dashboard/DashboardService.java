@@ -11,6 +11,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.ClientErrorException;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -46,16 +47,24 @@ public class DashboardService {
     private final SecurityTokens tokens;
     private final ObjectMapper objectMapper;
     private final TenantTransactionContext tenantContext;
+    private final int invitationDailyLimit;
 
     public DashboardService(
             AgroalDataSource dataSource,
             SecurityTokens tokens,
             ObjectMapper objectMapper,
-            TenantTransactionContext tenantContext) {
+            TenantTransactionContext tenantContext,
+            @ConfigProperty(
+                    name = "parkventory.security.invitation.daily-limit",
+                    defaultValue = "20") int invitationDailyLimit) {
         this.dataSource = dataSource;
         this.tokens = tokens;
         this.objectMapper = objectMapper;
         this.tenantContext = tenantContext;
+        if (invitationDailyLimit < 1) {
+            throw new IllegalArgumentException("Le quota quotidien d’invitations doit être positif.");
+        }
+        this.invitationDailyLimit = invitationDailyLimit;
     }
 
     @Transactional
@@ -350,6 +359,7 @@ public class DashboardService {
 
         try (Connection connection = dataSource.getConnection()) {
             tenantContext.applyTenant(connection, session.organizationId());
+            enforceInvitationQuota(connection, session);
             UUID invitationId = findPendingInvitation(
                     connection,
                     session.organizationId(),
@@ -400,6 +410,34 @@ public class DashboardService {
                             + ". Elle apparaîtra dans Mailpit.");
         } catch (SQLException exception) {
             throw new IllegalStateException("Impossible de créer l’invitation.", exception);
+        }
+    }
+
+    private void enforceInvitationQuota(Connection connection, SessionContext session)
+            throws SQLException {
+        try (PreparedStatement lock = connection.prepareStatement(
+                "SELECT pg_advisory_xact_lock(hashtextextended(?, 0))")) {
+            lock.setString(1, "invitation-quota:" + session.membershipId());
+            lock.executeQuery().close();
+        }
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT count(*)
+                  FROM audit_event
+                 WHERE organization_id = ?
+                   AND actor_membership_id = ?
+                   AND action = 'INVITATION_REQUESTED'
+                   AND result = 'SUCCESS'
+                   AND occurred_at >= now() - interval '24 hours'
+                """)) {
+            statement.setObject(1, session.organizationId());
+            statement.setObject(2, session.membershipId());
+            try (ResultSet result = statement.executeQuery()) {
+                result.next();
+                if (result.getInt(1) >= invitationDailyLimit) {
+                    throw new ClientErrorException(
+                            "Le quota quotidien d’invitations est atteint.", 429);
+                }
+            }
         }
     }
 

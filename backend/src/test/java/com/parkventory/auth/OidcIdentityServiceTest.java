@@ -165,6 +165,22 @@ class OidcIdentityServiceTest {
 
         given()
                 .cookie(SessionService.COOKIE_NAME, verified.rawSessionToken())
+                .header("Origin", "https://evil.test")
+                .when().post("/api/v1/auth/oidc/logout")
+                .then()
+                .statusCode(403);
+        assertNotNull(sessionService.require(verified.rawSessionToken()));
+
+        given()
+                .cookie(SessionService.COOKIE_NAME, verified.rawSessionToken())
+                .when().post("/api/v1/auth/oidc/logout")
+                .then()
+                .statusCode(403);
+        assertNotNull(sessionService.require(verified.rawSessionToken()));
+
+        given()
+                .cookie(SessionService.COOKIE_NAME, verified.rawSessionToken())
+                .header("Origin", "https://parkventory.test")
                 .when().post("/api/v1/auth/oidc/logout")
                 .then()
                 .statusCode(200)
@@ -181,6 +197,71 @@ class OidcIdentityServiceTest {
                 .then()
                 .statusCode(200)
                 .header("Set-Cookie", containsString("Max-Age=0"));
+    }
+
+    @Test
+    void suspendedAccountsAndMembershipsAreNeverReactivatedByOidc() throws Exception {
+        String discriminator = UUID.randomUUID().toString().replace("-", "");
+        OidcIdentityClaims accountIdentity = OidcIdentityClaims.validate(
+                ISSUER,
+                "email|suspended-account-" + discriminator,
+                "suspended-account@" + discriminator + ".test",
+                Boolean.TRUE,
+                ISSUER);
+        AuthService.VerifiedSession accountSession = identityService.signIn(accountIdentity);
+        suspendAccount(accountSession.context());
+
+        ClientErrorException suspendedAccount = assertThrows(
+                ClientErrorException.class,
+                () -> identityService.signIn(accountIdentity));
+        assertEquals(403, suspendedAccount.getResponse().getStatus());
+
+        OidcIdentityClaims membershipIdentity = OidcIdentityClaims.validate(
+                ISSUER,
+                "email|suspended-membership-" + discriminator,
+                "suspended-membership@" + discriminator + ".test",
+                Boolean.TRUE,
+                ISSUER);
+        AuthService.VerifiedSession membershipSession = identityService.signIn(membershipIdentity);
+        suspendMembership(membershipSession.context());
+
+        ClientErrorException suspendedMembership = assertThrows(
+                ClientErrorException.class,
+                () -> identityService.signIn(membershipIdentity));
+        assertEquals(403, suspendedMembership.getResponse().getStatus());
+    }
+
+    private void suspendAccount(SessionContext session) throws Exception {
+        try (var connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     UPDATE user_account
+                        SET status = 'SUSPENDED'
+                      WHERE id = ?
+                     """)) {
+            connection.setAutoCommit(false);
+            tenantContext.applyIdentityUser(connection, session.userId());
+            tenantContext.applyTenant(connection, session.organizationId());
+            statement.setObject(1, session.userId());
+            assertEquals(1, statement.executeUpdate());
+            connection.commit();
+        }
+    }
+
+    private void suspendMembership(SessionContext session) throws Exception {
+        try (var connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     UPDATE membership
+                        SET status = 'SUSPENDED'
+                      WHERE organization_id = ?
+                        AND id = ?
+                     """)) {
+            connection.setAutoCommit(false);
+            tenantContext.applyTenant(connection, session.organizationId());
+            statement.setObject(1, session.organizationId());
+            statement.setObject(2, session.membershipId());
+            assertEquals(1, statement.executeUpdate());
+            connection.commit();
+        }
     }
 
     @Test

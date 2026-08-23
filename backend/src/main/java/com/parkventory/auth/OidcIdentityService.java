@@ -52,7 +52,11 @@ public class OidcIdentityService {
             OrganizationResolution organization =
                     resolveOrganization(connection, identity.normalizedEmail());
             Membership membership =
-                    findOrCreateMembership(connection, organization.organizationId(), userId);
+                    findOrCreateMembership(
+                            connection,
+                            organization.organizationId(),
+                            userId,
+                            organization.explicitInvitation());
             String rawSession = tokens.issue();
             Instant expiresAt = Instant.now().plus(Duration.ofDays(sessionDays));
 
@@ -170,7 +174,9 @@ public class OidcIdentityService {
 
         try (PreparedStatement statement = connection.prepareStatement("""
                 UPDATE user_account
-                   SET oidc_subject = ?, status = 'ACTIVE', updated_at = now()
+                   SET oidc_subject = ?,
+                       status = CASE WHEN status = 'PENDING' THEN 'ACTIVE' ELSE status END,
+                       updated_at = now()
                  WHERE id = ?
                    AND status IN ('PENDING', 'ACTIVE')
                    AND (oidc_subject IS NULL OR oidc_subject = ?)
@@ -231,7 +237,7 @@ public class OidcIdentityService {
                             throw identityConflict();
                         }
                     }
-                    return new OrganizationResolution(organizationId);
+                    return new OrganizationResolution(organizationId, true);
                 }
             }
         }
@@ -256,7 +262,7 @@ public class OidcIdentityService {
                     UUID organizationId = result.getObject("organization_id", UUID.class);
                     tenantContext.applyTenant(connection, organizationId);
                     requireActiveOrganization(connection, organizationId);
-                    return new OrganizationResolution(organizationId);
+                    return new OrganizationResolution(organizationId, false);
                 }
             }
         }
@@ -290,7 +296,7 @@ public class OidcIdentityService {
             statement.setObject(1, organizationId);
             statement.executeUpdate();
         }
-        return new OrganizationResolution(organizationId);
+        return new OrganizationResolution(organizationId, false);
     }
 
     private void requireActiveOrganization(Connection connection, UUID organizationId)
@@ -312,7 +318,8 @@ public class OidcIdentityService {
     private Membership findOrCreateMembership(
             Connection connection,
             UUID organizationId,
-            UUID userId) throws SQLException {
+            UUID userId,
+            boolean explicitInvitation) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
                 SELECT id, role, status
                   FROM membership
@@ -325,7 +332,7 @@ public class OidcIdentityService {
             try (ResultSet result = statement.executeQuery()) {
                 if (result.next()) {
                     String status = result.getString("status");
-                    if ("INVITED".equals(status)) {
+                    if ("INVITED".equals(status) && explicitInvitation) {
                         try (PreparedStatement activate = connection.prepareStatement("""
                                 UPDATE membership
                                    SET status = 'ACTIVE'
@@ -485,7 +492,7 @@ public class OidcIdentityService {
         return false;
     }
 
-    private record OrganizationResolution(UUID organizationId) {
+    private record OrganizationResolution(UUID organizationId, boolean explicitInvitation) {
     }
 
     private record Membership(UUID membershipId, String role) {
