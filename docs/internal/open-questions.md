@@ -7,7 +7,6 @@ qui doit être tranché avant la phase nommée, sans bloquer la documentation F0
 
 | Question | Pourquoi elle compte | Décision attendue avant | Propriétaire |
 | --- | --- | --- | --- |
-| Approuver ou rejeter le candidat Auth0 EU Email OTP de l’ADR-0010 ? | Sous-traitant, sécurité, région, coût, délivrabilité et retrait | Avant tout provisionnement ou F05 ; Mailpit couvre uniquement le local | Propriétaire Parkventory |
 | Quels domaines personnels ou jetables refuser ? | Évite un tenant public et les abus | F03 | nclsppr |
 | Comment traiter filiales, domaines partagés et prestataires ? | Un domaine n'égale pas toujours une société | F03 | nclsppr |
 | Quelle preuve exacte pour le premier administrateur ? | Empêche l'escalade du premier inscrit | F06, prototype possible en F03 | nclsppr |
@@ -19,8 +18,8 @@ qui doit être tranché avant la phase nommée, sans bloquer la documentation F0
 
 | Question | Hypothèse de travail | Preuve recherchée |
 | --- | --- | --- |
-| Langue initiale de l'interface | Français, architecture prête pour i18n | Choix du premier pilote |
-| Pays et juridiction du pilote | France | Confirmation du propriétaire |
+| Langue initiale de l'interface | Français, architecture prête pour i18n | Mesure des demandes après ouverture |
+| Extension au-delà de la France | France et `Europe/Paris` pour la première bêta publique | Demandes et usages réels |
 | Granularité d'une réservation | Journée et intervalle libre | Entretiens et prototype |
 | Réserver sa propre place | Masqué par défaut | Cas d'usage réel |
 | Réservation partielle d'une offre | Autorisée si incluse | Test de compréhension |

@@ -7,6 +7,11 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Ajouté
 
+- ADR-0011 acceptant une bêta publique en libre-service plutôt qu'un pilote
+  fermé, avec barrières de lancement minimales et dette post-lancement
+  explicitement suivie ;
+- acceptation d'Auth0 EU Email OTP comme chemin d'identité le plus court vers la
+  bêta publique, sans prétendre que le tenant ou les secrets existent déjà ;
 - migration Flyway V3 activant et forçant RLS sur les tables d'identité,
   session et données tenant, avec contexte `SET LOCAL` transactionnel et rôle
   runtime non propriétaire testé ;

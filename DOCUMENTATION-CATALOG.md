@@ -12,7 +12,7 @@ Moteur déclaré : `nimbus`.
 | Produit | `public` | 4 |
 | Architecture et sécurité | `internal` | 3 |
 | Questions de travail | `internal` | 1 |
-| Décisions | `internal` | 10 |
+| Décisions | `internal` | 11 |
 | Références visuelles | `reference` | 1 |
 | Socle vendorisé | `reference` | 9 |
 | Maintenance Nimbus | `reference` | 1 |
@@ -61,6 +61,7 @@ Moteur déclaré : `nimbus`.
 - [docs/decisions/adr-0008-release-applicative-immuable-atlas.md](docs/decisions/adr-0008-release-applicative-immuable-atlas.md)
 - [docs/decisions/adr-0009-rls-et-contextes-tenant-transactionnels.md](docs/decisions/adr-0009-rls-et-contextes-tenant-transactionnels.md)
 - [docs/decisions/adr-0010-auth0-email-otp-production.md](docs/decisions/adr-0010-auth0-email-otp-production.md)
+- [docs/decisions/adr-0011-beta-publique-en-libre-service.md](docs/decisions/adr-0011-beta-publique-en-libre-service.md)
 
 ## Références visuelles
 
