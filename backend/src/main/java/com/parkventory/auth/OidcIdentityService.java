@@ -302,13 +302,15 @@ public class OidcIdentityService {
     private void requireActiveOrganization(Connection connection, UUID organizationId)
             throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
-                SELECT status
+                SELECT 1
                   FROM organization
                  WHERE id = ?
+                   AND status = 'ACTIVE'
+                   AND mode <> 'SUSPENDED'
                 """)) {
             statement.setObject(1, organizationId);
             try (ResultSet result = statement.executeQuery()) {
-                if (!result.next() || !"ACTIVE".equals(result.getString("status"))) {
+                if (!result.next()) {
                     throw new ClientErrorException("Cette organisation n’est pas active.", 403);
                 }
             }

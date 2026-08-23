@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { relativePathname } from "./config";
 import { demoDashboard } from "./data/demo";
+import { oidcRestartMessage } from "./pages/AuthPages";
 import type { DashboardData } from "./types";
 
 afterEach(() => {
@@ -12,6 +13,15 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   window.history.replaceState({}, "", "/");
+});
+
+it("explique le refus d’une adresse non professionnelle sans la refléter", () => {
+  const message = oidcRestartMessage("?error=professional-email&email=secret@example.com");
+  expect(message).toEqual({
+    isError: true,
+    text: "Cette adresse ne peut pas rejoindre Parkventory. Utilisez une adresse e-mail professionnelle.",
+  });
+  expect(message.text).not.toContain("secret@example.com");
 });
 
 function jsonResponse(body: unknown, status = 200) {

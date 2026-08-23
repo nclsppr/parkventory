@@ -24,7 +24,9 @@ Parkventory ouvre d'abord une **bêta publique** en français, destinée aux
 personnes disposant d'une adresse professionnelle vérifiée. Aucune liste blanche
 d'entreprises n'est requise. Les domaines personnels ou jetables sont refusés
 pour éviter qu'ils ne deviennent un tenant partagé ; une invitation exacte peut
-toujours rattacher un prestataire à l'organisation qui l'invite.
+uniquement rattacher une adresse appartenant à un domaine actif de
+l'organisation qui l'invite. Les prestataires externes restent hors du premier
+périmètre public.
 
 La première version reste volontairement bornée :
 

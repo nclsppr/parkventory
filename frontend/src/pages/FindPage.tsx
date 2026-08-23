@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   ArrowRight,
   CalendarDays,
@@ -16,7 +16,6 @@ import {
 import { ApiError, cancelReservation, reserveSpot } from "../api/client";
 import { AppLink } from "../components/AppLink";
 import { appUrl, isPublicDemo } from "../config";
-import { browserTimeZone } from "../lib/dates";
 import type { AvailabilityItem, DashboardData } from "../types";
 
 interface FindPageProps {
@@ -48,7 +47,7 @@ export function FindPage({
   const reserveLock = useRef(false);
   const cancelLock = useRef<string | null>(null);
   const reservationAttempt = useRef<{ availabilityId: string; key: string } | null>(null);
-  const timeZone = useMemo(browserTimeZone, []);
+  const timeZone = data.timeZone;
   const selected = data.availability.find((item) => item.id === selectedId) ?? null;
   const availableCount = data.availability.filter((item) => item.status === "AVAILABLE").length;
 

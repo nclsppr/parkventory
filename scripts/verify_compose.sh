@@ -13,6 +13,16 @@ VERIFY_PROJECT="${PARKVENTORY_VERIFY_PROJECT:-parkventory-verify}"
 cleanup() {
   exit_code=$?
   trap - EXIT INT TERM
+  if (( exit_code != 0 )); then
+    docker compose \
+      --project-directory "${PROJECT_ROOT}" \
+      --project-name "${VERIFY_PROJECT}" \
+      ps -a >&2 || true
+    docker compose \
+      --project-directory "${PROJECT_ROOT}" \
+      --project-name "${VERIFY_PROJECT}" \
+      logs --tail=200 --no-color >&2 || true
+  fi
   docker compose \
     --project-directory "${PROJECT_ROOT}" \
     --project-name "${VERIFY_PROJECT}" \
@@ -127,7 +137,7 @@ const run = async () => {
   const domain = `compose-${suffix}.test`;
   const ownerEmail = `owner@${domain}`;
   const colleagueEmail = `colleague@${domain}`;
-  const inviteeEmail = `invitee@external-${suffix}.test`;
+  const inviteeEmail = `invitee@${domain}`;
   const ownerCookie = await authenticate(ownerEmail);
 
   await request("/api/v1/spots", {
@@ -142,7 +152,9 @@ const run = async () => {
     body: JSON.stringify({ spot: "A-24", date, from: "08:00", to: "18:00" }),
   });
   const ownerDashboard = await request("/api/v1/dashboard", { cookie: ownerCookie });
-  if (ownerDashboard.body.demo !== false || ownerDashboard.body.user.assignedSpot !== "A-24") {
+  if (ownerDashboard.body.demo !== false
+      || ownerDashboard.body.timeZone !== "Europe/Paris"
+      || ownerDashboard.body.user.assignedSpot !== "A-24") {
     throw new Error("owner dashboard is not backed by PostgreSQL");
   }
 

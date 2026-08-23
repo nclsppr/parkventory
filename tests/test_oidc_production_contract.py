@@ -166,6 +166,14 @@ class OidcProductionContractTest(unittest.TestCase):
         )
         self.assert_rejected()
 
+    def test_rejects_professional_email_failure_without_safe_frontend_redirect(self) -> None:
+        self.replace(
+            "backend/src/main/java/com/parkventory/auth/OidcAuthResource.java",
+            '"/auth/callback?error=professional-email"',
+            '"/auth/callback"',
+        )
+        self.assert_rejected()
+
     def test_rejects_magic_link_invitation_in_production(self) -> None:
         self.replace(
             "backend/src/main/java/com/parkventory/notifications/OidcInvitationAccessMailer.java",

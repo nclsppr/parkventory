@@ -55,6 +55,10 @@ if [[ $target == pages ]]; then
     echo "Le build Pages ne porte pas le chemin de base /parkventory/." >&2
     exit 1
   }
+  grep -Fq '<script src="/parkventory/theme-init.js"></script>' "${DIST_DIR}/index.html" || {
+    echo "Le bootstrap de thème Pages ne porte pas le chemin /parkventory/." >&2
+    exit 1
+  }
 else
   if grep -Eq '(src|href)="/parkventory/' "${DIST_DIR}/index.html"; then
     echo "Le build Atlas contient encore un chemin GitHub Pages." >&2
@@ -62,6 +66,10 @@ else
   fi
   grep -Eq '(src|href)="/assets/' "${DIST_DIR}/index.html" || {
     echo "Le build Atlas ne porte pas le chemin de base racine." >&2
+    exit 1
+  }
+  grep -Fq '<script src="/theme-init.js"></script>' "${DIST_DIR}/index.html" || {
+    echo "Le bootstrap de thème Atlas ne porte pas le chemin racine." >&2
     exit 1
   }
 fi

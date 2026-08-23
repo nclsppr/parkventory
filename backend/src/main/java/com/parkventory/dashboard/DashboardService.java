@@ -110,6 +110,7 @@ public class DashboardService {
 
             return new Dashboard(
                     false,
+                    loadPrimaryTimezone(connection, session.organizationId()),
                     new User(
                             firstName(session.displayName()),
                             session.displayName(),
@@ -515,9 +516,11 @@ public class DashboardService {
         if (normalizedEmail.equals(session.normalizedEmail())) {
             throw new BadRequestException("Vous faites déjà partie de cet espace.");
         }
+        String invitedDomain = ProfessionalEmail.domain(normalizedEmail);
 
         try (Connection connection = dataSource.getConnection()) {
             tenantContext.applyTenant(connection, session.organizationId());
+            requireOrganizationDomain(connection, session.organizationId(), invitedDomain);
             enforceInvitationQuota(connection, session);
             UUID invitationId = findPendingInvitation(
                     connection,
@@ -566,9 +569,31 @@ public class DashboardService {
                     true,
                     "L’invitation a été mise en file pour "
                             + normalizedEmail
-                            + ". Elle apparaîtra dans Mailpit.");
+                            + ". Un e-mail lui sera envoyé.");
         } catch (SQLException exception) {
             throw new IllegalStateException("Impossible de créer l’invitation.", exception);
+        }
+    }
+
+    private void requireOrganizationDomain(
+            Connection connection,
+            UUID organizationId,
+            String normalizedDomain) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT 1
+                  FROM organization_domain
+                 WHERE organization_id = ?
+                   AND normalized_domain = ?
+                   AND status IN ('CLAIMED', 'VERIFIED')
+                """)) {
+            statement.setObject(1, organizationId);
+            statement.setString(2, normalizedDomain);
+            try (ResultSet result = statement.executeQuery()) {
+                if (!result.next()) {
+                    throw new BadRequestException(
+                            "Invitez une adresse rattachée à un domaine de cette organisation.");
+                }
+            }
         }
     }
 
@@ -968,6 +993,26 @@ public class DashboardService {
         }
     }
 
+    private String loadPrimaryTimezone(Connection connection, UUID organizationId)
+            throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT timezone
+                  FROM parking_site
+                 WHERE organization_id = ?
+                   AND status = 'ACTIVE'
+                 ORDER BY created_at
+                 LIMIT 1
+                """)) {
+            statement.setObject(1, organizationId);
+            try (ResultSet result = statement.executeQuery()) {
+                if (!result.next()) {
+                    throw new IllegalStateException("Aucun parking actif pour cette organisation.");
+                }
+                return safeZone(result.getString("timezone")).getId();
+            }
+        }
+    }
+
     private UUID findOrCreateSpot(
             Connection connection,
             UUID organizationId,
@@ -1080,11 +1125,17 @@ public class DashboardService {
             }
         }
         try (PreparedStatement statement = connection.prepareStatement("""
-                INSERT INTO outbox_dispatch (event_id, organization_id)
-                VALUES (?, ?)
+                INSERT INTO outbox_dispatch (
+                    event_id,
+                    organization_id,
+                    aggregate_type,
+                    aggregate_id
+                ) VALUES (?, ?, ?, ?)
                 """)) {
             statement.setObject(1, eventId);
             statement.setObject(2, organizationId);
+            statement.setString(3, aggregateType);
+            statement.setObject(4, aggregateId);
             statement.executeUpdate();
         }
     }

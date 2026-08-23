@@ -35,4 +35,17 @@ class RequestRateLimiterTest {
         assertTrue(limiter.acquire("mutation", "session:b", 1, Duration.ofMinutes(1)).allowed());
         assertTrue(limiter.acquire("invitation", "session:a", 1, Duration.ofMinutes(1)).allowed());
     }
+
+    @Test
+    void capacityPressureEvictsWithoutRejectingEveryNewSubject() {
+        AtomicLong clock = new AtomicLong(0);
+        RequestRateLimiter limiter = new RequestRateLimiter(clock::get, 2);
+
+        assertTrue(limiter.acquire("mutation-ip", "ip:a", 10, Duration.ofMinutes(1)).allowed());
+        clock.incrementAndGet();
+        assertTrue(limiter.acquire("mutation-ip", "ip:b", 10, Duration.ofMinutes(1)).allowed());
+        clock.incrementAndGet();
+        assertTrue(limiter.acquire("mutation-ip", "ip:c", 10, Duration.ofMinutes(1)).allowed());
+        assertEquals(2, limiter.bucketCount());
+    }
 }

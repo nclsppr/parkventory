@@ -3,7 +3,7 @@
 - Statut : accepté
 - Statut d'implémentation : implémenté et vérifié localement
 - Date : 2026-08-18
-- Dernière vérification : PostgreSQL 17.10 et 18.3, rôle runtime compris, le 2026-08-18
+- Dernière vérification : PostgreSQL 17.10 et 18.3, rôles migrateur et runtime compris, le 2026-08-23
 - Propriétaire : nclsppr
 - Domaine : sécurité, données et exploitation
 - Remplace : aucune
@@ -94,9 +94,12 @@ sans `BYPASSRLS`. Il prouve que :
 
 Les tests de parcours Quarkus vérifient en plus que session, invitation,
 partage, réservation et livraison outbox continuent de fonctionner. La matrice
-du dépôt rejoue V1, V2 puis V3 sur PostgreSQL 17.10 et 18.3, puis répète le
-parcours métier avec un rôle non propriétaire et sans `BYPASSRLS`. Cette preuve
-prépare le choix PostgreSQL Atlas décidé séparément ; elle ne crée ni rôle, ni
+du dépôt rejoue V1 à V4 sur PostgreSQL 17.10 et 18.3. Elle exerce notamment la
+reprise V3 vers V4 sur une file non vide sous un propriétaire `NOSUPERUSER` et
+`NOBYPASSRLS`, puis répète le parcours métier avec un rôle runtime non
+propriétaire et sans `BYPASSRLS`. La migration V4 retire `FORCE RLS` uniquement
+pendant son backfill transactionnel propriétaire et le rétablit avant commit.
+Cette preuve sélectionne la version dans l'ADR-0015 ; elle ne crée ni rôle, ni
 base, ni migration live dans cette tranche.
 
 ## Déploiement et retour arrière

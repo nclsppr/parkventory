@@ -18,7 +18,8 @@ succès générique, limite de débit, fournisseur indisponible et lien expiré.
 
 Après authentification et seulement si l'email est marqué vérifié :
 
-1. une invitation exacte non expirée est recherchée ;
+1. une invitation exacte non expirée, déjà limitée à un domaine actif de
+   l'organisation cible, est recherchée ;
 2. sinon un domaine déjà rattaché résout l'organisation ;
 3. sinon un domaine professionnel admissible crée atomiquement une
    organisation communautaire ;
@@ -103,7 +104,8 @@ notification.
 ## 8. Inviter
 
 1. Un membre saisit l'email professionnel du collègue.
-2. Le backend vérifie la portée sans révéler d'autre organisation.
+2. Le backend exige un domaine actif de l'organisation sans révéler d'autre
+   organisation.
 3. Une invitation exacte et expirante est créée.
 4. Le destinataire rejoint l'organisation après authentification.
 5. L'invitation consommée ne peut pas être rejouée.

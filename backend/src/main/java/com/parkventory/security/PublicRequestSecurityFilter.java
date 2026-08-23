@@ -9,21 +9,22 @@ import jakarta.ws.rs.Priorities;
 import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.container.ContainerRequestFilter;
 import jakarta.ws.rs.container.PreMatching;
-import jakarta.ws.rs.core.Cookie;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.Provider;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
+import java.net.Inet6Address;
+import java.net.InetAddress;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.HexFormat;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -44,37 +45,37 @@ public class PublicRequestSecurityFilter implements ContainerRequestFilter {
     private final String expectedOrigin;
     private final int loginLimit;
     private final Duration loginWindow;
-    private final int invitationLimit;
-    private final Duration invitationWindow;
-    private final int mutationLimit;
-    private final Duration mutationWindow;
+    private final int invitationIpLimit;
+    private final Duration invitationIpWindow;
+    private final int mutationIpLimit;
+    private final Duration mutationIpWindow;
 
     public PublicRequestSecurityFilter(
             RequestRateLimiter rateLimiter,
             @ConfigProperty(name = "parkventory.web.base-url") String webBaseUrl,
-            @ConfigProperty(name = "parkventory.security.rate-limit.login.limit", defaultValue = "8")
+            @ConfigProperty(name = "parkventory.security.rate-limit.login.limit", defaultValue = "120")
                     int loginLimit,
             @ConfigProperty(name = "parkventory.security.rate-limit.login.window", defaultValue = "10M")
                     Duration loginWindow,
-            @ConfigProperty(name = "parkventory.security.rate-limit.invitation.limit", defaultValue = "5")
-                    int invitationLimit,
-            @ConfigProperty(name = "parkventory.security.rate-limit.invitation.window", defaultValue = "10M")
-                    Duration invitationWindow,
-            @ConfigProperty(name = "parkventory.security.rate-limit.mutation.limit", defaultValue = "60")
-                    int mutationLimit,
-            @ConfigProperty(name = "parkventory.security.rate-limit.mutation.window", defaultValue = "1M")
-                    Duration mutationWindow) {
+            @ConfigProperty(name = "parkventory.security.rate-limit.invitation-ip.limit", defaultValue = "30")
+                    int invitationIpLimit,
+            @ConfigProperty(name = "parkventory.security.rate-limit.invitation-ip.window", defaultValue = "10M")
+                    Duration invitationIpWindow,
+            @ConfigProperty(name = "parkventory.security.rate-limit.mutation-ip.limit", defaultValue = "300")
+                    int mutationIpLimit,
+            @ConfigProperty(name = "parkventory.security.rate-limit.mutation-ip.window", defaultValue = "1M")
+                    Duration mutationIpWindow) {
         this.rateLimiter = rateLimiter;
         this.expectedOrigin = normalizeOrigin(webBaseUrl);
         this.loginLimit = loginLimit;
         this.loginWindow = loginWindow;
-        this.invitationLimit = invitationLimit;
-        this.invitationWindow = invitationWindow;
-        this.mutationLimit = mutationLimit;
-        this.mutationWindow = mutationWindow;
+        this.invitationIpLimit = invitationIpLimit;
+        this.invitationIpWindow = invitationIpWindow;
+        this.mutationIpLimit = mutationIpLimit;
+        this.mutationIpWindow = mutationIpWindow;
         requireValidRate("connexion", loginLimit, loginWindow);
-        requireValidRate("invitation", invitationLimit, invitationWindow);
-        requireValidRate("mutation", mutationLimit, mutationWindow);
+        requireValidRate("invitation par adresse réseau", invitationIpLimit, invitationIpWindow);
+        requireValidRate("mutation par adresse réseau", mutationIpLimit, mutationIpWindow);
     }
 
     @Override
@@ -96,18 +97,9 @@ public class PublicRequestSecurityFilter implements ContainerRequestFilter {
         if (policy == null) {
             return;
         }
-        String remoteAddress = remoteAddress(request);
-        String subject = policy == RatePolicy.LOGIN
-                ? "ip:" + fingerprint(remoteAddress)
-                : authenticatedSubject(request.getCookies(), remoteAddress);
-        RequestRateLimiter.Decision decision = switch (policy) {
-            case LOGIN -> rateLimiter.acquire(
-                    "login", subject, loginLimit, loginWindow);
-            case INVITATION -> rateLimiter.acquire(
-                    "invitation", subject, invitationLimit, invitationWindow);
-            case MUTATION -> rateLimiter.acquire(
-                    "mutation", subject, mutationLimit, mutationWindow);
-        };
+        RequestRateLimiter.Decision decision = acquireBudget(
+                policy,
+                remoteAddress(request));
         if (!decision.allowed()) {
             request.abortWith(Response.status(429)
                     .type(MediaType.APPLICATION_JSON_TYPE)
@@ -118,6 +110,20 @@ public class PublicRequestSecurityFilter implements ContainerRequestFilter {
                             "Trop de requêtes. Réessayez dans quelques instants."))
                     .build());
         }
+    }
+
+    RequestRateLimiter.Decision acquireBudget(
+            RatePolicy policy,
+            String remoteAddress) {
+        String ipSubject = "ip:" + fingerprint(networkSubject(remoteAddress));
+        return switch (policy) {
+            case LOGIN -> rateLimiter.acquire(
+                    "login-ip", ipSubject, loginLimit, loginWindow);
+            case INVITATION -> rateLimiter.acquire(
+                    "invitation-ip", ipSubject, invitationIpLimit, invitationIpWindow);
+            case MUTATION -> rateLimiter.acquire(
+                    "mutation-ip", ipSubject, mutationIpLimit, mutationIpWindow);
+        };
     }
 
     static boolean sameOrigin(
@@ -173,14 +179,6 @@ public class PublicRequestSecurityFilter implements ContainerRequestFilter {
                 expectedOrigin);
     }
 
-    private static String authenticatedSubject(Map<String, Cookie> cookies, String remoteAddress) {
-        Cookie session = cookies.get(SessionService.COOKIE_NAME);
-        if (session != null && session.getValue() != null && !session.getValue().isBlank()) {
-            return "session:" + fingerprint(session.getValue());
-        }
-        return "ip:" + fingerprint(remoteAddress);
-    }
-
     private static String remoteAddress(ContainerRequestContext request) {
         String forwarded = request.getHeaderString("X-Forwarded-For");
         if (forwarded == null || forwarded.isBlank()) {
@@ -189,6 +187,24 @@ public class PublicRequestSecurityFilter implements ContainerRequestFilter {
         String[] addresses = forwarded.split(",");
         String address = addresses[addresses.length - 1].strip();
         return address.isEmpty() || address.length() > 128 ? "invalid" : address;
+    }
+
+    static String networkSubject(String rawAddress) {
+        String address = rawAddress == null ? "invalid" : rawAddress.strip();
+        if (!address.contains(":")) {
+            return address;
+        }
+        int zoneSeparator = address.indexOf('%');
+        String literal = zoneSeparator < 0 ? address : address.substring(0, zoneSeparator);
+        try {
+            InetAddress parsed = InetAddress.getByName(literal);
+            if (parsed instanceof Inet6Address) {
+                return "ipv6-64:" + HexFormat.of().formatHex(parsed.getAddress(), 0, 8);
+            }
+        } catch (UnknownHostException ignored) {
+            return "invalid";
+        }
+        return address;
     }
 
     private static String fingerprint(String value) {

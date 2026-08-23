@@ -200,7 +200,7 @@ class OidcIdentityServiceTest {
     }
 
     @Test
-    void suspendedAccountsAndMembershipsAreNeverReactivatedByOidc() throws Exception {
+    void suspendedAccountsMembershipsAndOrganizationsAreRejectedByOidc() throws Exception {
         String discriminator = UUID.randomUUID().toString().replace("-", "");
         OidcIdentityClaims accountIdentity = OidcIdentityClaims.validate(
                 ISSUER,
@@ -229,6 +229,27 @@ class OidcIdentityServiceTest {
                 ClientErrorException.class,
                 () -> identityService.signIn(membershipIdentity));
         assertEquals(403, suspendedMembership.getResponse().getStatus());
+
+        String organizationEmail = "suspended-organization@"
+                + UUID.randomUUID().toString().replace("-", "")
+                + ".test";
+        OidcIdentityClaims organizationIdentity = OidcIdentityClaims.validate(
+                ISSUER,
+                "email|suspended-organization-" + discriminator,
+                organizationEmail,
+                Boolean.TRUE,
+                ISSUER);
+        AuthService.VerifiedSession organizationSession = identityService.signIn(organizationIdentity);
+        suspendOrganization(organizationSession.context());
+
+        ClientErrorException existingSession = assertThrows(
+                ClientErrorException.class,
+                () -> sessionService.require(organizationSession.rawSessionToken()));
+        assertEquals(401, existingSession.getResponse().getStatus());
+        ClientErrorException suspendedOrganization = assertThrows(
+                ClientErrorException.class,
+                () -> identityService.signIn(organizationIdentity));
+        assertEquals(403, suspendedOrganization.getResponse().getStatus());
     }
 
     private void suspendAccount(SessionContext session) throws Exception {
@@ -259,6 +280,21 @@ class OidcIdentityServiceTest {
             tenantContext.applyTenant(connection, session.organizationId());
             statement.setObject(1, session.organizationId());
             statement.setObject(2, session.membershipId());
+            assertEquals(1, statement.executeUpdate());
+            connection.commit();
+        }
+    }
+
+    private void suspendOrganization(SessionContext session) throws Exception {
+        try (var connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     UPDATE organization
+                        SET mode = 'SUSPENDED'
+                      WHERE id = ?
+                     """)) {
+            connection.setAutoCommit(false);
+            tenantContext.applyTenant(connection, session.organizationId());
+            statement.setObject(1, session.organizationId());
             assertEquals(1, statement.executeUpdate());
             connection.commit();
         }

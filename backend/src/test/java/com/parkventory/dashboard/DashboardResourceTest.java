@@ -74,6 +74,7 @@ class DashboardResourceTest {
                 .then()
                 .statusCode(200)
                 .body("demo", equalTo(false))
+                .body("timeZone", equalTo("Europe/Paris"))
                 .body("user.firstName", equalTo("Alex"))
                 .body("user.assignedSpot", equalTo(null))
                 .body("availability", hasSize(0));
@@ -233,11 +234,19 @@ class DashboardResourceTest {
     }
 
     @Test
-    void invitationTakesPriorityOverTheInviteeDomain() {
+    void invitationStaysInsideTheOrganizationDomain() {
         String ownerDomain = uniqueDomain();
         String ownerEmail = "owner@" + ownerDomain;
-        String inviteeEmail = "guest@" + uniqueDomain();
+        String inviteeEmail = "guest@" + ownerDomain;
         String ownerSession = authenticate(ownerEmail);
+
+        given()
+                .cookie(SessionService.COOKIE_NAME, ownerSession)
+                .contentType(ContentType.JSON)
+                .body("{\"email\":\"external@" + uniqueDomain() + "\"}")
+                .when().post("/api/v1/invitations")
+                .then()
+                .statusCode(400);
 
         given()
                 .cookie(SessionService.COOKIE_NAME, ownerSession)
@@ -310,7 +319,7 @@ class DashboardResourceTest {
     }
 
     @Test
-    void suspendedAccountsAndMembershipsCannotBeReactivatedByLocalSignIn()
+    void suspendedAccountsMembershipsAndOrganizationsCannotBeReactivated()
             throws Exception {
         String accountEmail = "suspended-account@" + uniqueDomain();
         String accountToken = authenticate(accountEmail);
@@ -337,17 +346,37 @@ class DashboardResourceTest {
                 .when().post("/api/v1/auth/verify")
                 .then()
                 .statusCode(403);
+
+        String organizationEmail = "suspended-organization@" + uniqueDomain();
+        String organizationToken = authenticate(organizationEmail);
+        SessionContext organization = sessions.require(organizationToken);
+        suspendOrganization(organization);
+
+        given()
+                .cookie(SessionService.COOKIE_NAME, organizationToken)
+                .when().get("/api/v1/dashboard")
+                .then()
+                .statusCode(401);
+
+        String suspendedOrganizationLink = requestMagicLink(organizationEmail);
+        given()
+                .contentType(ContentType.JSON)
+                .body("{\"token\":\"" + suspendedOrganizationLink + "\"}")
+                .when().post("/api/v1/auth/verify")
+                .then()
+                .statusCode(403);
     }
 
     @Test
     void invitationQuotaIsBoundToTheAuthenticatedMembership() {
-        String ownerSession = authenticate("quota-owner@" + uniqueDomain());
+        String ownerDomain = uniqueDomain();
+        String ownerSession = authenticate("quota-owner@" + ownerDomain);
 
         for (int index = 0; index < 2; index += 1) {
             given()
                     .cookie(SessionService.COOKIE_NAME, ownerSession)
                     .contentType(ContentType.JSON)
-                    .body("{\"email\":\"invitee-" + index + "@" + uniqueDomain() + "\"}")
+                    .body("{\"email\":\"invitee-" + index + "@" + ownerDomain + "\"}")
                     .when().post("/api/v1/invitations")
                     .then()
                     .statusCode(200);
@@ -356,7 +385,7 @@ class DashboardResourceTest {
         given()
                 .cookie(SessionService.COOKIE_NAME, ownerSession)
                 .contentType(ContentType.JSON)
-                .body("{\"email\":\"invitee-over-quota@" + uniqueDomain() + "\"}")
+                .body("{\"email\":\"invitee-over-quota@" + ownerDomain + "\"}")
                 .when().post("/api/v1/invitations")
                 .then()
                 .statusCode(429);
@@ -541,6 +570,21 @@ class DashboardResourceTest {
             tenantContext.applyTenant(connection, session.organizationId());
             statement.setObject(1, session.organizationId());
             statement.setObject(2, session.membershipId());
+            assertEquals(1, statement.executeUpdate());
+            connection.commit();
+        }
+    }
+
+    private void suspendOrganization(SessionContext session) throws Exception {
+        try (var connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     UPDATE organization
+                        SET mode = 'SUSPENDED'
+                      WHERE id = ?
+                     """)) {
+            connection.setAutoCommit(false);
+            tenantContext.applyTenant(connection, session.organizationId());
+            statement.setObject(1, session.organizationId());
             assertEquals(1, statement.executeUpdate());
             connection.commit();
         }

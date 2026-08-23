@@ -7,6 +7,7 @@ import io.quarkus.arc.profile.IfBuildProfile;
 import io.quarkus.security.Authenticated;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
+import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.CookieParam;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
@@ -69,9 +70,21 @@ public class OidcAuthResource {
     @Path("/login")
     @Authenticated
     @AuthorizationCodeFlow
-    public Response login() {
-        OidcIdentityClaims claims = OidcIdentityClaims.from(idToken, expectedIssuer);
-        AuthService.VerifiedSession verified = identityService.signIn(claims);
+    public Response login(@Context HttpHeaders requestHeaders) {
+        AuthService.VerifiedSession verified;
+        try {
+            OidcIdentityClaims claims = OidcIdentityClaims.from(idToken, expectedIssuer);
+            verified = identityService.signIn(claims);
+        } catch (BadRequestException exception) {
+            LOG.info("Connexion OIDC refusée par la politique d’adresse professionnelle.");
+            Response.ResponseBuilder response = Response.seeOther(URI.create(
+                            webBaseUrl + "/auth/callback?error=professional-email"))
+                    .header(HttpHeaders.SET_COOKIE, AuthResource.sessionCookie("", 0, secureCookie))
+                    .header("Clear-Site-Data", "\"cookies\"")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store");
+            expireOidcCookies(response, requestHeaders);
+            return response.build();
+        }
         return Response.seeOther(URI.create(webBaseUrl + "/app"))
                 .header(
                         HttpHeaders.SET_COOKIE,
@@ -108,6 +121,13 @@ public class OidcAuthResource {
                 .header("Clear-Site-Data", "\"cookies\"")
                 .header(HttpHeaders.CACHE_CONTROL, "no-store");
 
+        expireOidcCookies(response, requestHeaders);
+        return response.build();
+    }
+
+    private void expireOidcCookies(
+            Response.ResponseBuilder response,
+            HttpHeaders requestHeaders) {
         Set<String> oidcCookieNames = new TreeSet<>();
         oidcCookieNames.add("q_session");
         requestHeaders.getCookies().keySet().stream()
@@ -116,7 +136,6 @@ public class OidcAuthResource {
         oidcCookieNames.forEach(name -> response.header(
                 HttpHeaders.SET_COOKIE,
                 expiredOidcCookie(name)));
-        return response.build();
     }
 
     private String expiredOidcCookie(String name) {

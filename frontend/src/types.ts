@@ -30,6 +30,7 @@ export interface ThanksMessage {
 
 export interface DashboardData {
   demo: boolean;
+  timeZone: string;
   user: {
     firstName: string;
     fullName: string;

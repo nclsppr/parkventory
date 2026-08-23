@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { ApiError, declareSpot, shareSpot, withdrawAvailability } from "../api/client";
 import { isPublicDemo } from "../config";
-import { browserTimeZone, dateInputValue, formatInputDate } from "../lib/dates";
+import { dateInputValue, formatInputDate } from "../lib/dates";
 import type { DashboardData } from "../types";
 
 interface SharePageProps {
@@ -44,7 +44,7 @@ export function SharePage({
   const shareLock = useRef(false);
   const spotLock = useRef(false);
   const withdrawLock = useRef<string | null>(null);
-  const timeZone = useMemo(browserTimeZone, []);
+  const timeZone = data.timeZone;
   const ownShares = useMemo(
     () => data.availability.filter((item) => item.viewerRelation === "OFFERED"),
     [data.availability],

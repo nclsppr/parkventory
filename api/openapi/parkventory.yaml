@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Parkventory API
-  version: 0.4.0
+  version: 0.4.1
   description: >-
     Contrat des adaptateurs d’identité exclusifs par profil. Le lien magique et
     Mailpit existent hors production ; Auth0 Universal Login Email OTP existe
@@ -104,7 +104,9 @@ paths:
         "302":
           description: Challenge anonyme redirigé vers Auth0
         "303":
-          description: Session créée puis redirection vers l’application authentifiée
+          description: >-
+            Session créée puis redirection vers l’application, ou adresse non
+            professionnelle redirigée vers une erreur frontend sans exposer l’adresse
         "401":
           description: Claims absents, email non vérifié ou issuer incohérent
         "409":
@@ -403,11 +405,15 @@ components:
         role: { type: string, enum: [MEMBER, ADMIN] }
     Dashboard:
       type: object
-      required: [demo, user, organization, stats, availability, thanks]
+      required: [demo, timeZone, user, organization, stats, availability, thanks]
       properties:
         demo:
           type: boolean
           const: false
+        timeZone:
+          type: string
+          description: Fuseau IANA du parking utilisé pour interpréter et afficher les créneaux
+          example: Europe/Paris
         user:
           $ref: "#/components/schemas/User"
         organization:

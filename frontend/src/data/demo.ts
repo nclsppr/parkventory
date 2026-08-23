@@ -2,6 +2,7 @@ import type { DashboardData } from "../types";
 
 export const demoDashboard: DashboardData = {
   demo: true,
+  timeZone: "Europe/Paris",
   user: {
     firstName: "Nicolas",
     fullName: "Nicolas D.",

@@ -48,14 +48,16 @@ contract_path = Path(sys.argv[1])
 contract = json.loads(contract_path.read_text(encoding="ascii"))
 if contract.get("schema") != 1:
     raise SystemExit("Le schéma du contrat PostgreSQL doit être 1.")
-if contract.get("productionDecision") != "blocked":
-    raise SystemExit("La décision de production PostgreSQL doit rester bloquée.")
+if contract.get("productionDecision") != "selected":
+    raise SystemExit("La décision de production PostgreSQL doit être sélectionnée.")
+if contract.get("selectedRole") != "atlas-shared-cluster-production":
+    raise SystemExit("Le rôle PostgreSQL de production sélectionné est invalide.")
 variants = contract.get("variants")
 if not isinstance(variants, list) or len(variants) != 2:
     raise SystemExit("Le contrat PostgreSQL doit contenir exactement deux variantes.")
 
 expected = {
-    "atlas-shared-cluster-candidate": "17.10",
+    "atlas-shared-cluster-production": "17.10",
     "canonical-development-baseline": "18.3",
 }
 seen: set[str] = set()
@@ -154,14 +156,25 @@ verify_variant() {
     exit 1
   fi
   jdbc_url="jdbc:postgresql://127.0.0.1:${host_port}/${database}"
+  migrator_user="parkventory_migrator_${safe_version}_$$"
+  migrator_password="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+
+  docker exec -i "${container}" \
+    psql --set ON_ERROR_STOP=1 --username=postgres --dbname="${database}" <<SQL
+CREATE ROLE ${migrator_user}
+  LOGIN PASSWORD '${migrator_password}'
+  NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
+ALTER DATABASE ${database} OWNER TO ${migrator_user};
+ALTER SCHEMA public OWNER TO ${migrator_user};
+SQL
 
   (
     cd "${PROJECT_ROOT}/backend"
     if command -v mise >/dev/null 2>&1; then
       QUARKUS_DATASOURCE_DEVSERVICES_ENABLED=false \
       QUARKUS_DATASOURCE_JDBC_URL="${jdbc_url}" \
-      QUARKUS_DATASOURCE_USERNAME=postgres \
-      QUARKUS_DATASOURCE_PASSWORD="${database_password}" \
+      QUARKUS_DATASOURCE_USERNAME="${migrator_user}" \
+      QUARKUS_DATASOURCE_PASSWORD="${migrator_password}" \
       QUARKUS_FLYWAY_MIGRATE_AT_START=false \
       QUARKUS_SCHEDULER_ENABLED=false \
       PARKVENTORY_TEST_POSTGRES_VERSION="${version}" \
@@ -172,8 +185,8 @@ verify_variant() {
     else
       QUARKUS_DATASOURCE_DEVSERVICES_ENABLED=false \
       QUARKUS_DATASOURCE_JDBC_URL="${jdbc_url}" \
-      QUARKUS_DATASOURCE_USERNAME=postgres \
-      QUARKUS_DATASOURCE_PASSWORD="${database_password}" \
+      QUARKUS_DATASOURCE_USERNAME="${migrator_user}" \
+      QUARKUS_DATASOURCE_PASSWORD="${migrator_password}" \
       QUARKUS_FLYWAY_MIGRATE_AT_START=false \
       QUARKUS_SCHEDULER_ENABLED=false \
       PARKVENTORY_TEST_POSTGRES_VERSION="${version}" \
@@ -181,6 +194,34 @@ verify_variant() {
           -Dquarkus.analytics.disabled=true \
           -Dparkventory.test.v1=true \
           -Dtest=PostgresV1CompatibilityTest
+    fi
+  )
+
+  echo "Vérification de la reprise V3 vers V4 sous rôle migrateur non privilégié"
+  (
+    cd "${PROJECT_ROOT}/backend"
+    if command -v mise >/dev/null 2>&1; then
+      QUARKUS_DATASOURCE_DEVSERVICES_ENABLED=false \
+      QUARKUS_DATASOURCE_JDBC_URL="${jdbc_url}" \
+      QUARKUS_DATASOURCE_USERNAME="${migrator_user}" \
+      QUARKUS_DATASOURCE_PASSWORD="${migrator_password}" \
+      QUARKUS_FLYWAY_MIGRATE_AT_START=false \
+      QUARKUS_SCHEDULER_ENABLED=false \
+        mise exec -- ./mvnw test \
+          -Dquarkus.analytics.disabled=true \
+          -Dparkventory.test.v4-upgrade=true \
+          -Dtest=PostgresV4UpgradeCompatibilityTest
+    else
+      QUARKUS_DATASOURCE_DEVSERVICES_ENABLED=false \
+      QUARKUS_DATASOURCE_JDBC_URL="${jdbc_url}" \
+      QUARKUS_DATASOURCE_USERNAME="${migrator_user}" \
+      QUARKUS_DATASOURCE_PASSWORD="${migrator_password}" \
+      QUARKUS_FLYWAY_MIGRATE_AT_START=false \
+      QUARKUS_SCHEDULER_ENABLED=false \
+        ./mvnw test \
+          -Dquarkus.analytics.disabled=true \
+          -Dparkventory.test.v4-upgrade=true \
+          -Dtest=PostgresV4UpgradeCompatibilityTest
     fi
   )
 
@@ -256,4 +297,4 @@ done <<<"${VARIANT_LINES}"
 
 verify_value "2" "${variant_count}" "le nombre de variantes exécutées"
 
-echo "Compatibilité PostgreSQL vérifiée sur les deux versions exactes. La décision de production reste bloquée."
+echo "Compatibilité PostgreSQL vérifiée sur les deux versions exactes. Atlas PostgreSQL 17.10 est la cible de production sélectionnée."

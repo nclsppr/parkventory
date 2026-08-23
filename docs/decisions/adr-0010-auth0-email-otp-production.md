@@ -43,9 +43,10 @@ tenant existe déjà et n'autorise pas une activation sans preuve externe.
 - Le compte interne est lié à une clé opaque et stable dérivée du couple
   `(issuer, subject)`. L’email vérifié sert au rattachement initial, jamais
   comme identifiant OIDC durable.
-- L’invitation exacte est prioritaire ; sinon le domaine professionnel résout
-  ou crée l’organisation communautaire. Une adhésion suspendue ou quittée
-  n’est jamais réactivée automatiquement.
+- L’invitation exacte, préalablement bornée à un domaine actif de
+  l’organisation, est prioritaire ; sinon le domaine professionnel résout ou
+  crée l’organisation communautaire. Une adhésion suspendue ou quittée n’est
+  jamais réactivée automatiquement.
 - L’email d’invitation de production ne crée aucun magic-link Parkventory : il
   pointe vers `/api/v1/auth/oidc/login`, puis l’email vérifié par le fournisseur
   permet de réclamer l’invitation en base. Le lien local avec token reste
@@ -114,8 +115,9 @@ exécutée par le rôle runtime non propriétaire :
 3. elle résout le compte par cet email, pose l’identifiant utilisateur local,
    puis lie ou vérifie la clé opaque dérivée de `(issuer, subject)` ; un sujet
    déjà lié à un autre email, ou l’inverse, produit un conflit explicite ;
-4. elle résout une invitation exacte ou un domaine professionnel, choisit
-   l’organisation issue de la base et pose `SET LOCAL app.organization_id` ;
+4. elle résout une invitation exacte déjà bornée au domaine de l’organisation,
+   ou un domaine professionnel, choisit l’organisation issue de la base et pose
+   `SET LOCAL app.organization_id` ;
 5. elle relit ou crée l’adhésion active dans ce tenant ; une adhésion suspendue
    ou quittée reste refusée ;
 6. elle crée enfin l’`app_session`, liée par clé étrangère composite au

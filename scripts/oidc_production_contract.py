@@ -131,11 +131,14 @@ def validate_oidc_contract(root: Path = ROOT) -> None:
         "@Authenticated",
         "@AuthorizationCodeFlow",
         "OidcIdentityClaims.from(idToken, expectedIssuer)",
+        "catch (BadRequestException exception)",
+        '"/auth/callback?error=professional-email"',
         "oidcSession.logout()",
         "@PermitAll",
         'header("Clear-Site-Data", "\\\"cookies\\\"")',
         'Pattern.compile("q_session(?:_chunk_[0-9]+)?")',
         'oidcCookieNames.add("q_session")',
+        "expireOidcCookies(response, requestHeaders)",
         "expiredOidcCookie",
         'HttpHeaders.CACHE_CONTROL, "no-store"',
     )
@@ -146,6 +149,10 @@ def validate_oidc_contract(root: Path = ROOT) -> None:
     if oidc_resource.count("@AuthorizationCodeFlow") != 1:
         raise OidcContractError(
             f"{oidc_resource_path} doit sélectionner le code flow seulement pour le login"
+        )
+    if oidc_resource.count("expireOidcCookies(response, requestHeaders)") != 2:
+        raise OidcContractError(
+            f"{oidc_resource_path} doit expirer les cookies OIDC au refus et au logout"
         )
     oidc_service_path = "backend/src/main/java/com/parkventory/auth/OidcIdentityService.java"
     _require(

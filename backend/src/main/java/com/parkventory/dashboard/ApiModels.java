@@ -42,6 +42,7 @@ public final class ApiModels {
 
     public record Dashboard(
             boolean demo,
+            String timeZone,
             User user,
             Organization organization,
             Stats stats,

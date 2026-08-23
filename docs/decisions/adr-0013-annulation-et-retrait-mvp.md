@@ -95,13 +95,18 @@ publication d'artefact, ni une activation Compose, ni un déploiement public.
 
 ## Déploiement et retour arrière
 
-Le changement ne requiert pas de migration après V3. Il doit être déployé avec
-le frontend et le backend du même commit afin que les champs du dashboard et
-les actions restent cohérents.
+La migration V4 complète `outbox_dispatch` avec l'identité technique de
+l'agrégat afin qu'une notification d'annulation ne dépasse jamais une
+confirmation en retry. Elle ne duplique ni payload ni email. Le changement doit
+être déployé avec le frontend et le backend du même commit afin que les champs
+du dashboard et les actions restent cohérents.
 
 Le retour arrière applicatif conserve les statuts déjà écrits, connus du schéma
 V1. Une ancienne version ignore les lignes `CANCELLED` et `WITHDRAWN` dans les
-requêtes actives conformément aux contraintes existantes.
+requêtes actives conformément aux contraintes existantes. Le trigger V4 remplit
+l'agrégat pour les écritures `outbox_dispatch` de l'ancien runtime : un retour
+arrière applicatif reste donc compatible avec le schéma migré, tandis que le
+rollback de schéma demeure inutile et interdit en production.
 
 ## Réexamen
 

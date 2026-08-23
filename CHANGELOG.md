@@ -7,12 +7,22 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Ajouté
 
+- retour lisible vers l'interface lorsqu'Auth0 vérifie une adresse refusée par
+  la politique professionnelle, sans refléter l'adresse ni laisser de session
+  OIDC locale réutilisable ;
+- fuseau IANA du parking inclus dans le dashboard et utilisé par les écrans de
+  partage et de recherche, indépendamment du fuseau du navigateur ;
+- ADR-0015 sélectionnant le cluster partagé Atlas PostgreSQL 17.10 pour la
+  bêta publique, avec PostgreSQL 18.3 conservé comme baseline locale et preuve
+  d'upgrade V3 vers V4 sous le vrai profil de migrateur non privilégié ;
 - ADR-0014 retenant Resend pour l'OTP Auth0 et les e-mails transactionnels de
   la bêta, sur un sous-domaine isolé, avec deux clés séparées, suivi désactivé
   et recette de délivrabilité avant activation ;
 - pages publiques de confidentialité et de mentions légales, accessibles par
   URL directe dans les artefacts Pages et Atlas, avec contenu distinct pour la
   démo statique et le service dynamique, contact opérateur et couverture React ;
+- conservation de bêta décrite sans prétendre qu'une purge automatique existe,
+  avec traitement manuel explicite des demandes d'accès, export et suppression ;
 - ADR-0011 acceptant une bêta publique en libre-service plutôt qu'un pilote
   fermé, avec barrières de lancement minimales et dette post-lancement
   explicitement suivie ;
@@ -37,7 +47,7 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 - relation du membre courant, identifiant de sa réservation et actions
   autorisées dans le dashboard, puis contrôles accessibles sur les routes
   existantes Partager et Trouver sans ajouter de fausse destination ;
-- contrat OpenAPI `0.4.0` pour l'annulation et le retrait, aligné avec les
+- contrat OpenAPI `0.4.1` pour l'annulation, le retrait et le fuseau du parking, aligné avec les
   modèles Java et TypeScript et les réponses `401`, `403`, `409`, `429` et
   `5xx` ;
 - clé d'idempotence stable conservée par le frontend pendant un retry de
@@ -110,7 +120,7 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 - Compose VPS app-only sans port, build ni volume, avec secrets fichiers,
   réseaux externes, healthchecks, ressources et logs bornés ;
 - bundle `vps-integration` déterministe lié au SHA, inventaires exacts des
-  migrations V1 à V3 et probes, puis descripteur canonique
+  migrations V1 à V4 et probes, puis descripteur canonique
   `vps-infra.application-release.v1` liant tous les digests ;
 - workflow de publication après gate complète, scans bloquants, SBOM,
   provenance et attestations, avec revalidation des images réellement poussées
@@ -231,8 +241,22 @@ la source du diff technique et les ADR expliquent les décisions importantes.
   nombre d'e-mails déjà présents, afin de supprimer la course entre le mailer
   réactif et l'assertion CI ;
 - refus de toute réactivation implicite d'un compte `SUSPENDED` ou d'une
-  adhésion `SUSPENDED`/`LEFT` dans les parcours local et OIDC ; une adhésion
-  `INVITED` ne devient active qu'après consommation d'une invitation exacte ;
+  adhésion `SUSPENDED`/`LEFT`, ainsi que de toute organisation dont le statut ou
+  le mode est suspendu, dans les parcours local, OIDC et les sessions déjà
+  émises ; une adhésion `INVITED` ne devient active qu'après consommation d'une
+  invitation exacte ;
+- impossibilité pour un cookie de session forgé de remplacer le budget IP des
+  invitations ou mutations, avec filtre précoce sans accès bloquant à la base,
+  plafonds réseau distincts pour préserver les entreprises derrière un NAT,
+  normalisation IPv6 `/64` et éviction bornée en temps constant sans panne
+  globale ;
+- plafond de l'entrée OIDC relevé pour tenir compte de ses deux passages par
+  connexion et permettre un lancement collectif derrière un NAT ;
+- invitations communautaires bornées aux domaines actifs de l'organisation et
+  confirmation utilisateur indépendante du transport local Mailpit ;
+- ordre des notifications garanti par agrégat dans la file d'outbox : une
+  annulation ne peut plus dépasser une confirmation de réservation en attente
+  de retry ;
 - attente du processus PostgreSQL final, et pas du serveur temporaire de
   l'entrypoint, avant de tester les images réellement poussées, avec timeout et
   journaux explicites en cas d'échec ;

@@ -2,6 +2,7 @@ package com.parkventory.tenancy;
 
 import com.parkventory.notifications.OutboxDeliveryService;
 import io.agroal.api.AgroalDataSource;
+import io.quarkus.mailer.MockMailbox;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
@@ -49,6 +50,9 @@ class TenantIsolationTest {
 
     @Inject
     OutboxDeliveryService outboxDelivery;
+
+    @Inject
+    MockMailbox mailbox;
 
     @Test
     void tenantTablesEnableAndForceRowLevelSecurity() throws SQLException {
@@ -177,15 +181,23 @@ class TenantIsolationTest {
                          organization_id,
                          event_type,
                          aggregate_type,
+                         aggregate_id,
                          payload
-                     ) VALUES (?, ?, 'INVITATION_REQUESTED', 'INVITATION', '{}'::jsonb);
-                     INSERT INTO outbox_dispatch (event_id, organization_id) VALUES (?, ?);
+                     ) VALUES (?, ?, 'INVITATION_REQUESTED', 'INVITATION', ?, '{}'::jsonb);
+                     INSERT INTO outbox_dispatch (
+                         event_id,
+                         organization_id,
+                         aggregate_type,
+                         aggregate_id
+                     ) VALUES (?, ?, 'INVITATION', ?);
                      """)) {
             statement.setObject(1, organizationId);
             statement.setObject(2, eventId);
             statement.setObject(3, organizationId);
             statement.setObject(4, eventId);
-            statement.setObject(5, organizationId);
+            statement.setObject(5, eventId);
+            statement.setObject(6, organizationId);
+            statement.setObject(7, eventId);
             statement.execute();
         }
 
@@ -209,6 +221,112 @@ class TenantIsolationTest {
                         result.getObject("available_at", OffsetDateTime.class));
             }
         }
+    }
+
+    @Test
+    void outboxMigrationKeepsLegacyDispatchInsertsCompatible() throws SQLException {
+        UUID organizationId = UUID.randomUUID();
+        UUID eventId = UUID.randomUUID();
+        UUID aggregateId = UUID.randomUUID();
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     INSERT INTO organization (id, name) VALUES (?, 'Legacy writer tenant');
+                     INSERT INTO outbox_event (
+                         id,
+                         organization_id,
+                         event_type,
+                         aggregate_type,
+                         aggregate_id,
+                         payload
+                     ) VALUES (?, ?, 'INVITATION_REQUESTED', 'INVITATION', ?, '{}'::jsonb);
+                     INSERT INTO outbox_dispatch (event_id, organization_id)
+                     VALUES (?, ?);
+                     """)) {
+            statement.setObject(1, organizationId);
+            statement.setObject(2, eventId);
+            statement.setObject(3, organizationId);
+            statement.setObject(4, aggregateId);
+            statement.setObject(5, eventId);
+            statement.setObject(6, organizationId);
+            statement.execute();
+        }
+
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     SELECT aggregate_type, aggregate_id
+                       FROM outbox_dispatch
+                      WHERE event_id = ?
+                     """)) {
+            statement.setObject(1, eventId);
+            try (ResultSet result = statement.executeQuery()) {
+                assertTrue(result.next());
+                assertEquals("INVITATION", result.getString("aggregate_type"));
+                assertEquals(aggregateId, result.getObject("aggregate_id", UUID.class));
+            }
+        }
+    }
+
+    @Test
+    void outboxNeverDeliversACancellationBeforeItsRetriedConfirmation()
+            throws SQLException {
+        mailbox.clear();
+        UUID organizationId = UUID.randomUUID();
+        UUID reservationId = UUID.randomUUID();
+        UUID confirmationId = UUID.randomUUID();
+        UUID cancellationId = UUID.randomUUID();
+        String recipient = "ordered-" + UUID.randomUUID() + "@example.test";
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     INSERT INTO organization (id, name) VALUES (?, 'Ordered outbox tenant');
+                     INSERT INTO outbox_event (
+                         id, organization_id, event_type, aggregate_type,
+                         aggregate_id, payload, created_at
+                     ) VALUES (
+                         ?, ?, 'RESERVATION_CONFIRMED', 'RESERVATION', ?,
+                         '{}'::jsonb, '2000-01-01T00:00:00Z'
+                     );
+                     INSERT INTO outbox_dispatch (
+                         event_id, organization_id, aggregate_type, aggregate_id,
+                         created_at
+                     ) VALUES (?, ?, 'RESERVATION', ?, '2000-01-01T00:00:00Z');
+                     INSERT INTO outbox_event (
+                         id, organization_id, event_type, aggregate_type,
+                         aggregate_id, payload, created_at
+                     ) VALUES (
+                         ?, ?, 'RESERVATION_CANCELLED', 'RESERVATION', ?,
+                         CAST(? AS jsonb), '2000-01-02T00:00:00Z'
+                     );
+                     INSERT INTO outbox_dispatch (
+                         event_id, organization_id, aggregate_type, aggregate_id,
+                         created_at
+                     ) VALUES (?, ?, 'RESERVATION', ?, '2000-01-02T00:00:00Z');
+                     """)) {
+            String cancellationPayload = """
+                    {"email":"%s","reserverName":"Sam","spot":"A-24","startsAt":"2030-01-01T08:00:00Z"}
+                    """.formatted(recipient);
+            statement.setObject(1, organizationId);
+            statement.setObject(2, confirmationId);
+            statement.setObject(3, organizationId);
+            statement.setObject(4, reservationId);
+            statement.setObject(5, confirmationId);
+            statement.setObject(6, organizationId);
+            statement.setObject(7, reservationId);
+            statement.setObject(8, cancellationId);
+            statement.setObject(9, organizationId);
+            statement.setObject(10, reservationId);
+            statement.setString(11, cancellationPayload);
+            statement.setObject(12, cancellationId);
+            statement.setObject(13, organizationId);
+            statement.setObject(14, reservationId);
+            statement.execute();
+        }
+
+        assertTrue(outboxDelivery.deliverNext());
+        assertEquals(1, attemptsFor(confirmationId));
+        outboxDelivery.deliverNext();
+
+        assertEquals(0, attemptsFor(cancellationId));
+        assertTrue(mailbox.getMailsSentTo(recipient).isEmpty());
     }
 
     private void createRuntimeRole(Connection connection, String role) throws SQLException {

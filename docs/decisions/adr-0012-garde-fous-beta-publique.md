@@ -33,10 +33,14 @@ La bêta publique utilise les garde-fous suivants.
   preuve d'email ou un nouveau code flow.
 - Une `membership` `SUSPENDED` ou `LEFT` n'est jamais réactivée par la
   connexion.
+- Une organisation est refusée dès que son `status` n'est plus `ACTIVE` ou que
+  son mode canonique vaut `SUSPENDED`, y compris pour une session déjà émise.
 - Le passage `PENDING` vers `ACTIVE` reste permis pour un compte nouvellement
   vérifié.
 - Le passage `INVITED` vers `ACTIVE` exige que la connexion consomme une
-  invitation exacte encore valide. La seule égalité du domaine ne suffit pas.
+  invitation exacte encore valide. Une invitation ne peut cibler qu'un domaine
+  `CLAIMED` ou `VERIFIED` de l'organisation ; la seule égalité du domaine ne
+  suffit pas à réactiver une adhésion suspendue.
 
 ### Domaines ouverts par défaut, refus ciblé
 
@@ -75,11 +79,18 @@ de CORS en production. Elle ne remplace ni l'autorisation objet ni la RLS.
 
 Le bord HTTP applique des fenêtres fixes, configurables :
 
-- 8 entrées de connexion par IP et par 10 minutes ;
-- 5 invitations par session et par 10 minutes ;
-- 60 mutations sensibles par session et par minute.
+- 120 passages par l'entrée OIDC par IP et par 10 minutes ; une connexion
+  réussie traverse actuellement cette entrée deux fois, ce qui laisse jusqu'à
+  60 connexions collectives derrière un NAT avant le rejet ;
+- 30 invitations par IP et par 10 minutes ;
+- 300 mutations sensibles par IP et par minute.
 
-Les clés IP et session sont réduites à une empreinte en mémoire. Caddy remplace
+Le filtre HTTP de bord reste volontairement non bloquant : il ne consulte ni
+session ni base dans la phase précoce de la requête. Un cookie inventé ou
+tournant ne peut donc pas remplacer la clé réseau. Les plafonds IP,
+volontairement larges, évitent de confondre une entreprise derrière un NAT avec
+une seule personne. Les adresses IPv6 partagent une clé par préfixe `/64`. Les
+clés IP sont réduites à une empreinte en mémoire. Caddy remplace
 `X-Forwarded-For` par l'adresse du client immédiat afin que le navigateur ne
 puisse pas choisir la clé du quota. Le backend n'est pas exposé directement.
 
@@ -88,9 +99,13 @@ Un second quota transactionnel, indépendant du cookie, limite chaque adhésion
 PostgreSQL sérialise le comptage. Le rejet est HTTP `429` ; la limite courte
 ajoute `Retry-After`.
 
-Le limiteur HTTP est local au processus et borné à 50 000 compartiments. Il est
-adapté au runtime mono-instance de la bêta ; plusieurs réplicas exigeraient un
-quota partagé ou un contrôle au proxy.
+Le limiteur HTTP est local au processus et borné à 50 000 compartiments. Une
+pression de capacité évince en temps constant le compartiment admis le plus
+ancien ; elle ne balaie pas toute la table et ne ferme jamais globalement
+l'accès aux nouvelles clés. Sous attaque distribuée, cette éviction peut
+affaiblir temporairement la limite, mais elle ne doit pas rendre le service
+indisponible. Plusieurs réplicas exigeraient un quota partagé ou un contrôle au
+proxy.
 
 ### Navigateur et journaux
 
@@ -126,10 +141,15 @@ Compose.
 
 - tests unitaires des domaines personnels, jetables, publics et professionnels
   inconnus ;
-- tests déterministes des fenêtres de débit et de leur séparation ;
+- tests déterministes des fenêtres de débit, de leur séparation, de
+  l'impossibilité de contourner le budget IP avec des cookies forgés, de la
+  normalisation IPv6 `/64` et de l'admission après saturation de capacité ;
 - tests des décisions `Origin` et `Sec-Fetch-Site` ;
-- tests PostgreSQL prouvant qu'un compte ou une adhésion suspendus restent
-  suspendus dans les deux adaptateurs ;
+- tests PostgreSQL prouvant qu'un compte, une adhésion ou une organisation
+  suspendus restent inaccessibles dans les deux adaptateurs et via une session
+  déjà émise ;
+- test d'intégration refusant une invitation hors des domaines actifs de
+  l'organisation ;
 - test d'intégration du quota quotidien d'invitations ;
 - test d'image refusant un logout cross-origin avant d'accepter le même logout
   avec l'origine exacte ;

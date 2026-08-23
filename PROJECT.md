@@ -37,7 +37,7 @@ réservation.
 
 | Preuve | Baseline connue | Cible | Source | Échéance |
 | --- | --- | --- | --- | --- |
-| Parcours autonome complet | Parcours local Compose et navigateur vérifié | Une entreprise pilote exécute inscription, partage et réservation sans opérateur | Test E2E de la phase F04 | Sortie F04 |
+| Parcours autonome complet | Parcours local Compose et navigateur vérifié | Des utilisateurs publics exécutent inscription, partage et réservation sans opérateur | Test E2E de la phase F04 puis télémétrie de bêta | Ouverture publique |
 | Intégrité d'une réservation concurrente | Contraintes GiST et conflits séquentiels testés | Deux demandes simultanées produisent un succès et un conflit explicite | Test d'intégration PostgreSQL | Sortie F04 |
 | Isolation des organisations | Tenant chargé côté serveur et clés composites en place | Zéro lecture ou mutation inter-tenant dans la matrice d'autorisation | Tests d'intégration et RLS | Sortie F03 |
 | Accessibilité du parcours critique | 34 tests React, 24 audits Axe, ratios automatisés et revue clavier/mobile ; Safari réel et technologies d'assistance restent à vérifier | WCAG 2.2 AA, clavier et mobile vérifiés sur les appareils cibles | Matrice de `DESIGN.md` | Sortie F05 |
@@ -76,7 +76,7 @@ Ces cibles ne sont pas des résultats acquis.
 - impossibilité de rattacher une personne à une organisation sans exposer les
   membres ou accepter des domaines personnels ;
 - incapacité à prouver l'isolation inter-tenant et l'absence de double booking ;
-- absence de pilote capable de valider le flux cœur après F04 ;
+- absence d’usage réel du flux cœur après une fenêtre publique suffisante ;
 - coût ou délivrabilité de l'email incompatibles avec le self-service ;
 - exigences légales, immobilières ou de représentation du personnel modifiant
   la collecte minimale prévue.
@@ -101,7 +101,7 @@ Ces cibles ne sont pas des résultats acquis.
 | Historique | `CHANGELOG.md` | historique | Changements livrés |
 | Architecture | [`docs/architecture/overview.md`](docs/architecture/overview.md) | normative | Cible, pas état livré |
 | Contrat API | `api/openapi/parkventory.yaml` | normative actuelle | Authentification locale/OIDC et parcours métier versionnés |
-| Schéma de données | [`docs/architecture/domain-model.md`](docs/architecture/domain-model.md) et `backend/src/main/resources/db/migration/` | normative et opérationnelle | Migrations V1 à V3 et parcours runtime non propriétaire testés sur PostgreSQL 17.10 et 18.3 ; aucune migration Atlas exécutée |
+| Schéma de données | [`docs/architecture/domain-model.md`](docs/architecture/domain-model.md) et `backend/src/main/resources/db/migration/` | normative et opérationnelle | Migrations V1 à V4 et parcours runtime non propriétaire testés sur PostgreSQL 17.10 et 18.3 ; aucune migration Atlas exécutée |
 | Sécurité et isolation | [`docs/architecture/security-and-tenancy.md`](docs/architecture/security-and-tenancy.md) | normative | Défense en profondeur |
 | Design system | [`DESIGN.md`](DESIGN.md) et `frontend/src/styles.css` | normative et opérationnelle | Tokens, composants et responsive alignés |
 | Identité de marque | `assets/brand/parkventory-logo-transparent.svg` | normative | Master du symbole ; copies publiques synchronisées et contrôlées |
@@ -139,11 +139,11 @@ Le détail et les compromis vivent dans
 | Composant | Rôle | Statut | Exécution | Version | Source | Preuve et date | Propriétaire |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Documentation Nimbus | Rendu des Markdown classés | Actuel | Build local complet et GitHub Pages filtré | Nimbus 0.8.2 | `docs-nimbus/` | 13 tests d'adaptateur, 7 pages publiques issues de 4 sources, build/lint et probes, 2026-08-11 | nclsppr |
-| Frontend React | Landing, authentification, dashboard, partage et recherche | Actuel, réel en local et démo publique | Compose ou navigateur statique | React 19.2.8, Vite 8.1.5 | `frontend/` | 34 tests, 24 audits Axe, builds et parcours navigateur, 2026-08-11 | nclsppr |
+| Frontend React | Landing, authentification, dashboard, partage et recherche | Actuel, réel en local et démo publique | Compose ou navigateur statique | React 19.2.8, Vite 8.1.5 | `frontend/` | 44 tests, audits Axe, builds et parcours navigateur, 2026-08-23 | nclsppr |
 | API Java | Identité locale, adaptateur OIDC de production, métier, validation, santé et OpenAPI | Réel en local ; OIDC préparé sans activation | Compose, Maven 3.9.16 et Java 25 | Quarkus 3.33.3 LTS | `backend/` | Claims, profils, PostgreSQL, RLS runtime et contrat adversarial testés, 2026-08-18 | nclsppr |
-| PostgreSQL | Identité, sessions, métier, outbox, contraintes et RLS forcée | Actuel, local | Compose et Testcontainers | PostgreSQL 18.3 | migrations Flyway V1 à V3 | Migration, parcours persisté et rôle RLS adversarial vérifiés, 2026-08-18 | nclsppr |
+| PostgreSQL | Identité, sessions, métier, outbox, contraintes et RLS forcée | Sélectionné pour la bêta Atlas ; actuel en local | Cluster partagé Atlas, Compose et Testcontainers | 17.10 Atlas ; 18.3 local | migrations Flyway V1 à V4 | Upgrade non vide, parcours persisté et rôles migrateur/runtime adversariaux vérifiés sur les deux versions | nclsppr |
 | Mailpit | Liens magiques, invitations et notifications locales | Actuel, local uniquement | Compose | Mailpit 1.30.6 | `compose.yaml` | Healthcheck, API et navigateur, 2026-07-30 | nclsppr |
-| Livraison email de production | Magic links et notifications | Cible | Service externe derrière un port | Fournisseur non choisi | module `notifications` | Décision requise avant F05 | nclsppr |
+| Livraison email de production | OTP Auth0, invitations et notifications | Sélectionnée, non activée | Auth0 et SMTP externe | Resend sur `notifications.parkventory.com` | module `notifications` et ADR-0014 | Contrats locaux vérifiés ; domaine, clés et délivrabilité externe à prouver | nclsppr |
 
 ### Dépendance de mouvement de la landing
 
@@ -175,9 +175,9 @@ ni contrat, ni données, ni autre module, et son retrait est local.
 
 | Dépendance | Usage | Données transmises | Mode d'échec | Alternative |
 | --- | --- | --- | --- | --- |
-| Fournisseur email, non choisi | Liens magiques et notifications | Adresse destinataire, type de message, lien court | File d'outbox en attente ; réservation conservée | Mailpit uniquement en développement |
-| Auth0 EU, candidat non approuvé et non provisionné | Universal Login Email OTP et identité OIDC | Adresse professionnelle, métadonnées du flow et identifiant fournisseur | Nouvelles connexions indisponibles ; sessions applicatives existantes bornées par leur TTL | Rejeter le candidat ou changer de fournisseur par migration issuer/subject contrôlée |
-| Hébergement PostgreSQL, non choisi | Données applicatives | Identités minimales, organisations, places, intervalles | Application indisponible en écriture | PostgreSQL local pour développement, pas pour production |
+| Resend, sélectionné et non provisionné | OTP Auth0, invitations et notifications | Adresse destinataire, type de message, lien court | File d'outbox en attente ; réservation conservée | Mailpit uniquement en développement |
+| Auth0 EU, sélectionné et non provisionné | Universal Login Email OTP et identité OIDC | Adresse professionnelle, métadonnées du flow et identifiant fournisseur | Nouvelles connexions indisponibles ; sessions applicatives existantes bornées par leur TTL | Changer de fournisseur par migration issuer/subject contrôlée |
+| Cluster partagé Atlas PostgreSQL 17.10, sélectionné et non activé | Données applicatives | Identités minimales, organisations, places, intervalles | Application indisponible en écriture | PostgreSQL 18.3 local pour développement, pas pour production |
 | Atlas et Caddy partagé | Servir la démo statique puis le futur frontend/API | Requêtes, session et journaux minimisés après cutover | Démo indisponible aujourd'hui ; application indisponible après activation | Nouveau commit descendant statique ou release applicative descendante ; handoff de route contrôlé par `vps-infra` |
 
 ## Environnements
@@ -226,7 +226,7 @@ page 404 explicite.
 | Construire les artefacts Atlas | `./scripts/build-vps-release.sh frontend/dist <sortie> <révision>` | Archive et inventaire de routes déterministes liés à un commit complet |
 | Vérifier le contrat applicatif | `npm run production:check` | Images, Compose, OIDC fail-closed, bundle et descripteur conformes au contrat producteur exact |
 | Exercer les images applicatives | `npm run production:images:test` | Profils OIDC/local exclusifs, redirection Auth0 avec PKCE/state/nonce, frontend sans Mailpit, backend non-root, migrateur dédié, santé et runtime PostgreSQL sans DDL |
-| Construire le bundle VPS applicatif | `./scripts/build-vps-integration.sh <sortie> <révision>` | Compose app-only, inventaire, migrations V1 à V3 et probes déterministes liés au SHA |
+| Construire le bundle VPS applicatif | `./scripts/build-vps-integration.sh <sortie> <révision>` | Compose app-only, inventaire, migrations V1 à V4 et probes déterministes liés au SHA |
 
 Les commandes manuelles utilisent uniquement les services locaux autorisés.
 La démo et la documentation publique GitHub Pages sont déployées automatiquement
@@ -248,12 +248,12 @@ runbook ne sont pas satisfaits.
 - Autorisation : backend et base, jamais la seule interface.
 - Isolation actuelle : `organization_id`, clés composites, filtres serveur et
   PostgreSQL RLS forcée sous rôle runtime non propriétaire ; la configuration
-  Atlas reste à prouver avant pilote.
-- Identité candidate : Auth0 EU Email OTP préparé, claims vérifiés et
-  `app_session` interne ; ADR proposée, coût, tenant distant, secrets réels et
-  callback public non approuvés ou non provisionnés.
-- Rétention : durée exacte à décider avant pilote ; suppression et export
-  requis.
+  Atlas reste à prouver avant l'ouverture dynamique publique.
+- Identité sélectionnée : Auth0 EU Email OTP préparé, claims vérifiés et
+  `app_session` interne ; le tenant distant, les secrets réels, le callback
+  public et le flux OTP restent à provisionner et à éprouver.
+- Rétention : durées de bêta publiées, demandes d’accès/export/suppression
+  traitées manuellement ; automatisation des purges à prioriser après ouverture.
 - Sauvegarde : stratégie et restauration isolée obligatoires avant production.
 - Logs : identifiants corrélables pseudonymisés, aucun token ni email complet.
 
@@ -290,7 +290,7 @@ Le détail vit dans
   explicitement autorisée et testée.
 - Vérification finale : santé, route, parcours critique, logs et observation.
 - Observabilité cible : SmallRye Health, logs JSON, Micrometer et supervision externe.
-- Escalade : propriétaire du dépôt ; suppléant à nommer avant pilote.
+- Escalade : propriétaire du dépôt ; suppléant encore à nommer.
 
 ## Responsabilités
 
@@ -298,4 +298,4 @@ Le détail vit dans
 | --- | --- | --- | --- |
 | Produit, architecture et sécurité | nclsppr | Non nommé | `RUNBOOK.md` pour l'exploitation |
 | Documentation et design | nclsppr | Non nommé | `DOCUMENTATION.md` et `DESIGN.md` |
-| Production future | nclsppr jusqu'à délégation explicite | À nommer avant pilote | `RUNBOOK.md` |
+| Production | nclsppr jusqu'à délégation explicite | À nommer | `RUNBOOK.md` |

@@ -73,12 +73,21 @@ public class OutboxDeliveryService {
 
     private PendingDispatch lockNextDispatch(Connection connection) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
-                SELECT event_id, organization_id
-                  FROM outbox_dispatch
-                 WHERE available_at <= now()
-                 ORDER BY created_at
+                SELECT candidate.event_id, candidate.organization_id
+                  FROM outbox_dispatch candidate
+                 WHERE candidate.available_at <= now()
+                   AND NOT EXISTS (
+                       SELECT 1
+                         FROM outbox_dispatch predecessor
+                        WHERE predecessor.organization_id = candidate.organization_id
+                          AND predecessor.aggregate_type = candidate.aggregate_type
+                          AND predecessor.aggregate_id IS NOT DISTINCT FROM candidate.aggregate_id
+                          AND (predecessor.created_at, predecessor.event_id)
+                              < (candidate.created_at, candidate.event_id)
+                   )
+                 ORDER BY candidate.created_at, candidate.event_id
                  LIMIT 1
-                 FOR UPDATE SKIP LOCKED
+                 FOR UPDATE OF candidate SKIP LOCKED
                 """);
              ResultSet result = statement.executeQuery()) {
             if (!result.next()) {

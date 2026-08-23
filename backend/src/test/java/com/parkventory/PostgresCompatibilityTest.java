@@ -26,7 +26,7 @@ class PostgresCompatibilityTest {
         try (Connection connection = dataSource.getConnection();
              Statement statement = connection.createStatement()) {
             assertEquals(expectedVersion, scalar(statement, "SHOW server_version"));
-            assertEquals("3", scalar(statement, """
+            assertEquals("4", scalar(statement, """
                     SELECT version
                     FROM flyway_schema_history
                     WHERE success

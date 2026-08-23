@@ -161,6 +161,7 @@ export function AuthCallbackPage() {
 }
 
 function OidcRestartPage() {
+  const message = oidcRestartMessage(window.location.search);
   return (
     <main className="auth-page">
       <div className="auth-backdrop" aria-hidden="true" />
@@ -170,13 +171,26 @@ function OidcRestartPage() {
         <div className="auth-icon"><Mail aria-hidden="true" /></div>
         <p className="section-index">Connexion</p>
         <h1 id="callback-title">Reprenez votre connexion.</h1>
-        <p className="auth-intro">Le parcours précédent n’est plus actif.</p>
+        <p className="auth-intro" role={message.isError ? "alert" : undefined}>
+          {message.text}
+        </p>
         <a className="button button-primary" href={oidcLoginUrl}>
-          Continuer par e-mail <ArrowRight aria-hidden="true" />
+          {message.isError ? "Réessayer avec une autre adresse" : "Continuer par e-mail"}
+          <ArrowRight aria-hidden="true" />
         </a>
       </section>
     </main>
   );
+}
+
+export function oidcRestartMessage(search: string) {
+  if (new URLSearchParams(search).get("error") === "professional-email") {
+    return {
+      isError: true,
+      text: "Cette adresse ne peut pas rejoindre Parkventory. Utilisez une adresse e-mail professionnelle.",
+    };
+  }
+  return { isError: false, text: "Le parcours précédent n’est plus actif." };
 }
 
 function LocalAuthCallbackPage() {

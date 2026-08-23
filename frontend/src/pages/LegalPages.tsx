@@ -113,16 +113,16 @@ export function PrivacyPage() {
       </section>
 
       <section>
-        <h2>Durées de la bêta</h2>
+        <h2>Conservation pendant la bêta</h2>
         <ul>
-          <li>compte et adhésion : pendant l’utilisation du service, puis suppression sur demande ;</li>
-          <li>invitations expirées : 30 jours ;</li>
-          <li>offres et réservations terminées : 12 mois au maximum ;</li>
-          <li>journaux techniques : 30 jours ;</li>
-          <li>sauvegardes : rotation sur 30 jours.</li>
+          <li>les sessions et invitations deviennent inutilisables au plus tard après 7 jours ;</li>
+          <li>le compte, l’adhésion et l’historique métier sont conservés pendant la bêta pour faire fonctionner et sécuriser le service ;</li>
+          <li>les journaux techniques et sauvegardes suivent les limites configurées par l’hébergeur et ne sont pas conservés au-delà du besoin d’exploitation.</li>
         </ul>
         <p>
-          Les purges sont contrôlées manuellement pendant la bêta avant leur automatisation.
+          Les demandes d’accès, d’export et de suppression sont traitées manuellement. Aucune
+          purge automatique n’est présentée comme active à ce stade ; des durées plus précises
+          seront publiées avec son automatisation.
         </p>
       </section>
 

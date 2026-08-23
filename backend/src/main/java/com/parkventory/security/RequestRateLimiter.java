@@ -3,23 +3,34 @@ package com.parkventory.security;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.time.Duration;
+import java.util.ArrayDeque;
+import java.util.HashMap;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.LongSupplier;
 
 @ApplicationScoped
 public class RequestRateLimiter {
-    private static final int MAX_BUCKETS = 50_000;
+    private static final int DEFAULT_MAX_BUCKETS = 50_000;
 
-    private final ConcurrentHashMap<BucketKey, Bucket> buckets = new ConcurrentHashMap<>();
+    private final HashMap<BucketKey, Bucket> buckets = new HashMap<>();
+    private final ArrayDeque<BucketKey> admissionOrder = new ArrayDeque<>();
     private final LongSupplier nowMillis;
+    private final int maxBuckets;
 
     public RequestRateLimiter() {
-        this(System::currentTimeMillis);
+        this(System::currentTimeMillis, DEFAULT_MAX_BUCKETS);
     }
 
     RequestRateLimiter(LongSupplier nowMillis) {
+        this(nowMillis, DEFAULT_MAX_BUCKETS);
+    }
+
+    RequestRateLimiter(LongSupplier nowMillis, int maxBuckets) {
         this.nowMillis = Objects.requireNonNull(nowMillis);
+        if (maxBuckets < 1) {
+            throw new IllegalArgumentException("Le nombre de compartiments doit être positif.");
+        }
+        this.maxBuckets = maxBuckets;
     }
 
     public Decision acquire(String scope, String subject, int limit, Duration window) {
@@ -34,25 +45,38 @@ public class RequestRateLimiter {
         long now = nowMillis.getAsLong();
         long windowStart = Math.floorDiv(now, windowMillis) * windowMillis;
         BucketKey key = new BucketKey(scope, subject);
-        if (buckets.size() >= MAX_BUCKETS && !buckets.containsKey(key)) {
-            buckets.entrySet().removeIf(entry -> entry.getValue().expiresAtMillis() <= now);
-            if (buckets.size() >= MAX_BUCKETS) {
-                return Decision.rejected(retryAfterSeconds(now, windowStart + windowMillis));
-            }
-        }
 
-        Decision[] decision = new Decision[1];
-        buckets.compute(key, (ignored, current) -> {
+        synchronized (buckets) {
+            Bucket current = buckets.get(key);
+            if (current == null) {
+                evictForAdmission();
+                admissionOrder.addLast(key);
+            }
             int count = current == null || current.windowStartMillis() != windowStart
                     ? 1
                     : current.count() + 1;
             long expiresAt = windowStart + windowMillis;
-            decision[0] = count <= limit
+            buckets.put(key, new Bucket(windowStart, expiresAt, count));
+            return count <= limit
                     ? Decision.allowed(limit - count)
                     : Decision.rejected(retryAfterSeconds(now, expiresAt));
-            return new Bucket(windowStart, expiresAt, count);
-        });
-        return decision[0];
+        }
+    }
+
+    private void evictForAdmission() {
+        while (buckets.size() >= maxBuckets) {
+            BucketKey oldest = admissionOrder.pollFirst();
+            if (oldest == null) {
+                return;
+            }
+            buckets.remove(oldest);
+        }
+    }
+
+    int bucketCount() {
+        synchronized (buckets) {
+            return buckets.size();
+        }
     }
 
     private static long retryAfterSeconds(long now, long expiresAt) {
