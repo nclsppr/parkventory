@@ -32,7 +32,6 @@ qui doit être tranché avant la phase nommée, sans bloquer la documentation F0
 | --- | --- | --- |
 | Cutover Atlas statique vers Compose | Même origine sur Atlas ; démo statique seule propriétaire tant que le contrôleur reste désactivé | Procédure exclusive, convergence live et rollback prouvés avant F05 |
 | PostgreSQL managé | Préféré pour sauvegarde et PITR | Avant F05 |
-| Fournisseur email | Mailpit `v1.30.6` local ; port Quarkus remplaçable | Fournisseur réel avant F05 |
 | Liste de domaines | Source versionnée et contestable | Pendant F03 |
 | Rétention de l'outbox | Courte après succès, longue pour audit agrégé | Avant F04 |
 | Native image Quarkus | Non au MVP | Seulement après mesure |

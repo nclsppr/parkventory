@@ -7,6 +7,9 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Ajouté
 
+- ADR-0013 retenant Resend pour l'OTP Auth0 et les e-mails transactionnels de
+  la bêta, sur un sous-domaine isolé, avec deux clés séparées, suivi désactivé
+  et recette de délivrabilité avant activation ;
 - pages publiques de confidentialité et de mentions légales, accessibles par
   URL directe dans les artefacts Pages et Atlas, avec contenu distinct pour la
   démo statique et le service dynamique, contact opérateur et couverture React ;

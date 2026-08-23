@@ -229,11 +229,10 @@ du `known_hosts` protégé.
 
 ## Préconditions du candidat OIDC Auth0 EU
 
-L’[ADR-0010 proposée](docs/decisions/adr-0010-auth0-email-otp-production.md)
-décrit le contrat préparé. Le propriétaire doit d’abord accepter le
-sous-traitant, la région, le coût et les conditions. Les actions fournisseur
-ci-dessous exigent ensuite une autorisation explicite ; ce dépôt ne crée ni
-compte ni tenant.
+L’[ADR-0010 acceptée](docs/decisions/adr-0010-auth0-email-otp-production.md)
+décrit le contrat préparé. Le choix technique ne remplace pas l'acceptation du
+sous-traitant, de la région, du coût et des conditions au moment du
+provisionnement. Ce dépôt ne contient ni compte ni tenant.
 
 ### Contrat distant à vérifier avant injection des secrets
 
@@ -303,6 +302,48 @@ interdit de corriger cet échec avec une valeur factice en production.
 En cas d’indisponibilité ou de configuration incomplète, suspendre les nouvelles
 connexions ou laisser Compose désactivé. Ne jamais réactiver les magic links
 locaux sur la surface publique.
+
+## Transport e-mail Resend
+
+L'[ADR-0013](docs/decisions/adr-0013-resend-email-beta-publique.md) retient un
+seul transport pour l'OTP Auth0 et les messages Quarkus. Le sous-domaine
+`notifications.parkventory.com` évite de modifier le courrier OVH déjà attaché
+au domaine racine.
+
+### Contrat distant
+
+1. Créer ou sélectionner le compte Resend approuvé par le propriétaire.
+2. Ajouter `notifications.parkventory.com`, puis publier exactement les valeurs
+   SPF, DKIM et MX générées par le fournisseur sans toucher aux enregistrements
+   racine.
+3. Attendre le statut `verified` et contrôler les valeurs depuis au moins deux
+   résolveurs publics.
+4. Créer deux clés distinctes : une pour l'intégration Auth0, une pour le relais
+   SMTP du backend. Ne jamais les copier dans ce dépôt ou un log.
+5. Configurer Auth0 avec l'intégration Resend native et l'expéditeur
+   `Parkventory <no-reply@notifications.parkventory.com>`.
+6. Injecter sur Atlas les valeurs non secrètes `smtp.resend.com`, `587` et le
+   même expéditeur. Les fichiers `parkventory-smtp-username` et
+   `parkventory-smtp-password` contiennent respectivement `resend` et la clé
+   SMTP dédiée.
+7. Laisser le suivi d'ouverture et de clic désactivé et surveiller les limites
+   de 100 e-mails par jour et 3 000 par mois de l'offre gratuite initiale.
+
+### Recette avant trafic réel
+
+- envoyer un OTP Auth0 à deux boîtes de fournisseurs différents et terminer le
+  code flow ;
+- envoyer une invitation Quarkus et vérifier son expéditeur, son sujet et son
+  lien HTTPS sans token applicatif ;
+- vérifier SPF et DKIM dans les en-têtes reçus ;
+- provoquer un échec SMTP avec une clé de recette révoquée et vérifier une
+  alerte sans secret ni adresse destinataire dans les journaux ;
+- remettre uniquement la clé valide par la procédure protégée, puis prouver un
+  nouvel envoi réussi.
+
+Le transport Auth0 intégré, limité et non destiné à la production, n'est pas un
+fallback public. Si Resend ou son domaine n'est pas prêt, garder Compose
+désactivé.
 
 ## Sauvegarde et restauration isolée
 
