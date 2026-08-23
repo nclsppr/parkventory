@@ -114,6 +114,9 @@ class PublicRequestSecurityFilterTest {
         JsonNode document = new ObjectMapper(new YAMLFactory()).readTree(specification.toFile());
         assertFalse(document.at("/components/responses/RateLimited").isMissingNode());
         assertFalse(document.at("/components/responses/Forbidden").isMissingNode());
+        assertEquals(
+                366,
+                document.at("/components/schemas/Dashboard/properties/activeShares/maxItems").asInt());
 
         Map<String, String> productionPolicies = new TreeMap<>();
         Set<String> nonProductionOperations = new TreeSet<>();

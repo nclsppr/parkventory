@@ -44,6 +44,7 @@ change durablement une règle structurante exige une ADR.
 | AVL-005 | Une offre retirée n'est plus réservable mais reste traçable. |
 | AVL-006 | Une offre couvrant une réservation active ne peut pas être retirée ; le réservataire doit d'abord annuler. |
 | AVL-007 | La journée entière est convertie depuis le calendrier et le fuseau du site, jamais en durée fixe de vingt-quatre heures. |
+| AVL-008 | Un membre possède au plus 366 offres futures encore publiées ; les publications concurrentes sont sérialisées avant contrôle de cette limite. |
 
 ## Réservations
 

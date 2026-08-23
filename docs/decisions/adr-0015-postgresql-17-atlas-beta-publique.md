@@ -14,11 +14,11 @@ partagé PostgreSQL 17.10, isolé par base, rôles et réseaux applicatifs. Atte
 un second cluster PostgreSQL 18 retarderait l'ouverture sans répondre à un
 besoin produit observé.
 
-Les migrations V1 à V4, les exclusions temporelles, la RLS forcée, le runtime
+Les migrations V1 à V5, les exclusions temporelles, la RLS forcée, le runtime
 non propriétaire et le parcours métier complet sont exercés sur les images
-exactes PostgreSQL 17.10 et 18.3. La reprise V3 vers V4 est également testée sur
-une base non vide avec un migrateur propriétaire `NOSUPERUSER` et
-`NOBYPASSRLS`.
+exactes PostgreSQL 17.10 et 18.3. La reprise V3 vers le catalogue courant est
+également testée sur une base non vide avec un migrateur propriétaire
+`NOSUPERUSER` et `NOBYPASSRLS`.
 
 ## Décision
 
@@ -54,8 +54,8 @@ pas une condition de lancement.
 
 Le contrat `backend/postgres-compatibility.json` fixe
 `atlas-shared-cluster-production` à 17.10 et conserve 18.3 comme baseline. La
-gate refuse une décision redevenue indéterminée, rejoue V1 puis V4 sur une base
-non vide avec le rôle migrateur réel, exécute la suite Quarkus complète et
+gate refuse une décision redevenue indéterminée, rejoue V1 puis le catalogue
+courant sur une base non vide avec le rôle migrateur réel, exécute la suite Quarkus complète et
 répète le parcours sous rôle runtime RLS sur les deux versions.
 
 La preuve locale du 2026-08-23 est verte. La compatibilité et la restauration

@@ -120,7 +120,7 @@ WHERE (status IN ('HELD', 'CONFIRMED'));
 - Environnements : local et CI Linux.
 - Résultat attendu : exactement un succès, un conflit `409`, aucune ligne
   chevauchante ; deux intervalles adjacents sont acceptés.
-- Preuve observée : migrations V1 à V4 appliquées sur PostgreSQL 18.3 ; deux
+- Preuve observée : migrations V1 à V5 appliquées sur PostgreSQL 18.3 ; deux
   requêtes HTTP concurrentes vers la même offre produisent exactement un succès
   et un conflit `409`. L'annulation et le retrait idempotents sont couverts par
   le parcours d'intégration de l'ADR-0013.

@@ -14,13 +14,48 @@ import {
 import { ApiError, declareSpot, shareSpot, withdrawAvailability } from "../api/client";
 import { isPublicDemo } from "../config";
 import { dateInputValue, formatInputDate } from "../lib/dates";
-import type { DashboardData } from "../types";
+import type { AvailabilityItem, DashboardData, ShareRequest } from "../types";
 
 interface SharePageProps {
   data: DashboardData;
   onDemoMutation: (mutation: (current: DashboardData) => DashboardData) => void;
   onRefresh: (showLoading?: boolean) => Promise<void>;
   onSessionExpired: () => void;
+}
+
+export function addDemoShare(
+  current: DashboardData,
+  request: ShareRequest,
+  id: string = crypto.randomUUID(),
+): DashboardData {
+  const item: AvailabilityItem = {
+    id,
+    dateLabel: formatInputDate(request.date),
+    timeLabel: `${request.from} – ${request.to}`,
+    timeZone: current.user.assignedSiteTimeZone ?? "Fuseau non renseigné",
+    spot: request.spot,
+    level: current.user.assignedLevel ?? "Niveau non renseigné",
+    status: "UNAVAILABLE",
+    viewerRelation: "OFFERED",
+    reservationId: null,
+    canCancel: false,
+    canWithdraw: true,
+  };
+  const isInDiscoveryWindow = request.date >= dateInputValue()
+    && request.date <= dateInputValue(7);
+
+  return {
+    ...current,
+    organization: {
+      ...current.organization,
+      sharedTotal: current.organization.sharedTotal + 1,
+    },
+    stats: { ...current.stats, shares: current.stats.shares + 1 },
+    availability: isInDiscoveryWindow
+      ? [...current.availability, { ...item }]
+      : current.availability,
+    activeShares: [...current.activeShares, item],
+  };
 }
 
 export function SharePage({
@@ -37,7 +72,7 @@ export function SharePage({
   const [spotForm, setSpotForm] = useState({ label: "", level: "" });
   const [shareForm, setShareForm] = useState({
     spot: data.user.assignedSpot ?? "",
-    date: dateInputValue(1),
+    date: dateInputValue(isPublicDemo ? 2 : 1),
     from: "08:00",
     to: "18:00",
   });
@@ -98,14 +133,7 @@ export function SharePage({
     try {
       const response = await shareSpot(shareForm);
       if (isPublicDemo) {
-        onDemoMutation((current) => ({
-          ...current,
-          organization: {
-            ...current.organization,
-            sharedTotal: current.organization.sharedTotal + 1,
-          },
-          stats: { ...current.stats, shares: current.stats.shares + 1 },
-        }));
+        onDemoMutation((current) => addDemoShare(current, shareForm));
       } else {
         await onRefresh(false);
       }

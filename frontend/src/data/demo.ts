@@ -1,6 +1,22 @@
-import type { DashboardData } from "../types";
+import { dateInputValue, formatInputDate } from "../lib/dates";
+import type { AvailabilityItem, DashboardData } from "../types";
 
 const demoTimeZone = "Europe/Paris";
+const demoDateLabel = (daysFromToday: number) => formatInputDate(dateInputValue(daysFromToday));
+
+const demoOwnShare = {
+  id: "availability-a24-thu",
+  dateLabel: demoDateLabel(1),
+  timeLabel: "08:00 – 18:00",
+  timeZone: demoTimeZone,
+  spot: "A-24",
+  level: "Niveau A",
+  status: "UNAVAILABLE",
+  viewerRelation: "OFFERED",
+  reservationId: null,
+  canCancel: false,
+  canWithdraw: true,
+} satisfies AvailabilityItem;
 
 export const demoDashboard: DashboardData = {
   demo: true,
@@ -22,22 +38,10 @@ export const demoDashboard: DashboardData = {
     availableSpots: 27,
   },
   availability: [
-    {
-      id: "availability-a24-thu",
-      dateLabel: "Jeu. 30 juillet",
-      timeLabel: "08:00 – 18:00",
-      timeZone: demoTimeZone,
-      spot: "A-24",
-      level: "Niveau A",
-      status: "UNAVAILABLE",
-      viewerRelation: "OFFERED",
-      reservationId: null,
-      canCancel: false,
-      canWithdraw: true,
-    },
+    demoOwnShare,
     {
       id: "availability-b18-fri",
-      dateLabel: "Ven. 31 juillet",
+      dateLabel: demoDateLabel(2),
       timeLabel: "09:00 – 17:00",
       timeZone: demoTimeZone,
       spot: "B-18",
@@ -50,7 +54,7 @@ export const demoDashboard: DashboardData = {
     },
     {
       id: "availability-c07-mon",
-      dateLabel: "Lun. 3 août",
+      dateLabel: demoDateLabel(3),
       timeLabel: "12:00 – 16:00",
       timeZone: demoTimeZone,
       spot: "C-07",
@@ -63,7 +67,7 @@ export const demoDashboard: DashboardData = {
     },
     {
       id: "availability-d12-tue",
-      dateLabel: "Mar. 4 août",
+      dateLabel: demoDateLabel(4),
       timeLabel: "08:30 – 18:00",
       timeZone: demoTimeZone,
       spot: "D-12",
@@ -76,7 +80,7 @@ export const demoDashboard: DashboardData = {
     },
     {
       id: "availability-e03-wed",
-      dateLabel: "Mer. 5 août",
+      dateLabel: demoDateLabel(5),
       timeLabel: "10:00 – 14:00",
       timeZone: demoTimeZone,
       spot: "E-03",
@@ -88,21 +92,7 @@ export const demoDashboard: DashboardData = {
       canWithdraw: false,
     },
   ],
-  activeShares: [
-    {
-      id: "availability-a24-thu",
-      dateLabel: "Jeu. 30 juillet",
-      timeLabel: "08:00 – 18:00",
-      timeZone: demoTimeZone,
-      spot: "A-24",
-      level: "Niveau A",
-      status: "UNAVAILABLE",
-      viewerRelation: "OFFERED",
-      reservationId: null,
-      canCancel: false,
-      canWithdraw: true,
-    },
-  ],
+  activeShares: [{ ...demoOwnShare }],
   thanks: [
     {
       id: "thanks-julie",

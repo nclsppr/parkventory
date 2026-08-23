@@ -197,7 +197,7 @@ SQL
     fi
   )
 
-  echo "Vérification de la reprise V3 vers V4 sous rôle migrateur non privilégié"
+  echo "Vérification de la reprise V3 vers le catalogue courant sous rôle migrateur non privilégié"
   (
     cd "${PROJECT_ROOT}/backend"
     if command -v mise >/dev/null 2>&1; then

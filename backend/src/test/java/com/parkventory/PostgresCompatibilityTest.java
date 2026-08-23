@@ -26,12 +26,21 @@ class PostgresCompatibilityTest {
         try (Connection connection = dataSource.getConnection();
              Statement statement = connection.createStatement()) {
             assertEquals(expectedVersion, scalar(statement, "SHOW server_version"));
-            assertEquals("4", scalar(statement, """
+            assertEquals("5", scalar(statement, """
                     SELECT version
                     FROM flyway_schema_history
                     WHERE success
                     ORDER BY installed_rank DESC
                     LIMIT 1
+                    """));
+            assertEquals("1", scalar(statement, """
+                    SELECT count(*)
+                    FROM pg_indexes
+                    WHERE schemaname = 'public'
+                      AND tablename = 'availability_offer'
+                      AND indexname = 'idx_offer_owner_active'
+                      AND indexdef LIKE '%(organization_id, offered_by_membership_id, ends_at, starts_at)%'
+                      AND indexdef LIKE '%WHERE (status = ''PUBLISHED''%'
                     """));
             assertEquals("1", scalar(statement, """
                     SELECT count(*)

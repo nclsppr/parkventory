@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Parkventory API
-  version: 0.4.2
+  version: 0.4.3
   description: >-
     Contrat des adaptateurs d’identité exclusifs par profil. Le lien magique et
     Mailpit existent hors production ; Auth0 Universal Login Email OTP existe
@@ -209,7 +209,7 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
         "409":
-          description: Affectation absente ou offre chevauchante
+          description: Affectation absente, offre chevauchante ou limite de partages actifs atteinte
         "429":
           $ref: "#/components/responses/RateLimited"
   /availability/{availabilityId}/reservations:
@@ -442,7 +442,8 @@ components:
             $ref: "#/components/schemas/Availability"
         activeShares:
           type: array
-          description: Tous les partages futurs encore publiés par le membre courant
+          maxItems: 366
+          description: Partages futurs encore publiés par le membre courant, plafonnés transactionnellement à 366
           items:
             $ref: "#/components/schemas/Availability"
         thanks:

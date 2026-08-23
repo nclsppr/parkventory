@@ -101,7 +101,7 @@ Ces cibles ne sont pas des résultats acquis.
 | Historique | `CHANGELOG.md` | historique | Changements livrés |
 | Architecture | [`docs/architecture/overview.md`](docs/architecture/overview.md) | normative | Cible, pas état livré |
 | Contrat API | `api/openapi/parkventory.yaml` | normative actuelle | Authentification locale/OIDC et parcours métier versionnés |
-| Schéma de données | [`docs/architecture/domain-model.md`](docs/architecture/domain-model.md) et `backend/src/main/resources/db/migration/` | normative et opérationnelle | Migrations V1 à V4 et parcours runtime non propriétaire testés sur PostgreSQL 17.10 et 18.3 ; aucune migration Atlas exécutée |
+| Schéma de données | [`docs/architecture/domain-model.md`](docs/architecture/domain-model.md) et `backend/src/main/resources/db/migration/` | normative et opérationnelle | Migrations V1 à V5 et parcours runtime non propriétaire testés sur PostgreSQL 17.10 et 18.3 ; aucune migration Atlas exécutée |
 | Sécurité et isolation | [`docs/architecture/security-and-tenancy.md`](docs/architecture/security-and-tenancy.md) | normative | Défense en profondeur |
 | Design system | [`DESIGN.md`](DESIGN.md) et `frontend/src/styles.css` | normative et opérationnelle | Tokens, composants et responsive alignés |
 | Identité de marque | `assets/brand/parkventory-logo-transparent.svg` | normative | Master du symbole ; copies publiques synchronisées et contrôlées |
@@ -139,9 +139,9 @@ Le détail et les compromis vivent dans
 | Composant | Rôle | Statut | Exécution | Version | Source | Preuve et date | Propriétaire |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Documentation Nimbus | Rendu des Markdown classés | Actuel | Build local complet et GitHub Pages filtré | Nimbus 0.8.2 | `docs-nimbus/` | 13 tests d'adaptateur, 7 pages publiques issues de 4 sources, build/lint et probes, 2026-08-11 | nclsppr |
-| Frontend React | Landing, authentification, dashboard, partage et recherche | Actuel, réel en local et démo publique | Compose ou navigateur statique | React 19.2.8, Vite 8.1.5 | `frontend/` | 44 tests, audits Axe, builds et parcours navigateur, 2026-08-23 | nclsppr |
+| Frontend React | Landing, authentification, dashboard, partage et recherche | Actuel, réel en local et démo publique | Compose ou navigateur statique | React 19.2.8, Vite 8.1.5 | `frontend/` | 48 tests, audits Axe, builds et parcours navigateur, 2026-08-23 | nclsppr |
 | API Java | Identité locale, adaptateur OIDC de production, métier, validation, santé et OpenAPI | Réel en local ; OIDC préparé sans activation | Compose, Maven 3.9.16 et Java 25 | Quarkus 3.33.3 LTS | `backend/` | Claims, profils, PostgreSQL, RLS runtime et contrat adversarial testés, 2026-08-18 | nclsppr |
-| PostgreSQL | Identité, sessions, métier, outbox, contraintes et RLS forcée | Sélectionné pour la bêta Atlas ; actuel en local | Cluster partagé Atlas, Compose et Testcontainers | 17.10 Atlas ; 18.3 local | migrations Flyway V1 à V4 | Upgrade non vide, parcours persisté et rôles migrateur/runtime adversariaux vérifiés sur les deux versions | nclsppr |
+| PostgreSQL | Identité, sessions, métier, outbox, contraintes et RLS forcée | Sélectionné pour la bêta Atlas ; actuel en local | Cluster partagé Atlas, Compose et Testcontainers | 17.10 Atlas ; 18.3 local | migrations Flyway V1 à V5 | Upgrade non vide, parcours persisté et rôles migrateur/runtime adversariaux vérifiés sur les deux versions | nclsppr |
 | Mailpit | Liens magiques, invitations et notifications locales | Actuel, local uniquement | Compose | Mailpit 1.30.6 | `compose.yaml` | Healthcheck, API et navigateur, 2026-07-30 | nclsppr |
 | Livraison email de production | OTP Auth0, invitations et notifications | Sélectionnée, non activée | Auth0 et SMTP externe | Resend sur `notifications.parkventory.com` | module `notifications` et ADR-0014 | Contrats locaux vérifiés ; domaine, clés et délivrabilité externe à prouver | nclsppr |
 
@@ -226,7 +226,7 @@ page 404 explicite.
 | Construire les artefacts Atlas | `./scripts/build-vps-release.sh frontend/dist <sortie> <révision>` | Archive et inventaire de routes déterministes liés à un commit complet |
 | Vérifier le contrat applicatif | `npm run production:check` | Images, Compose, OIDC fail-closed, bundle et descripteur conformes au contrat producteur exact |
 | Exercer les images applicatives | `npm run production:images:test` | Profils OIDC/local exclusifs, redirection Auth0 avec PKCE/state/nonce, frontend sans Mailpit, backend non-root, migrateur dédié, santé et runtime PostgreSQL sans DDL |
-| Construire le bundle VPS applicatif | `./scripts/build-vps-integration.sh <sortie> <révision>` | Compose app-only, inventaire, migrations V1 à V4 et probes déterministes liés au SHA |
+| Construire le bundle VPS applicatif | `./scripts/build-vps-integration.sh <sortie> <révision>` | Compose app-only, inventaire, migrations V1 à V5 et probes déterministes liés au SHA |
 
 Les commandes manuelles utilisent uniquement les services locaux autorisés.
 La démo et la documentation publique GitHub Pages sont déployées automatiquement

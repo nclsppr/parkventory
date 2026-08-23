@@ -47,7 +47,7 @@ Atlas avec les commandes de ce runbook.
 | Premier candidat applicatif | `application-release@sha256:384f736a81089a9a91a7ff55b21d552a6d803d65ab8e33daa296b54d990209a3` publié et attesté | Workflow Application release `32071732734` | 2026-08-18 |
 | Contrôleur Compose | Code fusionné sur `vps-infra/main`, Parkventory `enabled: false`, convergence live de cette révision non prouvée | Contrats centraux statique et applicatif | 2026-08-18 |
 | État dynamique | Aucun secret, aucune base, aucun service Compose et aucune migration Parkventory sur Atlas | État Atlas vérifié | 2026-08-18 |
-| Compatibilité PostgreSQL | V1 seule, reprise V3 vers V4 non vide, suite Quarkus et parcours sous rôles migrateur/runtime non privilégiés réussis sur les images exactes 17.10 et 18.3 | `npm run postgres:verify` | 2026-08-23, preuve locale sans migration Atlas |
+| Compatibilité PostgreSQL | V1 seule, reprise V3 vers V5 non vide, suite Quarkus et parcours sous rôles migrateur/runtime non privilégiés réussis sur les images exactes 17.10 et 18.3 | `npm run postgres:verify` | 2026-08-23, preuve locale sans migration Atlas |
 
 ### Cible
 

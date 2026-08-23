@@ -20,12 +20,13 @@ active bloque toujours le retrait. Les deux transitions sont idempotentes et
 auditées.
 
 Le test d'intégration Quarkus exerce également deux réservations HTTP
-simultanées et observe exactement un succès et un conflit `409`. La gate locale
+simultanées et observe exactement un succès et un conflit `409`. Deux
+publications simultanées à la limite active produisent aussi un seul succès. La gate locale
 complète `npm run verify` réussit sur le worktree final : 46 Markdown et builds
-documentaires, 24 contrôles de contrat, 45 tests React, audit npm sans
-vulnérabilité, builds frontend, migration V1 isolée, reprise V3 vers V4 non
-vide et 40 tests Quarkus sur chacune des images PostgreSQL 17.10 et 18.3, puis
-6 tests métier sous rôle runtime RLS sur chacune. Le smoke Compose repart sans
+documentaires, 24 contrôles de contrat, 48 tests React, audit npm sans
+vulnérabilité, builds frontend, migration V1 isolée, reprise V3 vers V5 non
+vide et 41 tests Quarkus sur chacune des images PostgreSQL 17.10 et 18.3, puis
+9 tests métier sous rôle runtime RLS sur chacune. Le smoke Compose repart sans
 cache et couvre identité, partage, réservation, annulation, retrait,
 notification et invitation. Ce delta ne constitue ni un push, ni une release,
 ni une activation de production, ni une preuve publique. Les routes Partager
@@ -77,7 +78,7 @@ applicatif ne l'appelle tant que l'entrée reste désactivée. Le domaine et la
 route restent donc exclusivement détenus par la démo statique jusqu'à une
 bascule plateforme distincte et auditée.
 
-Une gate de préparation vérifie maintenant les migrations V1 à V4 et les
+Une gate de préparation vérifie maintenant les migrations V1 à V5 et les
 tests Quarkus sur les images exactes PostgreSQL 17.10 et 18.3. L'ADR-0015
 sélectionne PostgreSQL 17.10 sur le cluster partagé Atlas pour la bêta publique,
 tandis que PostgreSQL 18.3 reste la baseline locale. Cette sélection ne crée
@@ -139,10 +140,10 @@ graphe local intégré.
 | Identité locale | Lien 256 bits, hash en base, durée 15 min, consommation unique, session `HttpOnly` 7 jours | Tests Quarkus, smoke Compose, parcours navigateur | Endpoints supprimés du build `prod` |
 | Identité OIDC sélectionnée | Auth0 EU Universal Login Email OTP, client confidentiel, PKCE/state/nonce, issuer/audience exacts, claims vérifiés et pont `app_session` tenant | Tests de profils, claims et provisioning PostgreSQL sous rôle runtime non propriétaire ; contrat adversarial et images de production | Tenant, secrets réels, callback public et flux OTP externe absents |
 | Communauté | Invitation exacte prioritaire, sinon organisation communautaire unique par domaine | PostgreSQL réel et tests d'intégration | Domaine partagé/filiales et liste anti-abus à durcir |
-| Application React | Connexion, dashboard de synthèse, routes dédiées de partage et recherche, réservation, annulation, retrait, invitation, chargements, erreurs, états vides et choix clair/sombre persistant | 44 tests Vitest, build, navigation History API et navigateur sans erreur console | Client OpenAPI encore manuel ; recherche limitée à l'agenda de sept jours |
+| Application React | Connexion, dashboard de synthèse, routes dédiées de partage et recherche, réservation, annulation, retrait, invitation, chargements, erreurs, états vides et choix clair/sombre persistant | 48 tests Vitest, build, navigation History API et navigateur sans erreur console | Client OpenAPI encore manuel ; recherche limitée à l'agenda de sept jours |
 | Identité visuelle | Master SVG fourni utilisé dans les huit emplacements React, les favicons, le header Nimbus et les cartes Open Graph ; palettes sombre et claire sémantiques ; plaque de contraste claire sans recoloration du master | Gate anti-dérive, tests de ratios et revue des deux thèmes desktop/mobile | Symbole seul ; aucun wordmark vectoriel ni variante monochrome |
-| API Quarkus | Session, dashboard, place, partage, réservation/annulation/retrait idempotents et invitation | Migration V1 isolée, reprise V3 vers V4 non vide et 40 tests sur chacune des images exactes PostgreSQL 17.10 et 18.3, contrat OpenAPI `0.4.2` | Administration absente |
-| PostgreSQL | Schéma multi-tenant, sessions, métier, outbox ordonnée par agrégat, audit, idempotence, exclusions GiST et RLS forcée | V1 isolée, migration jusqu'à V4, `btree_gist`, trois exclusions, test adversarial et parcours sous rôle non propriétaire sur 17.10 et 18.3 | Rôle runtime et migrations Atlas restent à vérifier en live avant activation |
+| API Quarkus | Session, dashboard, place, partage borné, réservation/annulation/retrait idempotents et invitation | Migration V1 isolée, reprise V3 vers V5 non vide et 41 tests sur chacune des images exactes PostgreSQL 17.10 et 18.3, contrat OpenAPI `0.4.3` | Administration absente |
+| PostgreSQL | Schéma multi-tenant, sessions, métier, outbox ordonnée par agrégat, audit, idempotence, exclusions GiST, index de gestion des offres et RLS forcée | V1 isolée, migration jusqu'à V5, `btree_gist`, trois exclusions, test adversarial et parcours sous rôle non propriétaire sur 17.10 et 18.3 | Rôle runtime et migrations Atlas restent à vérifier en live avant activation |
 | Notifications | Invitation, réservation et annulation écrites avec l'outbox ordonnée puis livrées avec reprise bornée | Messages observés dans Mailpit | Délivrabilité Resend externe non prouvée |
 | Environnement | Quatre services Compose, images par digest, healthchecks et volumes | Checker indépendant, smoke complet et stack locale saine | Docker ou OrbStack requis |
 | Démo Pages | Landing animée, dashboard, partage et recherche statiques sous `/parkventory/` | Run Pages `32071732707` réussi sur `583e0e2` | Aucun compte, email ou stockage distant |

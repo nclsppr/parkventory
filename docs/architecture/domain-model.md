@@ -1,7 +1,7 @@
 # Modèle de domaine
 
 Ce document décrit les agrégats et invariants cibles. Les migrations Flyway V1
-à V4 sont la source exécutable du schéma local ; toute divergence est signalée
+à V5 sont la source exécutable du schéma local ; toute divergence est signalée
 et corrigée.
 
 ## Vue d'ensemble

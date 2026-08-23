@@ -10,6 +10,12 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 - liste de gestion distincte contenant tous les partages futurs du membre,
   sans reprendre la fenêtre de recherche bornée à sept jours, afin qu'un
   créneau publié longtemps à l'avance reste visible et retirable ;
+- plafond transactionnel de 366 partages futurs actifs par membre, appliqué
+  sous verrou concurrent et reflété dans OpenAPI, avec index PostgreSQL partiel
+  dédié à la liste de gestion ;
+- dates de démonstration relatives au jour courant et ajout immédiat d'un
+  partage simulé dans « Mes partages actifs », ainsi que dans la recherche
+  lorsqu'il appartient aux sept prochains jours ;
 - retour lisible vers l'interface lorsqu'Auth0 vérifie une adresse refusée par
   la politique professionnelle, sans refléter l'adresse ni laisser de session
   OIDC locale réutilisable ;
@@ -18,7 +24,7 @@ la source du diff technique et les ADR expliquent les décisions importantes.
   recherche indépendamment du fuseau du navigateur ;
 - ADR-0015 sélectionnant le cluster partagé Atlas PostgreSQL 17.10 pour la
   bêta publique, avec PostgreSQL 18.3 conservé comme baseline locale et preuve
-  d'upgrade V3 vers V4 sous le vrai profil de migrateur non privilégié ;
+  d'upgrade V3 vers le catalogue courant sous le vrai profil de migrateur non privilégié ;
 - ADR-0014 retenant Resend pour l'OTP Auth0 et les e-mails transactionnels de
   la bêta, sur un sous-domaine isolé, avec deux clés séparées, suivi désactivé
   et recette de délivrabilité avant activation ;
@@ -51,9 +57,9 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 - relation du membre courant, identifiant de sa réservation et actions
   autorisées dans le dashboard, puis contrôles accessibles sur les routes
   existantes Partager et Trouver sans ajouter de fausse destination ;
-- contrat OpenAPI `0.4.2` pour l'annulation, le retrait, les fuseaux par site
-  et la liste complète des partages actifs
-  et disponibilité, aligné avec les modèles Java et TypeScript ; les réponses
+- contrat OpenAPI `0.4.3` pour l'annulation, le retrait, les fuseaux par site,
+  la liste bornée des partages actifs et les disponibilités, aligné avec les
+  modèles Java et TypeScript ; les réponses
   partagées `403` et `429` couvrent exactement les mutations same-origin et les
   opérations limitées par adresse réseau dans le filtre de production ;
 - clé d'idempotence stable conservée par le frontend pendant un retry de
@@ -126,7 +132,7 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 - Compose VPS app-only sans port, build ni volume, avec secrets fichiers,
   réseaux externes, healthchecks, ressources et logs bornés ;
 - bundle `vps-integration` déterministe lié au SHA, inventaires exacts des
-  migrations V1 à V4 et probes, puis descripteur canonique
+  migrations V1 à V5 et probes, puis descripteur canonique
   `vps-infra.application-release.v1` liant tous les digests ;
 - workflow de publication après gate complète, scans bloquants, SBOM,
   provenance et attestations, avec revalidation des images réellement poussées

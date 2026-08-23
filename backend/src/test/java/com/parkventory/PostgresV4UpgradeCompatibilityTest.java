@@ -83,7 +83,7 @@ class PostgresV4UpgradeCompatibilityTest {
                 assertEquals("RESERVATION", result.getString("aggregate_type"));
                 assertEquals(aggregateId, result.getObject("aggregate_id", UUID.class));
             }
-            assertEquals("4", scalar(metadata, """
+            assertEquals("5", scalar(metadata, """
                     SELECT version
                       FROM flyway_schema_history
                      WHERE success
@@ -123,7 +123,7 @@ class PostgresV4UpgradeCompatibilityTest {
     private static String scalar(Statement statement, String query) throws SQLException {
         try (ResultSet result = statement.executeQuery(query)) {
             if (!result.next()) {
-                throw new SQLException("La preuve de migration V4 ne retourne aucune ligne.");
+                throw new SQLException("La preuve de reprise V3 vers le catalogue courant ne retourne aucune ligne.");
             }
             return result.getString(1);
         }

@@ -279,6 +279,77 @@ class DashboardResourceTest {
     }
 
     @Test
+    void serializesConcurrentPublicationsAtTheActiveShareLimit() throws Exception {
+        String domain = uniqueDomain();
+        String ownerSession = authenticate("bounded-owner@" + domain);
+
+        given()
+                .cookie(SessionService.COOKIE_NAME, ownerSession)
+                .contentType(ContentType.JSON)
+                .body("{\"label\":\"A-24\",\"level\":\"Niveau A\"}")
+                .when().post("/api/v1/spots")
+                .then()
+                .statusCode(200);
+        given()
+                .cookie(SessionService.COOKIE_NAME, ownerSession)
+                .contentType(ContentType.JSON)
+                .body("""
+                        {"spot":"A-24","date":"%s","from":"08:00","to":"10:00"}
+                        """.formatted(LocalDate.now().plusDays(1)))
+                .when().post("/api/v1/shares")
+                .then()
+                .statusCode(200);
+
+        SessionContext owner = sessions.require(ownerSession);
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try (var serializationGuard = dataSource.getConnection()) {
+            serializationGuard.setAutoCommit(false);
+            try (PreparedStatement statement = serializationGuard.prepareStatement(
+                    "SELECT pg_advisory_xact_lock(hashtextextended(?, 0))")) {
+                statement.setString(1, "active-share-limit:" + owner.membershipId());
+                statement.executeQuery().close();
+            }
+
+            Future<Integer> first = executor.submit(() -> shareConcurrently(
+                    ownerSession,
+                    LocalDate.now().plusDays(2),
+                    ready,
+                    start));
+            Future<Integer> second = executor.submit(() -> shareConcurrently(
+                    ownerSession,
+                    LocalDate.now().plusDays(3),
+                    ready,
+                    start));
+            assertTrue(ready.await(5, TimeUnit.SECONDS), "Les deux publications doivent être prêtes.");
+            start.countDown();
+            assertTrue(
+                    awaitPendingAdvisoryLocks(2),
+                    "Les deux publications doivent attendre le verrou du membre.");
+            serializationGuard.commit();
+
+            List<Integer> statuses = List.of(
+                            first.get(10, TimeUnit.SECONDS),
+                            second.get(10, TimeUnit.SECONDS))
+                    .stream()
+                    .sorted(Comparator.naturalOrder())
+                    .toList();
+            assertEquals(List.of(200, 409), statuses);
+        } finally {
+            start.countDown();
+            executor.shutdownNow();
+        }
+
+        given()
+                .cookie(SessionService.COOKIE_NAME, ownerSession)
+                .when().get("/api/v1/dashboard")
+                .then()
+                .statusCode(200)
+                .body("activeShares", hasSize(2));
+    }
+
+    @Test
     void returnsTheAssignedSiteTimezoneAndEachAvailabilityTimezone() throws Exception {
         String domain = uniqueDomain();
         String ownerSession = authenticate("owner@" + domain);
@@ -561,6 +632,46 @@ class DashboardResourceTest {
                 .header("Idempotency-Key", UUID.randomUUID().toString())
                 .when().post("/api/v1/availability/{id}/reservations", availabilityId)
                 .statusCode();
+    }
+
+    private int shareConcurrently(
+            String session,
+            LocalDate date,
+            CountDownLatch ready,
+            CountDownLatch start) throws InterruptedException {
+        ready.countDown();
+        if (!start.await(5, TimeUnit.SECONDS)) {
+            throw new IllegalStateException("Le départ concurrent n’a pas été libéré.");
+        }
+        return given()
+                .cookie(SessionService.COOKIE_NAME, session)
+                .contentType(ContentType.JSON)
+                .body("""
+                        {"spot":"A-24","date":"%s","from":"11:00","to":"13:00"}
+                        """.formatted(date))
+                .when().post("/api/v1/shares")
+                .statusCode();
+    }
+
+    private boolean awaitPendingAdvisoryLocks(int expected) throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        while (System.nanoTime() < deadline) {
+            try (var connection = dataSource.getConnection();
+                 PreparedStatement statement = connection.prepareStatement("""
+                         SELECT count(*)
+                           FROM pg_locks
+                          WHERE locktype = 'advisory'
+                            AND NOT granted
+                         """);
+                 var result = statement.executeQuery()) {
+                result.next();
+                if (result.getInt(1) >= expected) {
+                    return true;
+                }
+            }
+            Thread.sleep(25);
+        }
+        return false;
     }
 
     private String authenticate(String email) {

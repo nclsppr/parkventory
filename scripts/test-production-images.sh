@@ -174,7 +174,7 @@ migration_versions=$(docker exec "${postgres_container}" psql \
   --username postgres \
   --dbname parkventory \
   --command "SELECT string_agg(version, ',' ORDER BY installed_rank) FROM flyway_schema_history WHERE success")
-[[ ${migration_versions} == "1,2,3,4" ]]
+[[ ${migration_versions} == "1,2,3,4,5" ]]
 
 docker exec -i "${postgres_container}" psql \
   --set ON_ERROR_STOP=1 \

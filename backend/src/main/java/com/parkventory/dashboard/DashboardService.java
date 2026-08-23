@@ -38,6 +38,7 @@ import static com.parkventory.dashboard.ApiModels.*;
 
 @ApplicationScoped
 public class DashboardService {
+    private static final int MAX_ACTIVE_SHARE_LIMIT = 366;
     private static final DateTimeFormatter DATE_FORMATTER =
             DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.FRANCE);
     private static final DateTimeFormatter TIME_FORMATTER =
@@ -48,6 +49,7 @@ public class DashboardService {
     private final ObjectMapper objectMapper;
     private final TenantTransactionContext tenantContext;
     private final int invitationDailyLimit;
+    private final int activeShareLimit;
 
     public DashboardService(
             AgroalDataSource dataSource,
@@ -56,7 +58,10 @@ public class DashboardService {
             TenantTransactionContext tenantContext,
             @ConfigProperty(
                     name = "parkventory.security.invitation.daily-limit",
-                    defaultValue = "20") int invitationDailyLimit) {
+                    defaultValue = "20") int invitationDailyLimit,
+            @ConfigProperty(
+                    name = "parkventory.sharing.active-limit",
+                    defaultValue = "366") int activeShareLimit) {
         this.dataSource = dataSource;
         this.tokens = tokens;
         this.objectMapper = objectMapper;
@@ -65,6 +70,11 @@ public class DashboardService {
             throw new IllegalArgumentException("Le quota quotidien d’invitations doit être positif.");
         }
         this.invitationDailyLimit = invitationDailyLimit;
+        if (activeShareLimit < 1 || activeShareLimit > MAX_ACTIVE_SHARE_LIMIT) {
+            throw new IllegalArgumentException(
+                    "La limite de partages actifs doit être comprise entre 1 et 366.");
+        }
+        this.activeShareLimit = activeShareLimit;
     }
 
     @Transactional
@@ -213,6 +223,7 @@ public class DashboardService {
             }
 
             TimeWindow window = parseTimeWindow(request, assignment.timezone());
+            enforceActiveShareLimit(connection, session);
             UUID offerId;
             try (PreparedStatement statement = connection.prepareStatement("""
                     INSERT INTO availability_offer (
@@ -626,6 +637,34 @@ public class DashboardService {
         }
     }
 
+    private void enforceActiveShareLimit(Connection connection, SessionContext session)
+            throws SQLException {
+        try (PreparedStatement lock = connection.prepareStatement(
+                "SELECT pg_advisory_xact_lock(hashtextextended(?, 0))")) {
+            lock.setString(1, "active-share-limit:" + session.membershipId());
+            lock.executeQuery().close();
+        }
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT count(*)
+                  FROM availability_offer
+                 WHERE organization_id = ?
+                   AND offered_by_membership_id = ?
+                   AND status = 'PUBLISHED'
+                   AND ends_at > now()
+                """)) {
+            statement.setObject(1, session.organizationId());
+            statement.setObject(2, session.membershipId());
+            try (ResultSet result = statement.executeQuery()) {
+                result.next();
+                if (result.getInt(1) >= activeShareLimit) {
+                    throw new ClientErrorException(
+                            "La limite de partages actifs est atteinte. Retirez un créneau avant d’en publier un autre.",
+                            409);
+                }
+            }
+        }
+    }
+
     private AssignedSpot loadAssignedSpot(Connection connection, SessionContext session)
             throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
@@ -805,12 +844,14 @@ public class DashboardService {
                    AND offer.status = 'PUBLISHED'
                    AND offer.ends_at > now()
                  ORDER BY offer.starts_at, spot.label
+                 LIMIT ?
                 """;
         List<Availability> items = new ArrayList<>();
         Instant now = Instant.now();
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setObject(1, session.organizationId());
             statement.setObject(2, session.membershipId());
+            statement.setInt(3, activeShareLimit);
             try (ResultSet result = statement.executeQuery()) {
                 while (result.next()) {
                     items.add(toAvailability(result, session, now));
