@@ -49,8 +49,9 @@ la source du diff technique et les ADR expliquent les décisions importantes.
   autorisées dans le dashboard, puis contrôles accessibles sur les routes
   existantes Partager et Trouver sans ajouter de fausse destination ;
 - contrat OpenAPI `0.4.1` pour l'annulation, le retrait et les fuseaux par site
-  et disponibilité, aligné avec les modèles Java et TypeScript et les réponses
-  `401`, `403`, `409`, `429` et `5xx` ;
+  et disponibilité, aligné avec les modèles Java et TypeScript ; les réponses
+  partagées `403` et `429` couvrent exactement les mutations same-origin et les
+  opérations limitées par adresse réseau dans le filtre de production ;
 - clé d'idempotence stable conservée par le frontend pendant un retry de
   réservation et verrous immédiats contre les doubles soumissions ;
 - test PostgreSQL de deux réservations HTTP réellement simultanées produisant

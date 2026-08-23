@@ -111,6 +111,8 @@ paths:
           description: Claims absents, email non vérifié ou issuer incohérent
         "409":
           description: Identité déjà liée à un autre email vérifié
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /auth/oidc/callback:
     x-build-profile: prod
     get:
@@ -139,6 +141,10 @@ paths:
       responses:
         "200":
           description: Session Parkventory fermée et cookies locaux expirés
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /dashboard:
     get:
       tags: [Dashboard]
@@ -173,8 +179,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ActionResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "409":
           description: Place déjà affectée
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /shares:
     post:
       tags: [Sharing]
@@ -197,9 +207,11 @@ paths:
         "400":
           description: Créneau invalide
         "403":
-          description: Place non affectée au membre
+          $ref: "#/components/responses/Forbidden"
         "409":
           description: Affectation absente ou offre chevauchante
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /availability/{availabilityId}/reservations:
     post:
       tags: [Reservations]
@@ -230,6 +242,8 @@ paths:
                 $ref: "#/components/schemas/ApiProblem"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           description: Disponibilité inconnue
           content:
@@ -272,11 +286,7 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
-          description: Réservation créée par un autre membre
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiProblem"
+          $ref: "#/components/responses/Forbidden"
         "404":
           description: Réservation inconnue dans le tenant actif
           content:
@@ -318,11 +328,7 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
-          description: Disponibilité publiée par un autre membre
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiProblem"
+          $ref: "#/components/responses/Forbidden"
         "404":
           description: Disponibilité inconnue dans le tenant actif
           content:
@@ -360,10 +366,22 @@ paths:
                 $ref: "#/components/schemas/ActionResponse"
         "400":
           description: Adresse absente, invalide, personnelle ou identique
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
 components:
   responses:
     Unauthorized:
       description: Session absente, expirée ou révoquée
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiProblem"
+    Forbidden:
+      description: >-
+        Origine ou contexte de navigation refusé par le filtre de production,
+        ou action interdite au membre authentifié
       content:
         application/json:
           schema:
