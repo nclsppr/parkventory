@@ -80,7 +80,8 @@ class DashboardResourceTest {
                 .body("user.firstName", equalTo("Alex"))
                 .body("user.assignedSpot", equalTo(null))
                 .body("user.assignedSiteTimeZone", equalTo(null))
-                .body("availability", hasSize(0));
+                .body("availability", hasSize(0))
+                .body("activeShares", hasSize(0));
 
         given()
                 .cookie(SessionService.COOKIE_NAME, ownerSession)
@@ -116,7 +117,10 @@ class DashboardResourceTest {
                 .body("availability[0].timeZone", equalTo("Europe/Paris"))
                 .body("availability[0].status", equalTo("UNAVAILABLE"))
                 .body("availability[0].viewerRelation", equalTo("OFFERED"))
-                .body("availability[0].canWithdraw", equalTo(true));
+                .body("availability[0].canWithdraw", equalTo(true))
+                .body("activeShares", hasSize(1))
+                .body("activeShares[0].viewerRelation", equalTo("OFFERED"))
+                .body("activeShares[0].canWithdraw", equalTo(true));
 
         String colleagueSession = authenticate(colleagueEmail);
         String availabilityId = given()
@@ -236,7 +240,42 @@ class DashboardResourceTest {
                 .when().get("/api/v1/dashboard")
                 .then()
                 .statusCode(200)
-                .body("availability", hasSize(0));
+                .body("availability", hasSize(0))
+                .body("activeShares", hasSize(0));
+    }
+
+    @Test
+    void keepsEveryFutureShareInTheManagementListBeyondTheDiscoveryWindow() {
+        String domain = uniqueDomain();
+        String ownerSession = authenticate("owner@" + domain);
+
+        given()
+                .cookie(SessionService.COOKIE_NAME, ownerSession)
+                .contentType(ContentType.JSON)
+                .body("{\"label\":\"A-24\",\"level\":\"Niveau A\"}")
+                .when().post("/api/v1/spots")
+                .then()
+                .statusCode(200);
+        given()
+                .cookie(SessionService.COOKIE_NAME, ownerSession)
+                .contentType(ContentType.JSON)
+                .body("""
+                        {"spot":"A-24","date":"%s","from":"08:00","to":"18:00"}
+                        """.formatted(LocalDate.now().plusDays(30)))
+                .when().post("/api/v1/shares")
+                .then()
+                .statusCode(200);
+
+        given()
+                .cookie(SessionService.COOKIE_NAME, ownerSession)
+                .when().get("/api/v1/dashboard")
+                .then()
+                .statusCode(200)
+                .body("availability", hasSize(0))
+                .body("activeShares", hasSize(1))
+                .body("activeShares[0].spot", equalTo("A-24"))
+                .body("activeShares[0].viewerRelation", equalTo("OFFERED"))
+                .body("activeShares[0].canWithdraw", equalTo(true));
     }
 
     @Test

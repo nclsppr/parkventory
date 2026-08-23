@@ -45,6 +45,7 @@ export interface DashboardData {
   };
   stats: DashboardStats;
   availability: AvailabilityItem[];
+  activeShares: AvailabilityItem[];
   thanks: ThanksMessage[];
 }
 

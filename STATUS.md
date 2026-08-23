@@ -24,7 +24,7 @@ simultanées et observe exactement un succès et un conflit `409`. La gate local
 complète `npm run verify` réussit sur le worktree final : 46 Markdown et builds
 documentaires, 24 contrôles de contrat, 45 tests React, audit npm sans
 vulnérabilité, builds frontend, migration V1 isolée, reprise V3 vers V4 non
-vide et 39 tests Quarkus sur chacune des images PostgreSQL 17.10 et 18.3, puis
+vide et 40 tests Quarkus sur chacune des images PostgreSQL 17.10 et 18.3, puis
 6 tests métier sous rôle runtime RLS sur chacune. Le smoke Compose repart sans
 cache et couvre identité, partage, réservation, annulation, retrait,
 notification et invitation. Ce delta ne constitue ni un push, ni une release,
@@ -141,7 +141,7 @@ graphe local intégré.
 | Communauté | Invitation exacte prioritaire, sinon organisation communautaire unique par domaine | PostgreSQL réel et tests d'intégration | Domaine partagé/filiales et liste anti-abus à durcir |
 | Application React | Connexion, dashboard de synthèse, routes dédiées de partage et recherche, réservation, annulation, retrait, invitation, chargements, erreurs, états vides et choix clair/sombre persistant | 44 tests Vitest, build, navigation History API et navigateur sans erreur console | Client OpenAPI encore manuel ; recherche limitée à l'agenda de sept jours |
 | Identité visuelle | Master SVG fourni utilisé dans les huit emplacements React, les favicons, le header Nimbus et les cartes Open Graph ; palettes sombre et claire sémantiques ; plaque de contraste claire sans recoloration du master | Gate anti-dérive, tests de ratios et revue des deux thèmes desktop/mobile | Symbole seul ; aucun wordmark vectoriel ni variante monochrome |
-| API Quarkus | Session, dashboard, place, partage, réservation/annulation/retrait idempotents et invitation | Migration V1 isolée, reprise V3 vers V4 non vide et 39 tests sur chacune des images exactes PostgreSQL 17.10 et 18.3, contrat OpenAPI `0.4.1` | Administration absente |
+| API Quarkus | Session, dashboard, place, partage, réservation/annulation/retrait idempotents et invitation | Migration V1 isolée, reprise V3 vers V4 non vide et 40 tests sur chacune des images exactes PostgreSQL 17.10 et 18.3, contrat OpenAPI `0.4.2` | Administration absente |
 | PostgreSQL | Schéma multi-tenant, sessions, métier, outbox ordonnée par agrégat, audit, idempotence, exclusions GiST et RLS forcée | V1 isolée, migration jusqu'à V4, `btree_gist`, trois exclusions, test adversarial et parcours sous rôle non propriétaire sur 17.10 et 18.3 | Rôle runtime et migrations Atlas restent à vérifier en live avant activation |
 | Notifications | Invitation, réservation et annulation écrites avec l'outbox ordonnée puis livrées avec reprise bornée | Messages observés dans Mailpit | Délivrabilité Resend externe non prouvée |
 | Environnement | Quatre services Compose, images par digest, healthchecks et volumes | Checker indépendant, smoke complet et stack locale saine | Docker ou OrbStack requis |

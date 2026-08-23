@@ -64,6 +64,7 @@ function dashboardResponse(overrides: Partial<DashboardData> = {}): DashboardDat
     organization: { name: "Acme — communauté", sharedTotal: 12 },
     stats: { shares: 2, reservations: 1, availableSpots: 3 },
     availability,
+    activeShares: [],
     thanks: [],
     ...overrides,
   };
@@ -352,7 +353,7 @@ describe("Parkventory", () => {
       }
       if (url.endsWith("/dashboard")) {
         return jsonResponse(dashboardResponse({
-          availability: withdrawn ? [] : [ownShare],
+          activeShares: withdrawn ? [] : [ownShare],
         }));
       }
       return undefined;

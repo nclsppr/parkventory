@@ -45,10 +45,7 @@ export function SharePage({
   const spotLock = useRef(false);
   const withdrawLock = useRef<string | null>(null);
   const timeZone = data.user.assignedSiteTimeZone;
-  const ownShares = useMemo(
-    () => data.availability.filter((item) => item.viewerRelation === "OFFERED"),
-    [data.availability],
-  );
+  const ownShares = useMemo(() => data.activeShares, [data.activeShares]);
   const timeOrderInvalid = Boolean(shareForm.from && shareForm.to && shareForm.from >= shareForm.to);
   const timeOrderMessage = "L’heure de fin doit être postérieure à l’heure de début.";
 
@@ -136,6 +133,7 @@ export function SharePage({
         onDemoMutation((current) => ({
           ...current,
           availability: current.availability.filter((item) => item.id !== availabilityId),
+          activeShares: current.activeShares.filter((item) => item.id !== availabilityId),
         }));
       } else {
         await onRefresh(false);

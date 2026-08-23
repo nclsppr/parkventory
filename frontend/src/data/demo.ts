@@ -88,6 +88,21 @@ export const demoDashboard: DashboardData = {
       canWithdraw: false,
     },
   ],
+  activeShares: [
+    {
+      id: "availability-a24-thu",
+      dateLabel: "Jeu. 30 juillet",
+      timeLabel: "08:00 – 18:00",
+      timeZone: demoTimeZone,
+      spot: "A-24",
+      level: "Niveau A",
+      status: "UNAVAILABLE",
+      viewerRelation: "OFFERED",
+      reservationId: null,
+      canCancel: false,
+      canWithdraw: true,
+    },
+  ],
   thanks: [
     {
       id: "thanks-julie",

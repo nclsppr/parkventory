@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Parkventory API
-  version: 0.4.1
+  version: 0.4.2
   description: >-
     Contrat des adaptateurs d’identité exclusifs par profil. Le lien magique et
     Mailpit existent hors production ; Auth0 Universal Login Email OTP existe
@@ -423,7 +423,7 @@ components:
         role: { type: string, enum: [MEMBER, ADMIN] }
     Dashboard:
       type: object
-      required: [demo, user, organization, stats, availability, thanks]
+      required: [demo, user, organization, stats, availability, activeShares, thanks]
       properties:
         demo:
           type: boolean
@@ -437,6 +437,12 @@ components:
         availability:
           type: array
           maxItems: 50
+          description: Créneaux publiés dans les sept prochains jours, bornés pour la recherche
+          items:
+            $ref: "#/components/schemas/Availability"
+        activeShares:
+          type: array
+          description: Tous les partages futurs encore publiés par le membre courant
           items:
             $ref: "#/components/schemas/Availability"
         thanks:

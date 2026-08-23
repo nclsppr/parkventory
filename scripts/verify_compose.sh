@@ -156,6 +156,7 @@ const run = async () => {
       || ownerDashboard.body.user.assignedSpot !== "A-24"
       || ownerDashboard.body.user.assignedSiteTimeZone !== "Europe/Paris"
       || ownerDashboard.body.availability.length !== 1
+      || ownerDashboard.body.activeShares.length !== 1
       || ownerDashboard.body.availability.some((item) => item.timeZone !== "Europe/Paris")) {
     throw new Error("owner dashboard is not backed by PostgreSQL");
   }
@@ -203,7 +204,8 @@ const run = async () => {
     cookie: ownerCookie,
   });
   const withdrawn = await request("/api/v1/dashboard", { cookie: ownerCookie });
-  if (withdrawn.body.availability.some(item => item.id === offer.id)) {
+  if (withdrawn.body.availability.some(item => item.id === offer.id)
+      || withdrawn.body.activeShares.some(item => item.id === offer.id)) {
     throw new Error("withdrawn offer is still active");
   }
 

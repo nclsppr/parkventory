@@ -48,6 +48,7 @@ public final class ApiModels {
             Organization organization,
             Stats stats,
             List<Availability> availability,
+            List<Availability> activeShares,
             List<Thanks> thanks) {
     }
 

@@ -120,6 +120,7 @@ public class DashboardService {
                     new Organization(session.organizationName(), sharedTotal),
                     new Stats(shares, reservations, availableSpots),
                     loadAvailability(connection, session),
+                    loadActiveShares(connection, session),
                     List.of());
         } catch (SQLException exception) {
             throw new IllegalStateException("Impossible de charger le tableau de bord.", exception);
@@ -768,48 +769,96 @@ public class DashboardService {
             statement.setObject(1, session.organizationId());
             try (ResultSet result = statement.executeQuery()) {
                 while (result.next()) {
-                    Instant startsAt = result.getObject("starts_at", OffsetDateTime.class).toInstant();
-                    Instant endsAt = result.getObject("ends_at", OffsetDateTime.class).toInstant();
-                    ZoneId zone = safeZone(result.getString("timezone"));
-                    ZonedDateTime localStart = startsAt.atZone(zone);
-                    ZonedDateTime localEnd = endsAt.atZone(zone);
-                    UUID ownerMembershipId =
-                            result.getObject("offered_by_membership_id", UUID.class);
-                    UUID reservationId = result.getObject("reservation_id", UUID.class);
-                    UUID reservedByMembershipId =
-                            result.getObject("reserved_by_membership_id", UUID.class);
-                    boolean offeredByViewer = ownerMembershipId.equals(session.membershipId());
-                    boolean reservedByViewer = reservedByMembershipId != null
-                            && reservedByMembershipId.equals(session.membershipId());
-                    String status;
-                    if (reservationId != null) {
-                        status = "RESERVED";
-                    } else if (offeredByViewer) {
-                        status = "UNAVAILABLE";
-                    } else {
-                        status = "AVAILABLE";
-                    }
-                    String viewerRelation = offeredByViewer
-                            ? "OFFERED"
-                            : reservedByViewer ? "RESERVED" : "NONE";
-                    items.add(new Availability(
-                            result.getObject("id", UUID.class).toString(),
-                            DATE_FORMATTER.format(localStart),
-                            TIME_FORMATTER.format(localStart)
-                                    + " – "
-                                    + TIME_FORMATTER.format(localEnd),
-                            zone.getId(),
-                            result.getString("label"),
-                            result.getString("level"),
-                            status,
-                            viewerRelation,
-                            reservedByViewer ? reservationId.toString() : null,
-                            reservedByViewer && startsAt.isAfter(now),
-                            offeredByViewer && reservationId == null));
+                    items.add(toAvailability(result, session, now));
                 }
             }
         }
         return List.copyOf(items);
+    }
+
+    private List<Availability> loadActiveShares(
+            Connection connection,
+            SessionContext session) throws SQLException {
+        String sql = """
+                SELECT offer.id,
+                       offer.offered_by_membership_id,
+                       offer.starts_at,
+                       offer.ends_at,
+                       spot.label,
+                       COALESCE(spot.level_label, 'Niveau non renseigné') AS level,
+                       site.timezone,
+                       reserved.id AS reservation_id,
+                       reserved.reserved_by_membership_id
+                  FROM availability_offer offer
+                  JOIN parking_spot spot
+                    ON spot.organization_id = offer.organization_id
+                   AND spot.id = offer.parking_spot_id
+                  JOIN parking_site site
+                    ON site.organization_id = spot.organization_id
+                   AND site.id = spot.parking_site_id
+                  LEFT JOIN reservation reserved
+                    ON reserved.organization_id = offer.organization_id
+                   AND reserved.availability_offer_id = offer.id
+                   AND reserved.status IN ('HELD', 'CONFIRMED')
+                 WHERE offer.organization_id = ?
+                   AND offer.offered_by_membership_id = ?
+                   AND offer.status = 'PUBLISHED'
+                   AND offer.ends_at > now()
+                 ORDER BY offer.starts_at, spot.label
+                """;
+        List<Availability> items = new ArrayList<>();
+        Instant now = Instant.now();
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setObject(1, session.organizationId());
+            statement.setObject(2, session.membershipId());
+            try (ResultSet result = statement.executeQuery()) {
+                while (result.next()) {
+                    items.add(toAvailability(result, session, now));
+                }
+            }
+        }
+        return List.copyOf(items);
+    }
+
+    private Availability toAvailability(
+            ResultSet result,
+            SessionContext session,
+            Instant now) throws SQLException {
+        Instant startsAt = result.getObject("starts_at", OffsetDateTime.class).toInstant();
+        Instant endsAt = result.getObject("ends_at", OffsetDateTime.class).toInstant();
+        ZoneId zone = safeZone(result.getString("timezone"));
+        ZonedDateTime localStart = startsAt.atZone(zone);
+        ZonedDateTime localEnd = endsAt.atZone(zone);
+        UUID ownerMembershipId = result.getObject("offered_by_membership_id", UUID.class);
+        UUID reservationId = result.getObject("reservation_id", UUID.class);
+        UUID reservedByMembershipId =
+                result.getObject("reserved_by_membership_id", UUID.class);
+        boolean offeredByViewer = ownerMembershipId.equals(session.membershipId());
+        boolean reservedByViewer = reservedByMembershipId != null
+                && reservedByMembershipId.equals(session.membershipId());
+        String status;
+        if (reservationId != null) {
+            status = "RESERVED";
+        } else if (offeredByViewer) {
+            status = "UNAVAILABLE";
+        } else {
+            status = "AVAILABLE";
+        }
+        String viewerRelation = offeredByViewer
+                ? "OFFERED"
+                : reservedByViewer ? "RESERVED" : "NONE";
+        return new Availability(
+                result.getObject("id", UUID.class).toString(),
+                DATE_FORMATTER.format(localStart),
+                TIME_FORMATTER.format(localStart) + " – " + TIME_FORMATTER.format(localEnd),
+                zone.getId(),
+                result.getString("label"),
+                result.getString("level"),
+                status,
+                viewerRelation,
+                reservedByViewer ? reservationId.toString() : null,
+                reservedByViewer && startsAt.isAfter(now),
+                offeredByViewer && reservationId == null);
     }
 
     private ReservationOffer loadReservationOffer(

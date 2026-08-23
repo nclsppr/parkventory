@@ -7,6 +7,9 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Ajouté
 
+- liste de gestion distincte contenant tous les partages futurs du membre,
+  sans reprendre la fenêtre de recherche bornée à sept jours, afin qu'un
+  créneau publié longtemps à l'avance reste visible et retirable ;
 - retour lisible vers l'interface lorsqu'Auth0 vérifie une adresse refusée par
   la politique professionnelle, sans refléter l'adresse ni laisser de session
   OIDC locale réutilisable ;
@@ -48,7 +51,8 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 - relation du membre courant, identifiant de sa réservation et actions
   autorisées dans le dashboard, puis contrôles accessibles sur les routes
   existantes Partager et Trouver sans ajouter de fausse destination ;
-- contrat OpenAPI `0.4.1` pour l'annulation, le retrait et les fuseaux par site
+- contrat OpenAPI `0.4.2` pour l'annulation, le retrait, les fuseaux par site
+  et la liste complète des partages actifs
   et disponibilité, aligné avec les modèles Java et TypeScript ; les réponses
   partagées `403` et `429` couvrent exactement les mutations same-origin et les
   opérations limitées par adresse réseau dans le filtre de production ;
