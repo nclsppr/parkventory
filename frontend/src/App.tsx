@@ -3,6 +3,7 @@ import { ApiError, loadSession } from "./api/client";
 import type { ApplicationRoute } from "./components/AppShell";
 import {
   findUrl,
+  isOidcIdentity,
   isPublicDemo,
   relativePathname,
   shareUrl,
@@ -98,7 +99,9 @@ function AuthenticatedApplication({ route }: { route: ApplicationRoute }) {
             ? undefined
             : error instanceof Error
               ? error.message
-              : "La session locale n’a pas pu être vérifiée.",
+              : isOidcIdentity
+                ? "La session n’a pas pu être vérifiée."
+                : "La session locale n’a pas pu être vérifiée.",
         );
       });
     return () => {
@@ -111,7 +114,9 @@ function AuthenticatedApplication({ route }: { route: ApplicationRoute }) {
       <main className="auth-page">
         <div className="auth-backdrop" aria-hidden="true" />
         <ThemeToggle className="auth-theme-toggle" />
-        <p className="auth-loading" role="status">Vérification de la session locale…</p>
+        <p className="auth-loading" role="status">
+          {isOidcIdentity ? "Vérification de la session…" : "Vérification de la session locale…"}
+        </p>
       </main>
     );
   }

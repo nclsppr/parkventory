@@ -57,9 +57,10 @@ rollback vérifié.
 
 ### Limites et exclusions
 
-- Le domaine et l'hôte statiques existent, mais aucun fournisseur OIDC/email,
-  aucune base Parkventory, aucun budget ni aucune cible de restauration ne sont
-  décidés pour l'application.
+- Le domaine et l'hôte statiques existent. Un candidat Auth0 EU est préparé,
+  mais le fournisseur n’est pas approuvé et aucun tenant OIDC ni fournisseur email n’est provisionné ; aucune base
+  Parkventory, aucun budget ni aucune cible de restauration ne sont décidés
+  pour l'application.
 - Le réconciliateur statique et le contrôleur Compose existent dans `vps-infra`.
   Le second reste désactivé et sa convergence live n'est pas prouvée ; aucune
   commande Parkventory ne peut effectuer le cutover plateforme.
@@ -225,6 +226,83 @@ du `known_hosts` protégé.
   activer simultanément les contrats statique et Compose.
 - Interdiction de commencer : cible non résolue, test rouge, rollback absent,
   restauration non prouvée ou autorité manquante.
+
+## Préconditions du candidat OIDC Auth0 EU
+
+L’[ADR-0010 proposée](docs/decisions/adr-0010-auth0-email-otp-production.md)
+décrit le contrat préparé. Le propriétaire doit d’abord accepter le
+sous-traitant, la région, le coût et les conditions. Les actions fournisseur
+ci-dessous exigent ensuite une autorisation explicite ; ce dépôt ne crée ni
+compte ni tenant.
+
+### Contrat distant à vérifier avant injection des secrets
+
+1. Créer ou sélectionner un tenant Auth0 dont la région européenne, le compte
+   propriétaire, le coût et le traitement des données ont été acceptés.
+2. Créer une Regular Web Application confidentielle, jamais une SPA publique.
+3. Activer Passwordless Email et Universal Login avec vérification par OTP.
+   Le magic link du Classic Login n’est pas admis par ce contrat.
+4. Autoriser exactement le callback
+   `https://parkventory.com/api/v1/auth/oidc/callback`.
+5. Relever sans secret l’issuer HTTPS avec slash terminal et le client ID.
+   `PARKVENTORY_OIDC_AUTH_SERVER_URL` et `PARKVENTORY_OIDC_ISSUER` doivent être
+   strictement identiques.
+6. Confirmer que les ID tokens signés RS256 contiennent `sub`, `email` et le
+   booléen `email_verified=true`, avec l’audience égale au client ID.
+
+### Injection locale à Atlas
+
+Le Compose reçoit les valeurs non secrètes par son environnement :
+
+- `PARKVENTORY_OIDC_AUTH_SERVER_URL` ;
+- `PARKVENTORY_OIDC_ISSUER` ;
+- `PARKVENTORY_OIDC_CLIENT_ID`.
+
+Le runtime exige les fichiers réguliers non symboliques suivants, chacun sur
+une ligne imprimable :
+
+- `/etc/vps/secrets/parkventory/parkventory-oidc-client-secret` ;
+- `/etc/vps/secrets/parkventory/parkventory-oidc-state-secret` ;
+- `/etc/vps/secrets/parkventory/parkventory-oidc-token-encryption-secret`.
+
+Le secret client provient d’Auth0. Les secrets de state et de token state sont
+deux valeurs aléatoires indépendantes d’au moins 32 caractères. Ne jamais les
+afficher dans une commande, un ticket, un log ou un diff. Leur création et leur
+transfert appartiennent à la procédure protégée de `vps-infra`.
+
+Un secret absent, multiligne, trop court, un issuer non HTTPS ou deux URL OIDC
+différentes font sortir l’entrypoint avec le code `78`. Les expressions Quarkus
+obligatoires font aussi échouer le JAR si l’entrypoint est contourné. Il est
+interdit de corriger cet échec avec une valeur factice en production.
+
+### Recette avant trafic réel
+
+- exécuter `npm run production:check` puis
+  `npm run production:images:test` sur le SHA exact ;
+- vérifier que `/api/v1/auth/requests` et `/api/v1/auth/verify` répondent `404`
+  dans l’image de production ;
+- vérifier que `/api/v1/auth/oidc/login` redirige vers l’issuer exact avec
+  `connection=email`, `prompt=login`, PKCE S256, nonce et state ;
+- terminer un OTP avec une adresse de test autorisée, puis vérifier les cookies
+  OIDC et `parkventory_session` `HttpOnly`, `Secure` et `SameSite=Lax` ;
+- vérifier que l’issuer, l’audience, l’email non vérifié et un state altéré sont
+  refusés sans créer de compte, membership ou session ;
+- envoyer une invitation de test et vérifier que son email pointe vers
+  `/api/v1/auth/oidc/login`, sans token Parkventory ni création de
+  `magic_link_request` ;
+- prouver la séquence identité vérifiée → utilisateur interne → membership actif
+  → tenant → `SET LOCAL` avant toute requête RLS ;
+- déconnecter avec puis sans cookie OIDC : l’`app_session` et les cookies locaux
+  doivent être révoqués dans les deux cas, et un second appel doit rester
+  idempotent.
+  Le cookie Auth0 peut rester : vérifier qu’une nouvelle connexion redemande
+  l’email OTP grâce à `connection=email` et `prompt=login`. Ne pas présenter ce
+  résultat comme un logout global ; tout futur SSO exige `/v2/logout`, un
+  `returnTo` HTTPS allowlisté et une recette distincte.
+
+En cas d’indisponibilité ou de configuration incomplète, suspendre les nouvelles
+connexions ou laisser Compose désactivé. Ne jamais réactiver les magic links
+locaux sur la surface publique.
 
 ## Sauvegarde et restauration isolée
 

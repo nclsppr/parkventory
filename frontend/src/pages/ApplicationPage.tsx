@@ -8,6 +8,7 @@ import {
 import { Logo } from "../components/Logo";
 import { Toast } from "../components/Toast";
 import { useDashboardData } from "../hooks/useDashboardData";
+import { isOidcIdentity } from "../config";
 import type { DashboardData } from "../types";
 import { DashboardPage } from "./DashboardPage";
 import { FindPage } from "./FindPage";
@@ -49,8 +50,12 @@ export function ApplicationPage({ route, onSessionExpired }: ApplicationPageProp
       <main className="dashboard-state">
         <Logo />
         {loadError ? <AlertTriangle aria-hidden="true" /> : <LoaderCircle className="spin" aria-hidden="true" />}
-        <h1>{loadError ? "Le parking local ne répond pas." : "Chargement de votre espace…"}</h1>
-        <p role={loadError ? "alert" : "status"}>{loadError ?? "Lecture de votre session et des données PostgreSQL."}</p>
+        <h1>{loadError
+          ? isOidcIdentity ? "Le service ne répond pas." : "Le parking local ne répond pas."
+          : "Chargement de votre espace…"}</h1>
+        <p role={loadError ? "alert" : "status"}>{loadError ?? (isOidcIdentity
+          ? "Lecture de votre session et de votre espace."
+          : "Lecture de votre session et des données PostgreSQL.")}</p>
         {loadError && (
           <button className="button button-primary" type="button" onClick={() => void refreshDashboard()}>
             Réessayer

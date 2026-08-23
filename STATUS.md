@@ -106,18 +106,19 @@ graphe local intégré.
 | Phase roadmap | État observé | Preuve restante avant clôture | Responsable |
 | --- | --- | --- | --- |
 | F02 — Surface et squelette | `in_progress` | Générer le client OpenAPI et rejouer le démarrage depuis un clone propre | nclsppr |
-| F03 — Identité et communauté | `in_progress` | Anti-abus et adaptateur OIDC de production ; matrice tenant A/B et RLS désormais vérifiées localement | nclsppr |
+| F03 — Identité et communauté | `in_progress` | Anti-abus, décision fournisseur OIDC et OTP externe ; matrice tenant A/B et RLS vérifiées localement | nclsppr |
 | F04 — Partager et réserver | `in_progress` | Test réellement concurrent, annulation, fuseaux et heure d'été | nclsppr |
 
 ## Livré et vérifié
 
 | Capacité | Périmètre réel | Preuve | Limite connue |
 | --- | --- | --- | --- |
-| Identité locale | Lien 256 bits, hash en base, durée 15 min, consommation unique, session `HttpOnly` 7 jours | Tests Quarkus, smoke Compose, parcours navigateur | Adaptateur HTTP local, pas OIDC de production |
+| Identité locale | Lien 256 bits, hash en base, durée 15 min, consommation unique, session `HttpOnly` 7 jours | Tests Quarkus, smoke Compose, parcours navigateur | Endpoints supprimés du build `prod` |
+| Identité OIDC candidate | Auth0 EU Universal Login Email OTP, client confidentiel, PKCE/state/nonce, issuer/audience exacts, claims vérifiés et pont `app_session` tenant | Tests de profils, claims et provisioning PostgreSQL sous rôle runtime non propriétaire ; contrat adversarial et images de production | ADR non approuvée ; coût, tenant, secrets réels, callback public et flux OTP externe absents |
 | Communauté | Invitation exacte prioritaire, sinon organisation communautaire unique par domaine | PostgreSQL réel et tests d'intégration | Domaine partagé/filiales et liste anti-abus à durcir |
 | Application React | Connexion, dashboard de synthèse, routes dédiées de partage et recherche, réservation, invitation, chargements, erreurs, états vides et choix clair/sombre persistant | 35 tests Vitest, build, navigation History API et navigateur sans erreur console | Client OpenAPI encore manuel ; recherche limitée à l'agenda de sept jours |
 | Identité visuelle | Master SVG fourni utilisé dans les huit emplacements React, les favicons, le header Nimbus et les cartes Open Graph ; palettes sombre et claire sémantiques ; plaque de contraste claire sans recoloration du master | Gate anti-dérive, tests de ratios et revue des deux thèmes desktop/mobile | Symbole seul ; aucun wordmark vectoriel ni variante monochrome |
-| API Quarkus | Session, dashboard, place, partage, réservation idempotente et invitation | Un test V1 dédié puis quatre tests sur chacune des images exactes PostgreSQL 17.10 et 18.3, contrat OpenAPI `0.2.0` | Annulation et administration absentes |
+| API Quarkus | Session, dashboard, place, partage, réservation idempotente et invitation | Un test V1 dédié puis quatre tests sur chacune des images exactes PostgreSQL 17.10 et 18.3, contrat OpenAPI `0.3.0` | Annulation et administration absentes |
 | PostgreSQL | Schéma multi-tenant, sessions, outbox, audit, idempotence, exclusions GiST et RLS forcée | V1 isolée, migration jusqu'à V3, `btree_gist`, trois exclusions, test adversarial et parcours sous rôle non propriétaire sur 17.10 et 18.3 | Rôle runtime et migrations Atlas restent à vérifier en live avant activation |
 | Notifications | Invitation et réservation écrites avec l'outbox puis livrées avec reprise bornée | Messages observés dans Mailpit | Délivrabilité externe non prouvée |
 | Environnement | Quatre services Compose, images par digest, healthchecks et volumes | Checker indépendant, smoke complet et stack locale saine | Docker ou OrbStack requis |
@@ -154,7 +155,9 @@ Compose, PostgreSQL ou migrateur Parkventory n'a été démarré sur Atlas.
 
 | Date | Commande ou contrôle | Résultat | Portée de la preuve |
 | --- | --- | --- | --- |
-| 2026-08-18 | `mise exec -- npm run postgres:verify` | V1 puis V2/V3, 11 tests Quarkus et build sur chacune des images PostgreSQL 17.10/18.3 ; parcours métier 3/3 répété sous rôle runtime non propriétaire et sans `BYPASSRLS` | Matrice locale éphémère ; ne crée ni rôle, ni base, ni migration sur Atlas |
+| 2026-08-18 | `mise exec -- npm run production:images:test` | Images amd64 non-root, migrations V1/V2/V3, runtime sans DDL, routes magic-link absentes, redirection Auth0 avec PKCE/state/nonce, callback virtuel intercepté, révocation d’une `app_session` malgré un cookie OIDC invalide et expiration explicite des cookies | Conteneurs et fournisseur OIDC factice locaux ; le faux code prouve l’interception mais pas un échange Auth0 heureux, l’email OTP ni Atlas |
+| 2026-08-18 | `mise exec -- ./mvnw test -Dtest=OidcIdentityClaimsTest,AuthProfileExposureTest,OidcIdentityServiceTest` | 10 tests réussis ; claims dégradés refusés, profils exclusifs, liaison et session tenant exercées sous rôle runtime non propriétaire, invitation OIDC sans token et logout idempotent sans token-state vérifiés | PostgreSQL 18.3 local éphémère ; aucune preuve fournisseur ou Atlas |
+| 2026-08-18 | `mise exec -- npm run postgres:verify` | V1 puis V2/V3, 11 tests Quarkus et build sur chacune des images PostgreSQL 17.10/18.3 ; parcours métier 3/3 répété sous rôle runtime non propriétaire et sans `BYPASSRLS` | Matrice locale éphémère ; les tests OIDC complémentaires emploient leur propre PostgreSQL 18.3 et aucune preuve ne crée rôle, base ou migration sur Atlas |
 | 2026-08-18 | `mise exec -- ./mvnw test -Dtest=TenantIsolationTest,DashboardResourceTest,PostgresCompatibilityTest` | Migration V3 appliquée ; RLS forcée, absence/mauvais contexte, tenant A/B, bootstrap invitation/domaine, retry outbox et parcours session/métier réussis sur PostgreSQL 18.3 | Preuve locale sous rôle non propriétaire, sans migration Atlas ni activation de production |
 | 2026-08-18 | `mise exec -- ./scripts/verify.sh` après consolidation opérationnelle | Gate complète réussie : catalogue/Markdown, Nimbus, contrats de release, audit npm, 35 tests React, builds Pages/Atlas, PostgreSQL 17.10/18.3 et smoke Compose | Prouve la cohérence du dépôt et des documents modifiés ; ne change aucun état Atlas |
 | 2026-08-18 | État Git et workflows du merge #4 | `origin/main` exact `583e0e2b63701097aa4894ecc4fb3de8ad325346` ; Verify `32071732726` et Pages `32071732707` réussis | Prouve la source canonique et ses gates, pas l'activation Compose |
@@ -214,7 +217,7 @@ Compose, PostgreSQL ou migrateur Parkventory n'a été démarré sur Atlas.
 
 | Blocage | Impact | Propriétaire | Condition de reprise |
 | --- | --- | --- | --- |
-| Fournisseurs OIDC et email non choisis | Interdit de présenter l'identité locale comme prête pour la production | nclsppr | ADR, contrat, région, coût et retrait validés |
+| Auth0 EU non approuvé et fournisseur email non choisi | Interdit de présenter le candidat OIDC préparé comme une connexion de production active | nclsppr | ADR/coût/région/conditions approuvés, puis tenant, callback, secrets, OTP réel et retrait testés |
 | Production applicative non décidée | Bloque toute API, identité ou persistance publique | nclsppr | Architecture d'exploitation, services externes et gates du runbook validés |
 | Contrôleur Compose non activé et cutover plateforme non livré | Le candidat publié ne peut pas remplacer la démo statique en sécurité ; le code du contrôleur central est fusionné mais son entrée reste désactivée | nclsppr | Convergence live prouvée, base et secrets provisionnés, migration compatible, route transférée exclusivement sous le verrou partagé, rollback et probes publics testés |
 | Privilèges PostgreSQL de production non provisionnés | Le migrateur possède le schéma et le runtime doit recevoir uniquement les droits DML/usage nécessaires, y compris les default privileges des migrations futures | nclsppr | Rôles, grants et rotation créés par Atlas puis test négatif DDL rejoué avec les identités de production |
@@ -230,7 +233,7 @@ Compose, PostgreSQL ou migrateur Parkventory n'a été démarré sur Atlas.
 | Défense anti-abus | Refus minimal de domaines personnels | Spam et tenant indésirable | Rate limit, liste versionnée et réponses/timings comparés |
 | Intégrité temporelle complète | Contraintes GiST et conflits testés séquentiellement | Course, annulation ou DST mal traitée | Tests parallèles, annulation et matrice de fuseaux |
 | Recherche d'un intervalle arbitraire | Route dédiée alimentée par l'agenda réel à sept jours | Besoin non couvert au-delà de cette fenêtre | Ajouter un contrat de recherche borné avant d'afficher des filtres date/site |
-| Identité de production | Adaptateur local Mailpit ; cookie `Secure` forcé dans le profil prod | Mauvais usage hors boucle locale | OIDC, PKCE, CSRF et révocation de migration |
+| Identité de production | Candidat Auth0 fail-closed intégré à la RLS ; local et OIDC exclusifs au build | Sous-traitant non approuvé ou configuration distante incorrecte | Décision fournisseur, puis tenant réel, callback Caddy, anti-abus/CSRF et séquence identité → membership → `SET LOCAL` prouvée en préproduction |
 
 ## Risques et hypothèses
 

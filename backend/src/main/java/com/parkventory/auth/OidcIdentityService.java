@@ -1,18 +1,13 @@
 package com.parkventory.auth;
 
 import com.parkventory.tenancy.TenantTransactionContext;
-import io.quarkus.arc.profile.UnlessBuildProfile;
 import io.agroal.api.AgroalDataSource;
-import io.quarkus.mailer.Mail;
-import io.quarkus.mailer.Mailer;
+import io.quarkus.arc.profile.IfBuildProfile;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
-import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.ClientErrorException;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -24,86 +19,42 @@ import java.time.ZoneOffset;
 import java.util.Locale;
 import java.util.UUID;
 
-import static com.parkventory.auth.AuthModels.*;
-
 @ApplicationScoped
-@UnlessBuildProfile("prod")
-public class AuthService {
+@IfBuildProfile("prod")
+public class OidcIdentityService {
     private final AgroalDataSource dataSource;
     private final SecurityTokens tokens;
-    private final Mailer mailer;
     private final TenantTransactionContext tenantContext;
-    private final String webBaseUrl;
-    private final long magicLinkMinutes;
     private final long sessionDays;
 
-    public AuthService(
+    public OidcIdentityService(
             AgroalDataSource dataSource,
             SecurityTokens tokens,
-            Mailer mailer,
             TenantTransactionContext tenantContext,
-            @ConfigProperty(name = "parkventory.web.base-url") String webBaseUrl,
-            @ConfigProperty(name = "parkventory.auth.magic-link-minutes") long magicLinkMinutes,
             @ConfigProperty(name = "parkventory.auth.session-days") long sessionDays) {
         this.dataSource = dataSource;
         this.tokens = tokens;
-        this.mailer = mailer;
         this.tenantContext = tenantContext;
-        this.webBaseUrl = webBaseUrl.replaceAll("/+$", "");
-        this.magicLinkMinutes = magicLinkMinutes;
         this.sessionDays = sessionDays;
     }
 
     @Transactional
-    public AuthAction requestMagicLink(MagicLinkRequest request) {
-        String normalizedEmail = ProfessionalEmail.normalize(request.email());
-        String rawToken = tokens.issue();
-        Instant expiresAt = Instant.now().plus(Duration.ofMinutes(magicLinkMinutes));
-
+    public AuthService.VerifiedSession signIn(OidcIdentityClaims identity) {
+        String identityKey = identity.stableIdentityKey(tokens);
         try (Connection connection = dataSource.getConnection()) {
-            tenantContext.applyRequestedEmail(connection, normalizedEmail);
-            try (PreparedStatement invalidate = connection.prepareStatement("""
-                    UPDATE magic_link_request
-                       SET consumed_at = now()
-                     WHERE normalized_email = ?
-                       AND consumed_at IS NULL
-                    """)) {
-                invalidate.setString(1, normalizedEmail);
-                invalidate.executeUpdate();
-            }
-            insertMagicLink(connection, normalizedEmail, rawToken, "SIGN_IN", expiresAt);
-            sendMagicLink(normalizedEmail, rawToken, false);
-        } catch (SQLException exception) {
-            throw new IllegalStateException("Impossible de préparer le lien de connexion.", exception);
-        }
-
-        return new AuthAction(
-                true,
-                "Un lien de connexion a été envoyé. En local, ouvrez-le depuis Mailpit.");
-    }
-
-    @Transactional
-    public VerifiedSession verify(MagicLinkVerification verification) {
-        String rawToken = verification.token() == null ? "" : verification.token().trim();
-        if (rawToken.length() < 32 || rawToken.length() > 128) {
-            throw invalidLink();
-        }
-
-        try (Connection connection = dataSource.getConnection()) {
-            String tokenHash = tokens.hash(rawToken);
-            tenantContext.applyMagicLink(connection, tokenHash);
-            MagicLink magicLink = consumeMagicLink(connection, tokenHash);
             tenantContext.applyVerifiedIdentity(
                     connection,
-                    magicLink.normalizedEmail(),
-                    ProfessionalEmail.domain(magicLink.normalizedEmail()));
-            UUID userId = findOrCreateUser(connection, magicLink.normalizedEmail());
+                    identity.normalizedEmail(),
+                    ProfessionalEmail.domain(identity.normalizedEmail()));
+            lock(connection, "identity:" + identityKey);
+            lock(connection, "email:" + identity.normalizedEmail());
+            UUID userId = findOrCreateBoundUser(connection, identity, identityKey);
             OrganizationResolution organization =
-                    resolveOrganization(connection, magicLink.normalizedEmail());
+                    resolveOrganization(connection, identity.normalizedEmail());
             Membership membership =
                     findOrCreateMembership(connection, organization.organizationId(), userId);
             String rawSession = tokens.issue();
-            Instant sessionExpiresAt = Instant.now().plus(Duration.ofDays(sessionDays));
+            Instant expiresAt = Instant.now().plus(Duration.ofDays(sessionDays));
 
             try (PreparedStatement statement = connection.prepareStatement("""
                     INSERT INTO app_session (
@@ -118,7 +69,7 @@ public class AuthService {
                 statement.setObject(2, membership.membershipId());
                 statement.setObject(3, organization.organizationId());
                 statement.setString(4, tokens.hash(rawSession));
-                statement.setObject(5, OffsetDateTime.ofInstant(sessionExpiresAt, ZoneOffset.UTC));
+                statement.setObject(5, OffsetDateTime.ofInstant(expiresAt, ZoneOffset.UTC));
                 statement.executeUpdate();
             }
 
@@ -126,144 +77,42 @@ public class AuthService {
                     connection,
                     organization.organizationId(),
                     membership.membershipId(),
-                    "AUTH_SIGN_IN",
-                    "USER_ACCOUNT",
+                    "AUTH_OIDC_SIGN_IN",
                     userId);
-
             SessionContext context = loadContext(
                     connection,
                     userId,
                     membership.membershipId(),
                     organization.organizationId());
-            return new VerifiedSession(rawSession, sessionExpiresAt, context);
+            return new AuthService.VerifiedSession(rawSession, expiresAt, context);
         } catch (SQLException exception) {
-            throw new IllegalStateException("Impossible de valider le lien de connexion.", exception);
+            if (isUniqueViolation(exception)) {
+                throw identityConflict();
+            }
+            throw new IllegalStateException("Impossible d’établir la session OIDC.", exception);
         }
-    }
-
-    public void sendInvitationMagicLink(Connection connection, String normalizedEmail)
-            throws SQLException {
-        tenantContext.applyRequestedEmail(connection, normalizedEmail);
-        String rawToken = tokens.issue();
-        insertMagicLink(
-                connection,
-                normalizedEmail,
-                rawToken,
-                "INVITATION",
-                Instant.now().plus(Duration.ofMinutes(magicLinkMinutes)));
-        sendMagicLink(normalizedEmail, rawToken, true);
     }
 
     public long sessionMaxAgeSeconds() {
         return Duration.ofDays(sessionDays).toSeconds();
     }
 
-    private void sendMagicLink(String normalizedEmail, String rawToken, boolean invitation) {
-        String link = webBaseUrl
-                + "/auth/callback?token="
-                + URLEncoder.encode(rawToken, StandardCharsets.UTF_8);
-        String subject = invitation
-                ? "Votre invitation Parkventory"
-                : "Votre lien de connexion Parkventory";
-        String introduction = invitation
-                ? "Un collègue vous invite à rejoindre son espace Parkventory."
-                : "Vous avez demandé à vous connecter à Parkventory.";
-        String body = """
-                %s
-
-                Ouvrez ce lien à usage unique, valable %d minutes :
-                %s
-
-                Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail.
-                """.formatted(introduction, magicLinkMinutes, link);
-        mailer.send(Mail.withText(normalizedEmail, subject, body));
-    }
-
-    private void insertMagicLink(
+    private UUID findOrCreateBoundUser(
             Connection connection,
-            String normalizedEmail,
-            String rawToken,
-            String purpose,
-            Instant expiresAt) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement("""
-                INSERT INTO magic_link_request (
-                    normalized_email,
-                    token_hash,
-                    purpose,
-                    expires_at
-                ) VALUES (?, ?, ?, ?)
-                """)) {
-            statement.setString(1, normalizedEmail);
-            statement.setString(2, tokens.hash(rawToken));
-            statement.setString(3, purpose);
-            statement.setObject(4, OffsetDateTime.ofInstant(expiresAt, ZoneOffset.UTC));
-            statement.executeUpdate();
-        }
-    }
-
-    private MagicLink consumeMagicLink(Connection connection, String tokenHash) throws SQLException {
-        UUID requestId;
-        String normalizedEmail;
-        try (PreparedStatement statement = connection.prepareStatement("""
-                SELECT id, normalized_email
-                  FROM magic_link_request
-                 WHERE token_hash = ?
-                   AND consumed_at IS NULL
-                   AND expires_at > now()
-                 FOR UPDATE
-                """)) {
-            statement.setString(1, tokenHash);
-            try (ResultSet result = statement.executeQuery()) {
-                if (!result.next()) {
-                    throw invalidLink();
-                }
-                requestId = result.getObject("id", UUID.class);
-                normalizedEmail = result.getString("normalized_email");
-            }
-        }
-
-        try (PreparedStatement statement = connection.prepareStatement("""
-                UPDATE magic_link_request
-                   SET consumed_at = now()
-                 WHERE id = ?
-                   AND consumed_at IS NULL
-                """)) {
-            statement.setObject(1, requestId);
-            if (statement.executeUpdate() != 1) {
-                throw invalidLink();
-            }
-        }
-        return new MagicLink(normalizedEmail);
-    }
-
-    private UUID findOrCreateUser(Connection connection, String normalizedEmail)
-            throws SQLException {
+            OidcIdentityClaims identity,
+            String identityKey) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
                 SELECT user_account_id
                   FROM user_email
                  WHERE normalized_email = ?
+                   AND email_type = 'PROFESSIONAL'
                 """)) {
-            statement.setString(1, normalizedEmail);
+            statement.setString(1, identity.normalizedEmail());
             try (ResultSet result = statement.executeQuery()) {
                 if (result.next()) {
                     UUID userId = result.getObject("user_account_id", UUID.class);
                     tenantContext.applyIdentityUser(connection, userId);
-                    try (PreparedStatement update = connection.prepareStatement("""
-                            UPDATE user_email
-                               SET verified_at = COALESCE(verified_at, now())
-                             WHERE normalized_email = ?
-                            """)) {
-                        update.setString(1, normalizedEmail);
-                        update.executeUpdate();
-                    }
-                    try (PreparedStatement update = connection.prepareStatement("""
-                            UPDATE user_account
-                               SET status = 'ACTIVE', updated_at = now()
-                             WHERE id = ?
-                            """)) {
-                        update.setObject(1, userId);
-                        update.executeUpdate();
-                    }
+                    bindExistingUser(connection, userId, identity.normalizedEmail(), identityKey);
                     return userId;
                 }
             }
@@ -272,11 +121,12 @@ public class AuthService {
         UUID userId = UUID.randomUUID();
         tenantContext.applyIdentityUser(connection, userId);
         try (PreparedStatement statement = connection.prepareStatement("""
-                INSERT INTO user_account (id, display_name, status)
-                VALUES (?, ?, 'ACTIVE')
+                INSERT INTO user_account (id, oidc_subject, display_name, status)
+                VALUES (?, ?, ?, 'ACTIVE')
                 """)) {
             statement.setObject(1, userId);
-            statement.setString(2, displayName(normalizedEmail));
+            statement.setString(2, identityKey);
+            statement.setString(3, displayName(identity.normalizedEmail()));
             statement.executeUpdate();
         }
         try (PreparedStatement statement = connection.prepareStatement("""
@@ -288,10 +138,64 @@ public class AuthService {
                 ) VALUES (?, ?, 'PROFESSIONAL', now())
                 """)) {
             statement.setObject(1, userId);
-            statement.setString(2, normalizedEmail);
+            statement.setString(2, identity.normalizedEmail());
             statement.executeUpdate();
         }
         return userId;
+    }
+
+    private void bindExistingUser(
+            Connection connection,
+            UUID userId,
+            String normalizedEmail,
+            String identityKey) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT oidc_subject, status
+                  FROM user_account
+                 WHERE id = ?
+                 FOR UPDATE
+                """)) {
+            statement.setObject(1, userId);
+            try (ResultSet result = statement.executeQuery()) {
+                if (!result.next()) {
+                    throw identityConflict();
+                }
+                requireActiveUser(result.getString("status"));
+                String existingIdentity = result.getString("oidc_subject");
+                if (existingIdentity != null && !existingIdentity.equals(identityKey)) {
+                    throw identityConflict();
+                }
+            }
+        }
+
+        try (PreparedStatement statement = connection.prepareStatement("""
+                UPDATE user_account
+                   SET oidc_subject = ?, status = 'ACTIVE', updated_at = now()
+                 WHERE id = ?
+                   AND status IN ('PENDING', 'ACTIVE')
+                   AND (oidc_subject IS NULL OR oidc_subject = ?)
+                """)) {
+            statement.setString(1, identityKey);
+            statement.setObject(2, userId);
+            statement.setString(3, identityKey);
+            if (statement.executeUpdate() != 1) {
+                throw identityConflict();
+            }
+        }
+        markEmailVerified(connection, normalizedEmail);
+    }
+
+    private void markEmailVerified(Connection connection, String normalizedEmail)
+            throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                UPDATE user_email
+                   SET verified_at = COALESCE(verified_at, now())
+                 WHERE normalized_email = ?
+                   AND email_type = 'PROFESSIONAL'
+                """)) {
+            statement.setString(1, normalizedEmail);
+            statement.executeUpdate();
+        }
     }
 
     private OrganizationResolution resolveOrganization(
@@ -312,6 +216,7 @@ public class AuthService {
                     UUID invitationId = result.getObject("id", UUID.class);
                     UUID organizationId = result.getObject("organization_id", UUID.class);
                     tenantContext.applyTenant(connection, organizationId);
+                    requireActiveOrganization(connection, organizationId);
                     try (PreparedStatement accept = connection.prepareStatement("""
                             UPDATE invitation
                                SET status = 'ACCEPTED', accepted_at = now()
@@ -323,7 +228,7 @@ public class AuthService {
                         accept.setObject(1, organizationId);
                         accept.setObject(2, invitationId);
                         if (accept.executeUpdate() != 1) {
-                            throw invalidLink();
+                            throw identityConflict();
                         }
                     }
                     return new OrganizationResolution(organizationId);
@@ -350,6 +255,7 @@ public class AuthService {
                 if (result.next()) {
                     UUID organizationId = result.getObject("organization_id", UUID.class);
                     tenantContext.applyTenant(connection, organizationId);
+                    requireActiveOrganization(connection, organizationId);
                     return new OrganizationResolution(organizationId);
                 }
             }
@@ -387,29 +293,83 @@ public class AuthService {
         return new OrganizationResolution(organizationId);
     }
 
+    private void requireActiveOrganization(Connection connection, UUID organizationId)
+            throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT status
+                  FROM organization
+                 WHERE id = ?
+                """)) {
+            statement.setObject(1, organizationId);
+            try (ResultSet result = statement.executeQuery()) {
+                if (!result.next() || !"ACTIVE".equals(result.getString("status"))) {
+                    throw new ClientErrorException("Cette organisation n’est pas active.", 403);
+                }
+            }
+        }
+    }
+
     private Membership findOrCreateMembership(
             Connection connection,
             UUID organizationId,
             UUID userId) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
-                INSERT INTO membership (
-                    organization_id,
-                    user_account_id,
-                    role,
-                    status
-                ) VALUES (?, ?, 'MEMBER', 'ACTIVE')
-                ON CONFLICT (organization_id, user_account_id)
-                DO UPDATE SET status = 'ACTIVE'
-                RETURNING id, role
+                SELECT id, role, status
+                  FROM membership
+                 WHERE organization_id = ?
+                   AND user_account_id = ?
+                 FOR UPDATE
                 """)) {
             statement.setObject(1, organizationId);
             statement.setObject(2, userId);
             try (ResultSet result = statement.executeQuery()) {
-                result.next();
-                return new Membership(
-                        result.getObject("id", UUID.class),
-                        result.getString("role"));
+                if (result.next()) {
+                    String status = result.getString("status");
+                    if ("INVITED".equals(status)) {
+                        try (PreparedStatement activate = connection.prepareStatement("""
+                                UPDATE membership
+                                   SET status = 'ACTIVE'
+                                 WHERE id = ?
+                                   AND status = 'INVITED'
+                                """)) {
+                            activate.setObject(1, result.getObject("id", UUID.class));
+                            if (activate.executeUpdate() != 1) {
+                                throw identityConflict();
+                            }
+                        }
+                    } else if (!"ACTIVE".equals(status)) {
+                        throw new ClientErrorException("Cette adhésion n’est pas active.", 403);
+                    }
+                    return new Membership(
+                            result.getObject("id", UUID.class),
+                            result.getString("role"));
+                }
             }
+        }
+
+        UUID membershipId = UUID.randomUUID();
+        try (PreparedStatement statement = connection.prepareStatement("""
+                INSERT INTO membership (
+                    id,
+                    organization_id,
+                    user_account_id,
+                    role,
+                    status
+                ) VALUES (?, ?, ?, 'MEMBER', 'ACTIVE')
+                """)) {
+            statement.setObject(1, membershipId);
+            statement.setObject(2, organizationId);
+            statement.setObject(3, userId);
+            statement.executeUpdate();
+        }
+        return new Membership(membershipId, "MEMBER");
+    }
+
+    private void lock(Connection connection, String key) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT pg_advisory_xact_lock(hashtextextended(?, 0))")) {
+            statement.setString(1, key);
+            statement.executeQuery().close();
         }
     }
 
@@ -421,22 +381,24 @@ public class AuthService {
         try (PreparedStatement statement = connection.prepareStatement("""
                 SELECT ua.display_name,
                        ue.normalized_email,
-                       o.name AS organization_name,
-                       m.role
+                       organization.name AS organization_name,
+                       membership.role
                   FROM user_account ua
-                  JOIN user_email ue ON ue.user_account_id = ua.id
-                                    AND ue.email_type = 'PROFESSIONAL'
-                  JOIN membership m ON m.id = ?
-                  JOIN organization o ON o.id = ?
+                  JOIN user_email ue
+                    ON ue.user_account_id = ua.id
+                   AND ue.email_type = 'PROFESSIONAL'
+                  JOIN membership ON membership.id = ?
+                  JOIN organization ON organization.id = ?
                  WHERE ua.id = ?
-                 ORDER BY ue.created_at
                  LIMIT 1
                 """)) {
             statement.setObject(1, membershipId);
             statement.setObject(2, organizationId);
             statement.setObject(3, userId);
             try (ResultSet result = statement.executeQuery()) {
-                result.next();
+                if (!result.next()) {
+                    throw identityConflict();
+                }
                 return new SessionContext(
                         userId,
                         membershipId,
@@ -454,8 +416,7 @@ public class AuthService {
             UUID organizationId,
             UUID membershipId,
             String action,
-            String targetType,
-            UUID targetId) throws SQLException {
+            UUID userId) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
                 INSERT INTO audit_event (
                     organization_id,
@@ -464,14 +425,19 @@ public class AuthService {
                     target_type,
                     target_id,
                     result
-                ) VALUES (?, ?, ?, ?, ?, 'SUCCESS')
+                ) VALUES (?, ?, ?, 'USER_ACCOUNT', ?, 'SUCCESS')
                 """)) {
             statement.setObject(1, organizationId);
             statement.setObject(2, membershipId);
             statement.setString(3, action);
-            statement.setString(4, targetType);
-            statement.setObject(5, targetId);
+            statement.setObject(4, userId);
             statement.executeUpdate();
+        }
+    }
+
+    private static void requireActiveUser(String status) {
+        if (!"ACTIVE".equals(status) && !"PENDING".equals(status)) {
+            throw new ClientErrorException("Ce compte n’est pas actif.", 403);
         }
     }
 
@@ -504,22 +470,24 @@ public class AuthService {
                 + " — communauté";
     }
 
-    private static ClientErrorException invalidLink() {
-        return new ClientErrorException("Ce lien est invalide, expiré ou déjà utilisé.", 410);
+    private static ClientErrorException identityConflict() {
+        return new ClientErrorException(
+                "Cette identité ne peut pas être liée automatiquement.",
+                409);
     }
 
-    private record MagicLink(String normalizedEmail) {
+    private static boolean isUniqueViolation(SQLException exception) {
+        for (SQLException current = exception; current != null; current = current.getNextException()) {
+            if ("23505".equals(current.getSQLState())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private record OrganizationResolution(UUID organizationId) {
     }
 
     private record Membership(UUID membershipId, String role) {
-    }
-
-    public record VerifiedSession(
-            String rawSessionToken,
-            Instant expiresAt,
-            SessionContext context) {
     }
 }

@@ -30,6 +30,12 @@ read_secret() {
 export PARKVENTORY_DB_PASSWORD
 PARKVENTORY_DB_PASSWORD=$(read_secret "${PARKVENTORY_DB_PASSWORD_FILE}")
 export PARKVENTORY_MIGRATION_ONLY=true
+export PARKVENTORY_OIDC_AUTH_SERVER_URL=https://oidc-disabled.invalid/
+export PARKVENTORY_OIDC_CLIENT_ID=migrator-oidc-disabled
+export PARKVENTORY_OIDC_CLIENT_SECRET=oidc-disabled-migrator-client-secret
+export PARKVENTORY_OIDC_ISSUER=https://oidc-disabled.invalid/
+export PARKVENTORY_OIDC_STATE_SECRET=oidc-disabled-migrator-state-secret
+export PARKVENTORY_OIDC_TOKEN_ENCRYPTION_SECRET=oidc-disabled-migrator-token-secret
 export PARKVENTORY_SMTP_FROM=migrator@parkventory.invalid
 export PARKVENTORY_SMTP_HOST=127.0.0.1
 export PARKVENTORY_SMTP_PASSWORD=disabled
@@ -39,6 +45,7 @@ export PARKVENTORY_WEB_BASE_URL=http://127.0.0.1
 export QUARKUS_FLYWAY_MIGRATE_AT_START=false
 export QUARKUS_HTTP_HOST=127.0.0.1
 export QUARKUS_MAILER_MOCK=true
+export QUARKUS_OIDC_TENANT_ENABLED=false
 export QUARKUS_PROFILE=prod
 export QUARKUS_SCHEDULER_ENABLED=false
 

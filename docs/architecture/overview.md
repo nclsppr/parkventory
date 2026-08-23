@@ -14,7 +14,7 @@ Parkventory utilisera :
 - PostgreSQL 18 ;
 - OpenAPI 3.1 et client TypeScript généré ;
 - Testcontainers et ArchUnit ;
-- un fournisseur OIDC compatible passwordless email ;
+- un fournisseur OIDC passwordless ; Auth0 EU Email OTP est le candidat préparé ;
 - un fournisseur d'email derrière un port applicatif.
 
 La contrainte produit est explicite : si le backend est Java, il est Quarkus.
@@ -132,16 +132,20 @@ Le modèle détaillé vit dans [`domain-model.md`](domain-model.md).
 
 ## Authentification et tenant
 
-Le fournisseur OIDC doit supporter le passwordless email et produire un email
-vérifié. Quarkus utilise Authorization Code Flow, PKCE et un cookie de session
-chiffré. L'organisation Parkventory n'est pas un tenant OIDC : c'est une
-frontière métier interne, ce qui évite une configuration OIDC par entreprise.
+Le candidat préparé cible Auth0 EU et force `connection=email` dans Universal
+Login. Quarkus utilise Authorization Code Flow, PKCE, state, nonce, issuer et
+audience exacts, puis un token state chiffré. L'organisation Parkventory n'est
+pas un tenant OIDC : c'est une frontière métier interne, ce qui évite une
+configuration OIDC par entreprise.
 
-Le fournisseur précis reste à décider avant F05 ou toute ouverture externe,
-selon coût, région, export, délivrabilité, sécurité et procédure de retrait.
+Le fournisseur n’est pas choisi et le tenant n’est pas provisionné. L’ADR-0010,
+la région effective, le coût, l’export, le traitement des données, la
+délivrabilité OTP et la procédure de retrait restent des gates avant F05 ou
+toute ouverture externe.
 
 Le détail vit dans [`security-and-tenancy.md`](security-and-tenancy.md) et
-[`ADR-0003`](../decisions/adr-0003-authentication-et-isolation.md).
+[`ADR-0003`](../decisions/adr-0003-authentication-et-isolation.md) et
+[`ADR-0010`](../decisions/adr-0010-auth0-email-otp-production.md).
 
 ### Adaptateur local livré
 
@@ -149,7 +153,7 @@ Le développement n'attend pas ce choix externe. Sous Docker Compose, Quarkus
 émet un lien à usage unique vers Mailpit, ne persiste que son hash, établit une
 session serveur `HttpOnly` et résout invitation, domaine, organisation et
 membership dans PostgreSQL. Cette variante HTTP de boucle locale est bornée au
-développement et documentée dans
+développement et ses endpoints sont absents du build `prod`. Elle est documentée dans
 [`ADR-0005`](../decisions/adr-0005-adaptateur-identite-mailpit-local.md).
 
 ## Notifications

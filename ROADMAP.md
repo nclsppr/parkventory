@@ -24,7 +24,7 @@ lorsqu'elle améliore un usage déjà validé.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | F01 | Cadrage et socle | Le produit peut être compris et repris sans invention | `done` | Foundation, ADR, docs et Nimbus vérifiés | Snapshot identique ; `verify` vert ; rendu desktop/mobile revu | 2026-07-30 |
 | 2 | F02 | Surface et squelette exécutable | La landing et l'app shell fonctionnent sur une stack reproductible | `in_progress` | React, API santé, PostgreSQL, CI et design tokens démarrent ensemble | Builds/tests, CI, clone propre et démo Pages verts ; client généré et démarrage depuis clone à prouver | |
-| 3 | F03 | Identité et communauté | Un email pro vérifié rejoint ou crée une organisation sans admin | `in_progress` | Magic link, session et isolation inter-tenant testés | Adaptateur local, rejeu, session, invitation exacte, unicité de domaine et RLS tenant A/B vérifiés ; anti-abus et OIDC de production ouverts | |
+| 3 | F03 | Identité et communauté | Un email pro vérifié rejoint ou crée une organisation sans admin | `in_progress` | Magic link, session et isolation inter-tenant testés | Adaptateur local, candidat Auth0 fail-closed et RLS tenant A/B vérifiés ; décision fournisseur, anti-abus et OTP externe ouverts | |
 | 4 | F04 | Partager et réserver | Une place assignée devient réservable sans double booking | `in_progress` | Parcours vertical E2E et concurrence PostgreSQL prouvés | Déclaration, offre, réservation idempotente, outbox et E2E local vérifiés ; concurrence réelle, annulation et DST ouverts | |
 | 5 | F05 | Pilote fiable | Des collègues utilisent le flux sur mobile et desktop | `planned` | Notifications, accessibilité, observabilité et pilote contrôlé | Pipeline Atlas statique actif et candidat full-stack publié ; Compose, base, secrets, OIDC/email, cutover, appareils réels et pilote encore requis | |
 | 6 | F06 | Administration optionnelle | Une organisation peut nommer des admins et enrichir son inventaire | `planned` | Premier admin prouvé, rôles auditables, aucun admin requis au quotidien | | |
@@ -114,10 +114,13 @@ création concurrente d'un domaine unique et matrice inter-tenant testée.
 
 Exclusions : administration, SSO et domaines personnels.
 
-État observé : le parcours local Mailpit est fonctionnel et persistant. La
-matrice adversariale prouve désormais la RLS forcée avec un rôle non propriétaire,
-l'absence de contexte fermée et l'impossibilité pour A de lire ou muter B. F03
-reste ouverte pour l'anti-abus et l'adaptateur OIDC de production.
+État observé : le parcours local Mailpit est fonctionnel et persistant. Un
+candidat Auth0 EU Email OTP distinct est préparé avec PKCE/state/nonce, claims
+vérifiés, secrets par fichiers et provisioning vers `app_session`. La matrice
+adversariale prouve aussi la RLS forcée sous rôle non propriétaire et le refus
+tenant A/B. F03 reste ouverte : l’ADR et le coût ne sont pas approuvés, aucun
+tenant n’est provisionné, et l’anti-abus comme le flow OTP externe restent à
+prouver.
 
 ## Phase F04 : partager et réserver
 
