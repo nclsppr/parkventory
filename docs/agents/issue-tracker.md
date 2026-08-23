@@ -5,8 +5,8 @@ Les tickets et les spécifications de ce dépôt vivent dans GitHub Issues. Util
 ## Conventions
 
 - **Créer un ticket.** `gh issue create --title "..." --body "..."`. Utiliser un heredoc pour un corps sur plusieurs lignes.
-- **Lire un ticket.** `gh issue view <number> --comments`, puis filtrer les commentaires avec `jq` et récupérer aussi les labels.
-- **Lister les tickets.** `gh issue list --state open --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]'` avec les filtres `--label` et `--state` adaptés.
+- **Lire un ticket.** `gh issue view <number> --json number,title,body,author,createdAt,updatedAt,state,labels,comments`.
+- **Lister les tickets.** `gh issue list --state open --limit 1000 --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]'` avec les filtres `--label` et `--state` adaptés.
 - **Commenter.** `gh issue comment <number> --body "..."`.
 - **Ajouter ou retirer un label.** `gh issue edit <number> --add-label "..."` ou `gh issue edit <number> --remove-label "..."`.
 - **Fermer.** `gh issue close <number> --comment "..."`.
@@ -20,7 +20,7 @@ Déduire le dépôt depuis `git remote -v`. `gh` le fait automatiquement quand l
 Avec la valeur `yes`, les pull requests suivent les mêmes labels et états que les tickets, avec les commandes `gh pr` équivalentes :
 
 - **Lire une pull request.** `gh pr view <number> --comments` et `gh pr diff <number>` pour le diff.
-- **Lister les pull requests externes à trier.** `gh pr list --state open --json number,title,body,labels,author,authorAssociation,comments`, puis ne garder que les valeurs `CONTRIBUTOR`, `FIRST_TIME_CONTRIBUTOR` ou `NONE` de `authorAssociation`.
+- **Lister les pull requests externes à trier.** `gh api --paginate 'repos/{owner}/{repo}/pulls?state=open&per_page=100' | jq -s 'add | map(select(.author_association == "CONTRIBUTOR" or .author_association == "FIRST_TIME_CONTRIBUTOR" or .author_association == "NONE"))'`.
 - **Commenter, labelliser ou fermer.** Utiliser `gh pr comment`, `gh pr edit --add-label`, `gh pr edit --remove-label` et `gh pr close`.
 
 GitHub partage le même espace de numéros entre tickets et pull requests. Pour résoudre un numéro nu comme `#42`, lancer `gh pr view 42`, puis `gh issue view 42` si la première commande échoue.
