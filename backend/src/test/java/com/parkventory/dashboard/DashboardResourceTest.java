@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -128,9 +129,7 @@ class DashboardResourceTest {
                 .statusCode(409);
 
         outbox.deliverNext();
-        List<Mail> ownerMessages = awaitMessages(ownerEmail, 2);
-        assertTrue(ownerMessages.stream()
-                .anyMatch(mail -> mail.getSubject().contains("a été réservée")));
+        awaitMessage(ownerEmail, mail -> mail.getSubject().contains("a été réservée"));
 
         given()
                 .cookie(SessionService.COOKIE_NAME, colleagueSession)
@@ -259,6 +258,23 @@ class DashboardResourceTest {
             }
         }
         throw new AssertionError("Aucun e-mail reçu pour " + email);
+    }
+
+    private Mail awaitMessage(String email, Predicate<Mail> predicate) {
+        for (int attempt = 0; attempt < 40; attempt += 1) {
+            for (Mail message : mailbox.getMailsSentTo(email)) {
+                if (predicate.test(message)) {
+                    return message;
+                }
+            }
+            try {
+                Thread.sleep(25);
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("Attente interrompue.", exception);
+            }
+        }
+        throw new AssertionError("Aucun e-mail correspondant reçu pour " + email);
     }
 
     private static String tokenFrom(Mail mail) {

@@ -166,6 +166,9 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Corrigé
 
+- attente du sujet de notification de réservation attendu, plutôt que du seul
+  nombre d'e-mails déjà présents, afin de supprimer la course entre le mailer
+  réactif et l'assertion CI ;
 - attente du processus PostgreSQL final, et pas du serveur temporaire de
   l'entrypoint, avant de tester les images réellement poussées, avec timeout et
   journaux explicites en cas d'échec ;
