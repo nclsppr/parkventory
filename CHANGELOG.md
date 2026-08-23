@@ -254,6 +254,11 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Corrigé
 
+- contrat du bundle applicatif Atlas aligné sur les sept fichiers secrets
+  réellement montés par Compose, dont les trois secrets OIDC distincts exigés
+  par le contrôleur central ;
+- alerte Prometheus du backend étendue au cas où la série `up` disparaît,
+  afin qu'une cible absente ne ressemble pas à un état sain ;
 - attente du sujet de notification de réservation attendu, plutôt que du seul
   nombre d'e-mails déjà présents, afin de supprimer la course entre le mailer
   réactif et l'assertion CI ;
