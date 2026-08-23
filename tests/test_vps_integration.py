@@ -101,10 +101,41 @@ class VpsIntegrationTest(unittest.TestCase):
                 migrations = json.load(archive.extractfile("integration/migrations.json"))
                 probes_raw = archive.extractfile("integration/probes.json").read()
                 probes = json.loads(probes_raw)
+                prometheus_rules = archive.extractfile(
+                    "integration/prometheus/rules.yml"
+                ).read()
 
             self.assertEqual(contract["source_revision"], revision)
             self.assertFalse(contract["migration"]["runtime_auto_migrate"])
             self.assertEqual(contract["compose_file"], "compose.yaml")
+            self.assertEqual(
+                contract["secrets"],
+                [
+                    "parkventory-postgres-migrator-password",
+                    "parkventory-postgres-runtime-password",
+                    "parkventory-oidc-client-secret",
+                    "parkventory-oidc-state-secret",
+                    "parkventory-oidc-token-encryption-secret",
+                    "parkventory-smtp-password",
+                    "parkventory-smtp-username",
+                ],
+            )
+            self.assertEqual(
+                prometheus_rules,
+                b"""groups:
+  - name: parkventory
+    rules:
+      - alert: ParkventoryBackendUnavailable
+        expr: >-
+          up{application=\"parkventory\"} != 1
+          or absent(up{application=\"parkventory\"})
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Parkventory backend is unavailable
+""",
+            )
             self.assertEqual(
                 contract["image_variables"],
                 {

@@ -151,6 +151,16 @@ def validate_integration_sources() -> None:
         fail("séparation migrateur/runtime incomplète")
     if template.get("route_owner") != "compose":
         fail("le bundle ne déclare pas son propriétaire de route futur")
+    if template.get("secrets") != [
+        "parkventory-postgres-migrator-password",
+        "parkventory-postgres-runtime-password",
+        "parkventory-oidc-client-secret",
+        "parkventory-oidc-state-secret",
+        "parkventory-oidc-token-encryption-secret",
+        "parkventory-smtp-password",
+        "parkventory-smtp-username",
+    ]:
+        fail("le contrat d'intégration ne déclare pas les secrets exacts")
     if template.get("compose_file") != "compose.yaml" or template.get(
         "image_variables"
     ) != {
@@ -181,6 +191,24 @@ def validate_integration_sources() -> None:
             fail(f"le Compose applicatif contient une primitive interdite : {forbidden}")
     if compose.count("image: ${PARKVENTORY_BACKEND_IMAGE:?") != 2:
         fail("le backend et le migrateur n'utilisent pas exactement la même image")
+    prometheus_rules = (
+        ROOT / "deploy/vps/prometheus/rules.yml"
+    ).read_text(encoding="ascii")
+    expected_prometheus_rules = """groups:
+  - name: parkventory
+    rules:
+      - alert: ParkventoryBackendUnavailable
+        expr: >-
+          up{application=\"parkventory\"} != 1
+          or absent(up{application=\"parkventory\"})
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Parkventory backend is unavailable
+"""
+    if prometheus_rules != expected_prometheus_rules:
+        fail("l'alerte d'indisponibilité backend diffère du contrat exact")
     require_text(
         "deploy/vps/caddy/parkventory.caddy",
         (
