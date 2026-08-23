@@ -1,4 +1,22 @@
-import type { DashboardData } from "../types";
+import { dateInputValue, formatInputDate } from "../lib/dates";
+import type { AvailabilityItem, DashboardData } from "../types";
+
+const demoTimeZone = "Europe/Paris";
+const demoDateLabel = (daysFromToday: number) => formatInputDate(dateInputValue(daysFromToday));
+
+const demoOwnShare = {
+  id: "availability-a24-thu",
+  dateLabel: demoDateLabel(1),
+  timeLabel: "08:00 – 18:00",
+  timeZone: demoTimeZone,
+  spot: "A-24",
+  level: "Niveau A",
+  status: "UNAVAILABLE",
+  viewerRelation: "OFFERED",
+  reservationId: null,
+  canCancel: false,
+  canWithdraw: true,
+} satisfies AvailabilityItem;
 
 export const demoDashboard: DashboardData = {
   demo: true,
@@ -8,6 +26,7 @@ export const demoDashboard: DashboardData = {
     initials: "ND",
     assignedSpot: "A-24",
     assignedLevel: "Niveau A",
+    assignedSiteTimeZone: demoTimeZone,
   },
   organization: {
     name: "Victor Buck Services",
@@ -19,47 +38,61 @@ export const demoDashboard: DashboardData = {
     availableSpots: 27,
   },
   availability: [
-    {
-      id: "availability-a24-thu",
-      dateLabel: "Jeu. 30 juillet",
-      timeLabel: "08:00 – 18:00",
-      spot: "A-24",
-      level: "Niveau A",
-      status: "AVAILABLE",
-    },
+    demoOwnShare,
     {
       id: "availability-b18-fri",
-      dateLabel: "Ven. 31 juillet",
+      dateLabel: demoDateLabel(2),
       timeLabel: "09:00 – 17:00",
+      timeZone: demoTimeZone,
       spot: "B-18",
       level: "Niveau B",
-      status: "AVAILABLE",
+      status: "RESERVED",
+      viewerRelation: "RESERVED",
+      reservationId: "demo-reservation-b18-fri",
+      canCancel: true,
+      canWithdraw: false,
     },
     {
       id: "availability-c07-mon",
-      dateLabel: "Lun. 3 août",
+      dateLabel: demoDateLabel(3),
       timeLabel: "12:00 – 16:00",
+      timeZone: demoTimeZone,
       spot: "C-07",
       level: "Niveau C",
       status: "AVAILABLE",
+      viewerRelation: "NONE",
+      reservationId: null,
+      canCancel: false,
+      canWithdraw: false,
     },
     {
       id: "availability-d12-tue",
-      dateLabel: "Mar. 4 août",
+      dateLabel: demoDateLabel(4),
       timeLabel: "08:30 – 18:00",
+      timeZone: demoTimeZone,
       spot: "D-12",
       level: "Niveau D",
       status: "AVAILABLE",
+      viewerRelation: "NONE",
+      reservationId: null,
+      canCancel: false,
+      canWithdraw: false,
     },
     {
       id: "availability-e03-wed",
-      dateLabel: "Mer. 5 août",
+      dateLabel: demoDateLabel(5),
       timeLabel: "10:00 – 14:00",
+      timeZone: demoTimeZone,
       spot: "E-03",
       level: "Niveau E",
       status: "AVAILABLE",
+      viewerRelation: "NONE",
+      reservationId: null,
+      canCancel: false,
+      canWithdraw: false,
     },
   ],
+  activeShares: [{ ...demoOwnShare }],
   thanks: [
     {
       id: "thanks-julie",

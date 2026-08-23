@@ -26,7 +26,7 @@ from pathlib import Path
 source = Path(sys.argv[1])
 target = Path(sys.argv[2])
 contract = json.loads(source.read_text(encoding="ascii"))
-contract["productionDecision"] = "selected"
+contract["productionDecision"] = "blocked"
 target.write_text(json.dumps(contract), encoding="ascii")
 PY
 
@@ -40,7 +40,7 @@ if [[ "${output}" == *"Compatibilité PostgreSQL vérifiée"* ]]; then
   exit 1
 fi
 
-if [[ "${output}" != *"La décision de production PostgreSQL doit rester bloquée."* ]]; then
+if [[ "${output}" != *"La décision de production PostgreSQL doit être sélectionnée."* ]]; then
   echo "Le rejet du contrat ne porte pas le diagnostic attendu." >&2
   exit 1
 fi

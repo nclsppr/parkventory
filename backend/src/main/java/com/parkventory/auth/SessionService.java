@@ -119,6 +119,7 @@ public class SessionService {
                    AND ua.status = 'ACTIVE'
                    AND m.status = 'ACTIVE'
                    AND o.status = 'ACTIVE'
+                   AND o.mode <> 'SUSPENDED'
                  ORDER BY ue.created_at
                  LIMIT 1
                 """)) {

@@ -18,7 +18,8 @@ succès générique, limite de débit, fournisseur indisponible et lien expiré.
 
 Après authentification et seulement si l'email est marqué vérifié :
 
-1. une invitation exacte non expirée est recherchée ;
+1. une invitation exacte non expirée, déjà limitée à un domaine actif de
+   l'organisation cible, est recherchée ;
 2. sinon un domaine déjà rattaché résout l'organisation ;
 3. sinon un domaine professionnel admissible crée atomiquement une
    organisation communautaire ;
@@ -55,9 +56,10 @@ droit de réserver.
 5. Un résumé précède la publication.
 6. Le succès rend l'offre immédiatement trouvable.
 
-Modifier ou retirer une offre sans réservation active est autorisé. Si une
-réservation confirmée serait invalidée, l'action est refusée et propose un flux
-d'annulation explicite avec notification.
+Retirer une offre sans réservation active est autorisé et conserve son
+historique. Si une réservation confirmée serait invalidée, l'action est refusée
+et indique que le réservataire doit d'abord l'annuler. Le titulaire ne peut pas
+annuler silencieusement à sa place dans le MVP.
 
 États obligatoires : aucune place, intervalle invalide, chevauchement, heure
 d'été ou d'hiver ambiguë, offre publiée, offre partiellement réservée et retrait
@@ -90,9 +92,10 @@ Une panne d'email ne transforme jamais une réservation confirmée en échec.
 
 ## 7. Annuler
 
-Le réservataire peut annuler sa réservation avant son début selon une politique
-à finaliser avant F04. La place redevient disponible pour l'intervalle libéré et
-un événement d'outbox notifie le titulaire.
+Le réservataire peut annuler sa réservation strictement avant son début. La
+réservation passe à `CANCELLED`, la place redevient disponible pour l'intervalle
+libéré et un événement d'outbox notifie le titulaire dans la même transaction.
+Un rejeu retourne le même succès sans seconde notification.
 
 Le titulaire ne peut pas effacer silencieusement une réservation. Un
 administrateur peut intervenir uniquement avec une raison auditée et une
@@ -101,7 +104,8 @@ notification.
 ## 8. Inviter
 
 1. Un membre saisit l'email professionnel du collègue.
-2. Le backend vérifie la portée sans révéler d'autre organisation.
+2. Le backend exige un domaine actif de l'organisation sans révéler d'autre
+   organisation.
 3. Une invitation exacte et expirante est créée.
 4. Le destinataire rejoint l'organisation après authentification.
 5. L'invitation consommée ne peut pas être rejouée.
@@ -148,5 +152,6 @@ Desktop :
 - Administration, conditionnelle
 
 Mobile : Accueil, Partager et Trouver sont directement accessibles. La
-destination Réservations sera ajoutée avec sa route réelle ; les autres
-sections passent dans un menu explicite.
+réservation active et son annulation restent accessibles dans Trouver ; une
+destination Réservations distincte sera ajoutée avec un historique réel. Les
+autres sections passent dans un menu explicite.

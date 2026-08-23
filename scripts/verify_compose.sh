@@ -8,11 +8,21 @@ fi
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 PROJECT_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd -P)"
-VERIFY_PROJECT="parkventory-verify"
+VERIFY_PROJECT="${PARKVENTORY_VERIFY_PROJECT:-parkventory-verify}"
 
 cleanup() {
   exit_code=$?
   trap - EXIT INT TERM
+  if (( exit_code != 0 )); then
+    docker compose \
+      --project-directory "${PROJECT_ROOT}" \
+      --project-name "${VERIFY_PROJECT}" \
+      ps -a >&2 || true
+    docker compose \
+      --project-directory "${PROJECT_ROOT}" \
+      --project-name "${VERIFY_PROJECT}" \
+      logs --tail=200 --no-color >&2 || true
+  fi
   docker compose \
     --project-directory "${PROJECT_ROOT}" \
     --project-name "${VERIFY_PROJECT}" \
@@ -31,7 +41,7 @@ export PARKVENTORY_MAILPIT_UI_PORT=0
 docker compose \
   --project-directory "${PROJECT_ROOT}" \
   --project-name "${VERIFY_PROJECT}" \
-  up --build -d --wait --wait-timeout 300
+  up --build -d --wait --wait-timeout 600
 
 docker compose \
   --project-directory "${PROJECT_ROOT}" \
@@ -103,7 +113,14 @@ const run = async () => {
   if (!landing.ok || !(await landing.text()).includes("Parkventory")) {
     throw new Error("landing marker missing");
   }
-  for (const path of ["/app", "/app/partager", "/app/trouver", "/auth/callback"]) {
+  for (const path of [
+    "/app",
+    "/app/partager",
+    "/app/trouver",
+    "/auth/callback",
+    "/confidentialite",
+    "/mentions-legales",
+  ]) {
     const route = await fetch(`${web}${path}`);
     if (!route.ok || !(await route.text()).includes("Parkventory")) {
       throw new Error(`frontend route is not directly reachable: ${path}`);
@@ -120,7 +137,7 @@ const run = async () => {
   const domain = `compose-${suffix}.test`;
   const ownerEmail = `owner@${domain}`;
   const colleagueEmail = `colleague@${domain}`;
-  const inviteeEmail = `invitee@external-${suffix}.test`;
+  const inviteeEmail = `invitee@${domain}`;
   const ownerCookie = await authenticate(ownerEmail);
 
   await request("/api/v1/spots", {
@@ -135,7 +152,12 @@ const run = async () => {
     body: JSON.stringify({ spot: "A-24", date, from: "08:00", to: "18:00" }),
   });
   const ownerDashboard = await request("/api/v1/dashboard", { cookie: ownerCookie });
-  if (ownerDashboard.body.demo !== false || ownerDashboard.body.user.assignedSpot !== "A-24") {
+  if (ownerDashboard.body.demo !== false
+      || ownerDashboard.body.user.assignedSpot !== "A-24"
+      || ownerDashboard.body.user.assignedSiteTimeZone !== "Europe/Paris"
+      || ownerDashboard.body.availability.length !== 1
+      || ownerDashboard.body.activeShares.length !== 1
+      || ownerDashboard.body.availability.some((item) => item.timeZone !== "Europe/Paris")) {
     throw new Error("owner dashboard is not backed by PostgreSQL");
   }
 
@@ -151,9 +173,40 @@ const run = async () => {
   await waitForLatestMail("Votre place A-24 a été réservée", ownerEmail);
 
   const persisted = await request("/api/v1/dashboard", { cookie: colleagueCookie });
+  const persistedOffer = persisted.body.availability.find(item => item.id === offer.id);
   if (persisted.body.stats.reservations !== 1
-      || persisted.body.availability[0]?.status !== "RESERVED") {
+      || persistedOffer?.status !== "RESERVED"
+      || persistedOffer.viewerRelation !== "RESERVED"
+      || !persistedOffer.reservationId
+      || persistedOffer.canCancel !== true) {
     throw new Error("reservation was not persisted");
+  }
+
+  await request(`/api/v1/reservations/${persistedOffer.reservationId}`, {
+    method: "DELETE",
+    cookie: colleagueCookie,
+  });
+  await waitForLatestMail(
+    "La réservation de votre place A-24 a été annulée",
+    ownerEmail,
+  );
+  const reopened = await request("/api/v1/dashboard", { cookie: colleagueCookie });
+  const reopenedOffer = reopened.body.availability.find(item => item.id === offer.id);
+  if (reopened.body.stats.reservations !== 0
+      || reopenedOffer?.status !== "AVAILABLE"
+      || reopenedOffer.reservationId !== null
+      || reopenedOffer.canCancel !== false) {
+    throw new Error("cancelled reservation did not reopen the offer");
+  }
+
+  await request(`/api/v1/availability/${offer.id}`, {
+    method: "DELETE",
+    cookie: ownerCookie,
+  });
+  const withdrawn = await request("/api/v1/dashboard", { cookie: ownerCookie });
+  if (withdrawn.body.availability.some(item => item.id === offer.id)
+      || withdrawn.body.activeShares.some(item => item.id === offer.id)) {
+    throw new Error("withdrawn offer is still active");
   }
 
   await request("/api/v1/invitations", {
@@ -169,4 +222,4 @@ run().catch(error => {
   process.exit(1);
 });'
 
-echo "Parcours Compose vérifié : PostgreSQL, Mailpit, Quarkus, Vite, identité, partage, réservation et invitation sont sains."
+echo "Parcours Compose vérifié : PostgreSQL, Mailpit, Quarkus, Vite, identité, partage, réservation, annulation, retrait et invitation sont sains."

@@ -131,11 +131,14 @@ def validate_oidc_contract(root: Path = ROOT) -> None:
         "@Authenticated",
         "@AuthorizationCodeFlow",
         "OidcIdentityClaims.from(idToken, expectedIssuer)",
+        "catch (BadRequestException exception)",
+        '"/auth/callback?error=professional-email"',
         "oidcSession.logout()",
         "@PermitAll",
         'header("Clear-Site-Data", "\\\"cookies\\\"")',
         'Pattern.compile("q_session(?:_chunk_[0-9]+)?")',
         'oidcCookieNames.add("q_session")',
+        "expireOidcCookies(response, requestHeaders)",
         "expiredOidcCookie",
         'HttpHeaders.CACHE_CONTROL, "no-store"',
     )
@@ -147,6 +150,10 @@ def validate_oidc_contract(root: Path = ROOT) -> None:
         raise OidcContractError(
             f"{oidc_resource_path} doit sélectionner le code flow seulement pour le login"
         )
+    if oidc_resource.count("expireOidcCookies(response, requestHeaders)") != 2:
+        raise OidcContractError(
+            f"{oidc_resource_path} doit expirer les cookies OIDC au refus et au logout"
+        )
     oidc_service_path = "backend/src/main/java/com/parkventory/auth/OidcIdentityService.java"
     _require(
         _read(root, oidc_service_path),
@@ -155,6 +162,19 @@ def validate_oidc_contract(root: Path = ROOT) -> None:
         "findOrCreateBoundUser",
         "findOrCreateMembership",
         "INSERT INTO app_session",
+        "explicitInvitation",
+        "Cette adhésion n’est pas active.",
+    )
+    request_security_path = (
+        "backend/src/main/java/com/parkventory/security/PublicRequestSecurityFilter.java"
+    )
+    _require(
+        _read(root, request_security_path),
+        request_security_path,
+        '@IfBuildProfile("prod")',
+        'request.getHeaderString("Origin")',
+        'request.getHeaderString("Sec-Fetch-Site")',
+        'rateLimiter.acquire(',
     )
     claims_path = "backend/src/main/java/com/parkventory/auth/OidcIdentityClaims.java"
     _require(
@@ -230,7 +250,19 @@ def validate_oidc_contract(root: Path = ROOT) -> None:
         "q_session=invalid-token-state",
         "set-cookie: q_session=",
         "GET /api/v1/auth/oidc/callback?code=image-test-invalid-code&state=",
+        "Origin: https://evil.test",
+        "Origin: https://parkventory.test",
         "SELECT (revoked_at IS NOT NULL)::text FROM app_session",
+    )
+    caddy_path = "deploy/vps/caddy/parkventory.caddy"
+    _require(
+        _read(root, caddy_path),
+        caddy_path,
+        "Content-Security-Policy",
+        "request>uri query",
+        "delete code",
+        "delete state",
+        "delete session_state",
     )
 
     dockerfile_path = "infra/images/frontend.Dockerfile"

@@ -65,7 +65,7 @@ class AuthProfileExposureTest {
                 "logout", String.class, HttpHeaders.class);
         assertNull(logout.getAnnotation(Authenticated.class));
         assertNotNull(logout.getAnnotation(PermitAll.class));
-        var login = OidcAuthResource.class.getDeclaredMethod("login");
+        var login = OidcAuthResource.class.getDeclaredMethod("login", HttpHeaders.class);
         assertNotNull(login.getAnnotation(Authenticated.class));
         assertNotNull(login.getAnnotation(AuthorizationCodeFlow.class));
     }

@@ -1,12 +1,18 @@
 export type AvailabilityStatus = "AVAILABLE" | "RESERVED" | "UNAVAILABLE";
+export type AvailabilityViewerRelation = "NONE" | "OFFERED" | "RESERVED";
 
 export interface AvailabilityItem {
   id: string;
   dateLabel: string;
   timeLabel: string;
+  timeZone: string;
   spot: string;
   level: string;
   status: AvailabilityStatus;
+  viewerRelation: AvailabilityViewerRelation;
+  reservationId: string | null;
+  canCancel: boolean;
+  canWithdraw: boolean;
 }
 
 export interface DashboardStats {
@@ -31,6 +37,7 @@ export interface DashboardData {
     initials: string;
     assignedSpot: string | null;
     assignedLevel: string | null;
+    assignedSiteTimeZone: string | null;
   };
   organization: {
     name: string;
@@ -38,6 +45,7 @@ export interface DashboardData {
   };
   stats: DashboardStats;
   availability: AvailabilityItem[];
+  activeShares: AvailabilityItem[];
   thanks: ThanksMessage[];
 }
 

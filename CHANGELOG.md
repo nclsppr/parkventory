@@ -7,6 +7,71 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Ajouté
 
+- liste de gestion distincte contenant tous les partages futurs du membre,
+  sans reprendre la fenêtre de recherche bornée à sept jours, afin qu'un
+  créneau publié longtemps à l'avance reste visible et retirable ;
+- plafond transactionnel de 366 partages futurs actifs par membre, appliqué
+  sous verrou concurrent et reflété dans OpenAPI, avec index PostgreSQL partiel
+  dédié à la liste de gestion ;
+- dates de démonstration relatives au jour courant et ajout immédiat d'un
+  partage simulé dans « Mes partages actifs », ainsi que dans la recherche
+  lorsqu'il appartient aux sept prochains jours ;
+- retour lisible vers l'interface lorsqu'Auth0 vérifie une adresse refusée par
+  la politique professionnelle, sans refléter l'adresse ni laisser de session
+  OIDC locale réutilisable ;
+- fuseau IANA du site affecté inclus avec le profil et fuseau du parking inclus
+  avec chaque disponibilité, puis utilisés par les écrans de partage et de
+  recherche indépendamment du fuseau du navigateur ;
+- ADR-0015 sélectionnant le cluster partagé Atlas PostgreSQL 17.10 pour la
+  bêta publique, avec PostgreSQL 18.3 conservé comme baseline locale et preuve
+  d'upgrade V3 vers le catalogue courant sous le vrai profil de migrateur non privilégié ;
+- ADR-0014 retenant Resend pour l'OTP Auth0 et les e-mails transactionnels de
+  la bêta, sur un sous-domaine isolé, avec deux clés séparées, suivi désactivé
+  et recette de délivrabilité avant activation ;
+- pages publiques de confidentialité et de mentions légales, accessibles par
+  URL directe dans les artefacts Pages et Atlas, avec contenu distinct pour la
+  démo statique et le service dynamique, contact opérateur et couverture React ;
+- conservation de bêta décrite sans prétendre qu'une purge automatique existe,
+  avec traitement manuel explicite des demandes d'accès, export et suppression ;
+- ADR-0011 acceptant une bêta publique en libre-service plutôt qu'un pilote
+  fermé, avec barrières de lancement minimales et dette post-lancement
+  explicitement suivie ;
+- acceptation d'Auth0 EU Email OTP comme chemin d'identité le plus court vers la
+  bêta publique, sans prétendre que le tenant ou les secrets existent déjà ;
+- garde-fous de bêta publique sans allowlist d'entreprises : denylist versionnée
+  des domaines personnels, jetables et racines partagées, normalisation IDNA et
+  admission par défaut des autres domaines valides ;
+- protection des mutations à cookie par origine exacte et Fetch Metadata dans
+  le profil de production, rate limits séparés pour connexion, invitations et
+  mutations, plus quota transactionnel de 20 invitations par adhésion sur 24 h ;
+- CSP Caddy sans script inline, bootstrap de thème servi par la même origine,
+  réécriture de `X-Forwarded-For` et suppression de `code`, `state` et
+  `session_state` des journaux d'accès ;
+- ADR-0012 documentant les compromis, limites et retours arrière de ces
+  protections mono-instance pour l'ouverture publique ;
+- annulation idempotente d'une réservation par son réservataire avant le début,
+  avec conservation de l'historique, remise à disposition immédiate, audit et
+  notification du titulaire par l'outbox transactionnelle ;
+- retrait idempotent d'une disponibilité par son titulaire lorsque aucune
+  réservation active ne la couvre, avec refus explicite `403`/`409` et audit ;
+- relation du membre courant, identifiant de sa réservation et actions
+  autorisées dans le dashboard, puis contrôles accessibles sur les routes
+  existantes Partager et Trouver sans ajouter de fausse destination ;
+- contrat OpenAPI `0.4.3` pour l'annulation, le retrait, les fuseaux par site,
+  la liste bornée des partages actifs et les disponibilités, aligné avec les
+  modèles Java et TypeScript ; les réponses
+  partagées `403` et `429` couvrent exactement les mutations same-origin et les
+  opérations limitées par adresse réseau dans le filtre de production ;
+- clé d'idempotence stable conservée par le frontend pendant un retry de
+  réservation et verrous immédiats contre les doubles soumissions ;
+- test PostgreSQL de deux réservations HTTP réellement simultanées produisant
+  exactement un succès et un conflit, plus attente déterministe de l'email
+  outbox par sujet au lieu de dépendre de l'ordre global des événements ;
+- smoke Compose étendu jusqu'à l'annulation et au retrait, avec projet de test
+  isolable et fenêtres de santé adaptées à un téléchargement réellement froid ;
+- ADR-0013 fixant la politique minimale d'annulation avant le début et de
+  retrait sans réservation active ; ces capacités restent locales et non
+  déployées ;
 - migration Flyway V3 activant et forçant RLS sur les tables d'identité,
   session et données tenant, avec contexte `SET LOCAL` transactionnel et rôle
   runtime non propriétaire testé ;
@@ -67,7 +132,7 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 - Compose VPS app-only sans port, build ni volume, avec secrets fichiers,
   réseaux externes, healthchecks, ressources et logs bornés ;
 - bundle `vps-integration` déterministe lié au SHA, inventaires exacts des
-  migrations V1 à V3 et probes, puis descripteur canonique
+  migrations V1 à V5 et probes, puis descripteur canonique
   `vps-infra.application-release.v1` liant tous les digests ;
 - workflow de publication après gate complète, scans bloquants, SBOM,
   provenance et attestations, avec revalidation des images réellement poussées
@@ -187,6 +252,23 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 - attente du sujet de notification de réservation attendu, plutôt que du seul
   nombre d'e-mails déjà présents, afin de supprimer la course entre le mailer
   réactif et l'assertion CI ;
+- refus de toute réactivation implicite d'un compte `SUSPENDED` ou d'une
+  adhésion `SUSPENDED`/`LEFT`, ainsi que de toute organisation dont le statut ou
+  le mode est suspendu, dans les parcours local, OIDC et les sessions déjà
+  émises ; une adhésion `INVITED` ne devient active qu'après consommation d'une
+  invitation exacte ;
+- impossibilité pour un cookie de session forgé de remplacer le budget IP des
+  invitations ou mutations, avec filtre précoce sans accès bloquant à la base,
+  plafonds réseau distincts pour préserver les entreprises derrière un NAT,
+  normalisation IPv6 `/64` et éviction bornée en temps constant sans panne
+  globale ;
+- plafond de l'entrée OIDC relevé pour tenir compte de ses deux passages par
+  connexion et permettre un lancement collectif derrière un NAT ;
+- invitations communautaires bornées aux domaines actifs de l'organisation et
+  confirmation utilisateur indépendante du transport local Mailpit ;
+- ordre des notifications garanti par agrégat dans la file d'outbox : une
+  annulation ne peut plus dépasser une confirmation de réservation en attente
+  de retry ;
 - attente du processus PostgreSQL final, et pas du serveur temporaire de
   l'entrypoint, avant de tester les images réellement poussées, avec timeout et
   journaux explicites en cas d'échec ;

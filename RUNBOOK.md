@@ -21,11 +21,11 @@ cutover n'est pas livré.
 | --- | --- |
 | Opération | Exploiter la démo statique puis préparer la première activation Compose |
 | Propriétaire | nclsppr |
-| Suppléant | À nommer avant le pilote |
-| Statut documentaire | Démo statique opérationnelle ; production applicative bloquée |
+| Suppléant | À nommer |
+| Statut documentaire | Démo statique opérationnelle ; production applicative préparée mais non activée |
 | Dernière vérification | 2026-08-18 pour le plan statique ; jamais exécutée pour Compose |
 | Environnement concerné | Atlas public pour la démo ; cible Atlas applicative non activée |
-| Décisions liées | ADR-0007, ADR-0008 et future décision de cutover avant F05 |
+| Décisions liées | ADR-0007, ADR-0008, ADR-0010 à ADR-0015 |
 | Preuve de la dernière exécution | `DELIVERY-EVIDENCE.md`, extension du 2026-08-18 |
 
 ## État actuel et cible
@@ -47,13 +47,13 @@ Atlas avec les commandes de ce runbook.
 | Premier candidat applicatif | `application-release@sha256:384f736a81089a9a91a7ff55b21d552a6d803d65ab8e33daa296b54d990209a3` publié et attesté | Workflow Application release `32071732734` | 2026-08-18 |
 | Contrôleur Compose | Code fusionné sur `vps-infra/main`, Parkventory `enabled: false`, convergence live de cette révision non prouvée | Contrats centraux statique et applicatif | 2026-08-18 |
 | État dynamique | Aucun secret, aucune base, aucun service Compose et aucune migration Parkventory sur Atlas | État Atlas vérifié | 2026-08-18 |
-| Compatibilité PostgreSQL | V1 seule, reprise jusqu'à V3, suite Quarkus et parcours sous rôle runtime non propriétaire réussis sur les images exactes 17.10 et 18.3 | `npm run postgres:verify` | 2026-08-18, preuve locale sans migration Atlas |
+| Compatibilité PostgreSQL | V1 seule, reprise V3 vers V5 non vide, suite Quarkus et parcours sous rôles migrateur/runtime non privilégiés réussis sur les images exactes 17.10 et 18.3 | `npm run postgres:verify` | 2026-08-23, preuve locale sans migration Atlas |
 
 ### Cible
 
-Servir le frontend React et l'API Quarkus sous une même origine HTTPS, avec
-PostgreSQL 18 sauvegardé, livraison email, observabilité, artefacts immuables et
-rollback vérifié.
+Servir le frontend React et l'API Quarkus sous une même origine HTTPS, avec le
+cluster partagé Atlas PostgreSQL 17.10 sauvegardé, livraison email,
+observabilité, artefacts immuables et rollback vérifié.
 
 ### Limites et exclusions
 
@@ -66,8 +66,8 @@ rollback vérifié.
   commande Parkventory ne peut effectuer le cutover plateforme.
 - Aucune sauvegarde ni restauration n'est possible avant création de la base.
 - Ce runbook ne permet pas de provisionner implicitement un service.
-- La compatibilité PostgreSQL 17.10 ne remplace pas la décision de version, les
-  rôles séparés, la restauration ni l'ADR d'exploitation.
+- PostgreSQL 17.10 est sélectionné par l'ADR-0015 ; cette décision ne remplace
+  ni les rôles séparés, ni la sauvegarde, ni la restauration live.
 
 ## Cible exacte
 
@@ -229,11 +229,10 @@ du `known_hosts` protégé.
 
 ## Préconditions du candidat OIDC Auth0 EU
 
-L’[ADR-0010 proposée](docs/decisions/adr-0010-auth0-email-otp-production.md)
-décrit le contrat préparé. Le propriétaire doit d’abord accepter le
-sous-traitant, la région, le coût et les conditions. Les actions fournisseur
-ci-dessous exigent ensuite une autorisation explicite ; ce dépôt ne crée ni
-compte ni tenant.
+L’[ADR-0010 acceptée](docs/decisions/adr-0010-auth0-email-otp-production.md)
+décrit le contrat préparé. Le choix technique ne remplace pas l'acceptation du
+sous-traitant, de la région, du coût et des conditions au moment du
+provisionnement. Ce dépôt ne contient ni compte ni tenant.
 
 ### Contrat distant à vérifier avant injection des secrets
 
@@ -304,6 +303,48 @@ En cas d’indisponibilité ou de configuration incomplète, suspendre les nouve
 connexions ou laisser Compose désactivé. Ne jamais réactiver les magic links
 locaux sur la surface publique.
 
+## Transport e-mail Resend
+
+L'[ADR-0014](docs/decisions/adr-0014-resend-email-beta-publique.md) retient un
+seul transport pour l'OTP Auth0 et les messages Quarkus. Le sous-domaine
+`notifications.parkventory.com` évite de modifier le courrier OVH déjà attaché
+au domaine racine.
+
+### Contrat distant
+
+1. Créer ou sélectionner le compte Resend approuvé par le propriétaire.
+2. Ajouter `notifications.parkventory.com`, puis publier exactement les valeurs
+   SPF, DKIM et MX générées par le fournisseur sans toucher aux enregistrements
+   racine.
+3. Attendre le statut `verified` et contrôler les valeurs depuis au moins deux
+   résolveurs publics.
+4. Créer deux clés distinctes : une pour l'intégration Auth0, une pour le relais
+   SMTP du backend. Ne jamais les copier dans ce dépôt ou un log.
+5. Configurer Auth0 avec l'intégration Resend native et l'expéditeur
+   `Parkventory <no-reply@notifications.parkventory.com>`.
+6. Injecter sur Atlas les valeurs non secrètes `smtp.resend.com`, `587` et le
+   même expéditeur. Les fichiers `parkventory-smtp-username` et
+   `parkventory-smtp-password` contiennent respectivement `resend` et la clé
+   SMTP dédiée.
+7. Laisser le suivi d'ouverture et de clic désactivé et surveiller les limites
+   de 100 e-mails par jour et 3 000 par mois de l'offre gratuite initiale.
+
+### Recette avant trafic réel
+
+- envoyer un OTP Auth0 à deux boîtes de fournisseurs différents et terminer le
+  code flow ;
+- envoyer une invitation Quarkus et vérifier son expéditeur, son sujet et son
+  lien HTTPS sans token applicatif ;
+- vérifier SPF et DKIM dans les en-têtes reçus ;
+- provoquer un échec SMTP avec une clé de recette révoquée et vérifier une
+  alerte sans secret ni adresse destinataire dans les journaux ;
+- remettre uniquement la clé valide par la procédure protégée, puis prouver un
+  nouvel envoi réussi.
+
+Le transport Auth0 intégré, limité et non destiné à la production, n'est pas un
+fallback public. Si Resend ou son domaine n'est pas prêt, garder Compose
+désactivé.
+
 ## Sauvegarde et restauration isolée
 
 | Champ | Valeur |
@@ -316,7 +357,7 @@ locaux sur la surface publique.
 | Cible isolée de restauration | Projet ou instance de restauration sans trafic utilisateur |
 | Commande de restauration | À définir et tester avant ouverture |
 | Dernier test de restauration | Aucun, car aucune base n'existe |
-| RPO et RTO | À fixer avec les besoins du pilote avant F05 |
+| RPO et RTO bêta | RPO 24 h ; RTO cible 24 h, sans garantie contractuelle |
 
 ## Contrôles avant exécution
 
@@ -415,5 +456,5 @@ manuellement `/srv/www/parkventory/current`.
 - Mettre `STATUS.md` à jour uniquement après vérification de l'URL.
 - Aligner l'ADR d'exploitation et ce runbook si la cible change.
 - Consigner risques et actions externes avec un propriétaire.
-- Rejouer le runbook en préproduction avant le premier pilote et après tout
+- Rejouer le runbook dans une cible isolée avant le cutover public et après tout
   changement majeur d'infrastructure.

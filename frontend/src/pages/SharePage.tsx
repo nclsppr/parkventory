@@ -1,5 +1,6 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
+  AlertTriangle,
   CalendarCheck,
   CarFront,
   Check,
@@ -8,17 +9,53 @@ import {
   MapPin,
   ShieldCheck,
   Share2,
+  Trash2,
 } from "lucide-react";
-import { ApiError, declareSpot, shareSpot } from "../api/client";
+import { ApiError, declareSpot, shareSpot, withdrawAvailability } from "../api/client";
 import { isPublicDemo } from "../config";
-import { browserTimeZone, dateInputValue, formatInputDate } from "../lib/dates";
-import type { DashboardData } from "../types";
+import { dateInputValue, formatInputDate } from "../lib/dates";
+import type { AvailabilityItem, DashboardData, ShareRequest } from "../types";
 
 interface SharePageProps {
   data: DashboardData;
   onDemoMutation: (mutation: (current: DashboardData) => DashboardData) => void;
   onRefresh: (showLoading?: boolean) => Promise<void>;
   onSessionExpired: () => void;
+}
+
+export function addDemoShare(
+  current: DashboardData,
+  request: ShareRequest,
+  id: string = crypto.randomUUID(),
+): DashboardData {
+  const item: AvailabilityItem = {
+    id,
+    dateLabel: formatInputDate(request.date),
+    timeLabel: `${request.from} – ${request.to}`,
+    timeZone: current.user.assignedSiteTimeZone ?? "Fuseau non renseigné",
+    spot: request.spot,
+    level: current.user.assignedLevel ?? "Niveau non renseigné",
+    status: "UNAVAILABLE",
+    viewerRelation: "OFFERED",
+    reservationId: null,
+    canCancel: false,
+    canWithdraw: true,
+  };
+  const isInDiscoveryWindow = request.date >= dateInputValue()
+    && request.date <= dateInputValue(7);
+
+  return {
+    ...current,
+    organization: {
+      ...current.organization,
+      sharedTotal: current.organization.sharedTotal + 1,
+    },
+    stats: { ...current.stats, shares: current.stats.shares + 1 },
+    availability: isInDiscoveryWindow
+      ? [...current.availability, { ...item }]
+      : current.availability,
+    activeShares: [...current.activeShares, item],
+  };
 }
 
 export function SharePage({
@@ -29,16 +66,21 @@ export function SharePage({
 }: SharePageProps) {
   const [shareBusy, setShareBusy] = useState(false);
   const [spotBusy, setSpotBusy] = useState(false);
+  const [withdrawBusyId, setWithdrawBusyId] = useState<string | null>(null);
   const [inlineError, setInlineError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [spotForm, setSpotForm] = useState({ label: "", level: "" });
   const [shareForm, setShareForm] = useState({
     spot: data.user.assignedSpot ?? "",
-    date: dateInputValue(1),
+    date: dateInputValue(isPublicDemo ? 2 : 1),
     from: "08:00",
     to: "18:00",
   });
-  const timeZone = useMemo(browserTimeZone, []);
+  const shareLock = useRef(false);
+  const spotLock = useRef(false);
+  const withdrawLock = useRef<string | null>(null);
+  const timeZone = data.user.assignedSiteTimeZone;
+  const ownShares = useMemo(() => data.activeShares, [data.activeShares]);
   const timeOrderInvalid = Boolean(shareForm.from && shareForm.to && shareForm.from >= shareForm.to);
   const timeOrderMessage = "L’heure de fin doit être postérieure à l’heure de début.";
 
@@ -57,7 +99,8 @@ export function SharePage({
 
   const handleDeclareSpot = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (spotBusy) return;
+    if (spotLock.current) return;
+    spotLock.current = true;
     setSpotBusy(true);
     setInlineError(null);
     setSuccessMessage(null);
@@ -71,31 +114,26 @@ export function SharePage({
     } catch (error) {
       reportError(error, "La place n’a pas pu être déclarée.");
     } finally {
+      spotLock.current = false;
       setSpotBusy(false);
     }
   };
 
   const handleShare = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (shareBusy) return;
+    if (shareLock.current) return;
     setInlineError(null);
     setSuccessMessage(null);
     if (timeOrderInvalid) {
       return;
     }
 
+    shareLock.current = true;
     setShareBusy(true);
     try {
       const response = await shareSpot(shareForm);
       if (isPublicDemo) {
-        onDemoMutation((current) => ({
-          ...current,
-          organization: {
-            ...current.organization,
-            sharedTotal: current.organization.sharedTotal + 1,
-          },
-          stats: { ...current.stats, shares: current.stats.shares + 1 },
-        }));
+        onDemoMutation((current) => addDemoShare(current, shareForm));
       } else {
         await onRefresh(false);
       }
@@ -104,15 +142,53 @@ export function SharePage({
     } catch (error) {
       reportError(error, "La disponibilité n’a pas pu être publiée.");
     } finally {
+      shareLock.current = false;
       setShareBusy(false);
     }
   };
 
-  const readyToShare = Boolean(
-    shareForm.spot && shareForm.date && shareForm.from && shareForm.to,
-  );
-  const shareError = timeOrderInvalid ? timeOrderMessage : inlineError;
+  const handleWithdraw = async (availabilityId: string, spot: string, dateLabel: string) => {
+    if (withdrawLock.current) return;
+    if (!window.confirm(`Retirer le partage de ${spot} pour ${dateLabel} ?`)) return;
 
+    withdrawLock.current = availabilityId;
+    setWithdrawBusyId(availabilityId);
+    setInlineError(null);
+    setSuccessMessage(null);
+    try {
+      const response = await withdrawAvailability(availabilityId);
+      if (isPublicDemo) {
+        onDemoMutation((current) => ({
+          ...current,
+          availability: current.availability.filter((item) => item.id !== availabilityId),
+          activeShares: current.activeShares.filter((item) => item.id !== availabilityId),
+        }));
+      } else {
+        await onRefresh(false);
+      }
+      setSuccessMessage(response.message);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        onSessionExpired();
+        return;
+      }
+      setInlineError(
+        error instanceof Error
+          ? error.message
+          : "La disponibilité n’a pas pu être retirée.",
+      );
+      if (error instanceof ApiError && error.status === 409 && !isPublicDemo) {
+        await onRefresh(false);
+      }
+    } finally {
+      withdrawLock.current = null;
+      setWithdrawBusyId(null);
+    }
+  };
+
+  const readyToShare = Boolean(
+    shareForm.spot && shareForm.date && shareForm.from && shareForm.to && timeZone,
+  );
   return (
     <div className="app-page route-page share-route-page">
       <header className="app-page-header route-page-header">
@@ -131,6 +207,12 @@ export function SharePage({
       {successMessage && (
         <div className="inline-feedback inline-feedback-success" role="status">
           <Check aria-hidden="true" /><p>{successMessage}</p>
+        </div>
+      )}
+
+      {inlineError && (
+        <div className="inline-feedback inline-feedback-error" role="alert">
+          <AlertTriangle aria-hidden="true" /><p>{inlineError}</p>
         </div>
       )}
 
@@ -188,8 +270,8 @@ export function SharePage({
               </label>
             </div>
 
-            <p className="timezone-note"><Clock3 aria-hidden="true" /> Fuseau : <strong>{timeZone}</strong></p>
-            {shareError && <p className="field-error" id="share-time-error" role="alert">{shareError}</p>}
+            <p className="timezone-note"><Clock3 aria-hidden="true" /> Fuseau : <strong>{timeZone ?? "Non renseigné"}</strong></p>
+            {timeOrderInvalid && <p className="field-error" id="share-time-error" role="alert">{timeOrderMessage}</p>}
           </form>
 
           <aside className="workflow-surface workflow-summary" aria-labelledby="share-summary-title">
@@ -199,7 +281,7 @@ export function SharePage({
               <div><dt>Emplacement</dt><dd><MapPin aria-hidden="true" />{data.user.assignedLevel ?? "Niveau non renseigné"}</dd></div>
               <div><dt>Date</dt><dd>{formatInputDate(shareForm.date)}</dd></div>
               <div><dt>Horaire</dt><dd>{shareForm.from || "—"} – {shareForm.to || "—"}</dd></div>
-              <div><dt>Fuseau</dt><dd>{timeZone}</dd></div>
+              <div><dt>Fuseau</dt><dd>{timeZone ?? "Non renseigné"}</dd></div>
             </dl>
             <p className="workflow-trust"><ShieldCheck aria-hidden="true" /> Votre absence et son motif ne sont jamais demandés.</p>
             <button
@@ -207,6 +289,7 @@ export function SharePage({
               type="submit"
               form="share-workflow-form"
               disabled={!readyToShare || shareBusy}
+              aria-busy={shareBusy}
             >
               {shareBusy ? <LoaderCircle className="spin" aria-hidden="true" /> : <Share2 aria-hidden="true" />}
               {shareBusy ? "Publication…" : "Partager ma place"}
@@ -240,8 +323,7 @@ export function SharePage({
                 onChange={(event) => setSpotForm({ ...spotForm, level: event.target.value })}
               />
             </label>
-            {inlineError && <p className="field-error" role="alert">{inlineError}</p>}
-            <button className="button button-primary workflow-primary-action" type="submit" disabled={spotBusy || !spotForm.label.trim()}>
+            <button className="button button-primary workflow-primary-action" type="submit" disabled={spotBusy || !spotForm.label.trim()} aria-busy={spotBusy}>
               {spotBusy ? <LoaderCircle className="spin" aria-hidden="true" /> : <CarFront aria-hidden="true" />}
               {spotBusy ? "Enregistrement…" : "Affecter cette place"}
             </button>
@@ -252,6 +334,56 @@ export function SharePage({
             <p>Parkventory rattache chaque disponibilité à une place précise pour éviter les conflits de réservation.</p>
           </aside>
         </div>
+      )}
+
+      {data.user.assignedSpot && (
+        <section className="availability-results managed-availability" aria-labelledby="my-shares-title">
+          <div className="section-heading-compact">
+            <div>
+              <p className="section-kicker">Suivi</p>
+              <h2 id="my-shares-title">Mes partages actifs</h2>
+            </div>
+          </div>
+          {ownShares.length === 0 ? (
+            <div className="route-empty-state route-empty-state-compact">
+              <CalendarCheck aria-hidden="true" />
+              <h3>Aucun partage actif.</h3>
+              <p>Le prochain créneau publié apparaîtra ici et pourra être retiré tant qu’il n’est pas réservé.</p>
+            </div>
+          ) : (
+            <ol className="availability-agenda">
+              {ownShares.map((item) => (
+                <li key={item.id}>
+                  <div className="availability-agenda-status">
+                    <span className={`status status-${item.status.toLowerCase()}`}><i />{item.status === "RESERVED" ? "Réservée" : "Publiée"}</span>
+                    <span>{item.dateLabel}</span>
+                  </div>
+                  <div className="availability-agenda-place">
+                    <CarFront aria-hidden="true" />
+                    <p><strong>{item.spot}</strong><span>{item.level}</span></p>
+                  </div>
+                  <p className="availability-agenda-time"><Clock3 aria-hidden="true" />{item.timeLabel} · {item.timeZone}</p>
+                  {item.canWithdraw ? (
+                    <button
+                      className="button button-danger button-small"
+                      type="button"
+                      onClick={() => void handleWithdraw(item.id, item.spot, item.dateLabel)}
+                      disabled={withdrawBusyId === item.id}
+                      aria-busy={withdrawBusyId === item.id}
+                    >
+                      {withdrawBusyId === item.id
+                        ? <LoaderCircle className="spin" aria-hidden="true" />
+                        : <Trash2 aria-hidden="true" />}
+                      {withdrawBusyId === item.id ? "Retrait…" : "Retirer"}
+                    </button>
+                  ) : (
+                    <span className="availability-agenda-static"><ShieldCheck aria-hidden="true" />Réservation active</span>
+                  )}
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
       )}
     </div>
   );

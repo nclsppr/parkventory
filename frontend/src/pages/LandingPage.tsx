@@ -23,7 +23,9 @@ import {
   homeUrl,
   isOidcIdentity,
   isPublicDemo,
+  legalUrl,
   oidcLoginUrl,
+  privacyUrl,
   shareUrl,
 } from "../config";
 import { useLandingMotion } from "../hooks/useLandingMotion";
@@ -312,7 +314,12 @@ export function LandingPage() {
       <footer className="landing-footer">
         <Logo />
         <p>Le parking partagé, simplement.</p>
-        <div><a href={appUrl}>Application</a><a href="#securite">Confidentialité</a><span>© 2026</span></div>
+        <div>
+          <a href={appUrl}>Application</a>
+          <a href={privacyUrl}>Confidentialité</a>
+          <a href={legalUrl}>Mentions légales</a>
+          <span>© 2026</span>
+        </div>
       </footer>
     </div>
   );

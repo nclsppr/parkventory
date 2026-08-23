@@ -25,8 +25,8 @@ lorsqu'elle améliore un usage déjà validé.
 | 1 | F01 | Cadrage et socle | Le produit peut être compris et repris sans invention | `done` | Foundation, ADR, docs et Nimbus vérifiés | Snapshot identique ; `verify` vert ; rendu desktop/mobile revu | 2026-07-30 |
 | 2 | F02 | Surface et squelette exécutable | La landing et l'app shell fonctionnent sur une stack reproductible | `in_progress` | React, API santé, PostgreSQL, CI et design tokens démarrent ensemble | Builds/tests, CI, clone propre et démo Pages verts ; client généré et démarrage depuis clone à prouver | |
 | 3 | F03 | Identité et communauté | Un email pro vérifié rejoint ou crée une organisation sans admin | `in_progress` | Magic link, session et isolation inter-tenant testés | Adaptateur local, candidat Auth0 fail-closed et RLS tenant A/B vérifiés ; décision fournisseur, anti-abus et OTP externe ouverts | |
-| 4 | F04 | Partager et réserver | Une place assignée devient réservable sans double booking | `in_progress` | Parcours vertical E2E et concurrence PostgreSQL prouvés | Déclaration, offre, réservation idempotente, outbox et E2E local vérifiés ; concurrence réelle, annulation et DST ouverts | |
-| 5 | F05 | Pilote fiable | Des collègues utilisent le flux sur mobile et desktop | `planned` | Notifications, accessibilité, observabilité et pilote contrôlé | Pipeline Atlas statique actif et candidat full-stack publié ; Compose, base, secrets, OIDC/email, cutover, appareils réels et pilote encore requis | |
+| 4 | F04 | Partager et réserver | Une place assignée devient réservable sans double booking | `in_progress` | Parcours vertical E2E et concurrence PostgreSQL prouvés | Déclaration, offre, réservation idempotente, concurrence réelle, annulation/retrait, outbox et E2E local vérifiés ; DST et bornes temporelles complètes restent ouvertes | |
+| 5 | F05 | Bêta publique fiable | De vrais utilisateurs rejoignent spontanément leur organisation et utilisent le flux sur mobile et desktop | `planned` | Identité, isolation, annulation, sauvegarde restaurable, observabilité minimale et ouverture publique | Pipeline Atlas statique actif et candidat full-stack publié ; Compose, base, secrets, OIDC/email, cutover et appareils réels encore requis | |
 | 6 | F06 | Administration optionnelle | Une organisation peut nommer des admins et enrichir son inventaire | `planned` | Premier admin prouvé, rôles auditables, aucun admin requis au quotidien | | |
 | 7 | F07 | Plan de parking | Les places peuvent être localisées sur un plan versionné | `planned` | Placement accessible, versionné et utile sur un site pilote | | |
 
@@ -134,23 +134,27 @@ E2E fonctionne sans administrateur.
 Exclusions : récurrence complexe, carte et gamification.
 
 État observé : le parcours vertical fonctionne dans Compose et dans le
-navigateur. F04 reste ouverte pour le test réellement concurrent, l'annulation,
-les fuseaux et les changements d'heure.
+navigateur. Deux réservations réellement concurrentes produisent un succès et
+un conflit ; le réservataire peut annuler avant le début, puis le titulaire
+retirer l'offre libérée. F04 reste ouverte pour la matrice complète des bornes,
+des fuseaux et des changements d'heure.
 
-## Phase F05 : pilote fiable
+## Phase F05 : bêta publique fiable
 
-Objectif : rendre le flux exploitable par un petit groupe réel, avec emails,
-états vides, erreurs, accessibilité et diagnostic.
+Objectif : ouvrir le flux à de vrais utilisateurs en libre-service, avec emails,
+états vides, erreurs, accessibilité essentielle et diagnostic.
 
-Critère de sortie : pilote autorisé, parcours mobile/desktop/clavier vérifié,
-notifications par outbox, restauration isolée et runbook exécutable.
+Critère de sortie : inscription publique autorisée pour les domaines
+professionnels, parcours mobile/desktop/clavier vérifié, notifications par
+outbox, restauration isolée et runbook exécutable.
 
-Exclusions : croissance commerciale et statistiques non prouvées.
+Exclusions : croissance commerciale, administration avancée et statistiques
+non prouvées.
 
 État observé : `parkventory.com` sert la démo statique et un candidat
 full-stack immuable est publié. Le contrôleur Compose reste désactivé ; ces
 preuves de livraison ne remplacent ni la base, ni les secrets, ni le cutover
-exclusif, ni la validation d'un pilote réel.
+exclusif, ni la validation de la bêta publique définie par l'ADR-0011.
 
 ## Phase F06 : administration optionnelle
 

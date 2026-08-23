@@ -10,6 +10,31 @@ la documentation, publie de nouveaux candidats statique et applicatif ; leur
 état courant doit être résolu dans les workflows puis vérifié sur Atlas. Les
 invariants durables restent l'activation statique et la désactivation Compose.
 
+## Delta local non publié du 2026-08-23
+
+La branche de préparation issue des candidats RLS et OIDC ajoute le parcours
+minimal d'annulation et de retrait décrit par l'ADR-0013. Le réservataire peut
+annuler avant le début ; le créneau redevient disponible et l'outbox notifie le
+titulaire. Celui-ci peut ensuite retirer l'offre, tandis qu'une réservation
+active bloque toujours le retrait. Les deux transitions sont idempotentes et
+auditées.
+
+Le test d'intégration Quarkus exerce également deux réservations HTTP
+simultanées et observe exactement un succès et un conflit `409`. Deux
+publications simultanées à la limite active produisent aussi un seul succès. La gate locale
+complète `npm run verify` réussit sur le worktree final : 46 Markdown et builds
+documentaires, 24 contrôles de contrat, 48 tests React, audit npm sans
+vulnérabilité, builds frontend, migration V1 isolée, reprise V3 vers V5 non
+vide et 41 tests Quarkus sur chacune des images PostgreSQL 17.10 et 18.3, puis
+9 tests métier sous rôle runtime RLS sur chacune. Le smoke Compose repart sans
+cache et couvre identité, partage, réservation, annulation, retrait,
+notification et invitation. Ce delta ne constitue ni un push, ni une release,
+ni une activation de production, ni une preuve publique. Les routes Partager
+et Trouver ont aussi été relues dans Chromium à 390 × 844 et 1 280 × 720 :
+aucun débordement horizontal, cibles d'action de 44 px minimum et aucune erreur
+console observée. Safari et les technologies d'assistance réelles restent hors
+de cette preuve.
+
 ## Référence
 
 | Champ | Valeur |
@@ -53,12 +78,11 @@ applicatif ne l'appelle tant que l'entrée reste désactivée. Le domaine et la
 route restent donc exclusivement détenus par la démo statique jusqu'à une
 bascule plateforme distincte et auditée.
 
-Une gate de préparation vérifie maintenant les migrations V1 à V3 et les
-tests Quarkus sur les images exactes PostgreSQL 17.10 et 18.3. PostgreSQL 17.10
-est seulement un candidat de compatibilité pour le cluster partagé Atlas. La
-cible documentaire reste PostgreSQL 18 et la décision de production reste
-bloquée jusqu'à son alignement explicite par ADR. Aucune base Atlas n'est créée
-par cette gate.
+Une gate de préparation vérifie maintenant les migrations V1 à V5 et les
+tests Quarkus sur les images exactes PostgreSQL 17.10 et 18.3. L'ADR-0015
+sélectionne PostgreSQL 17.10 sur le cluster partagé Atlas pour la bêta publique,
+tandis que PostgreSQL 18.3 reste la baseline locale. Cette sélection ne crée
+aucune base Atlas et ne remplace ni sauvegarde, ni restauration, ni cutover.
 
 Le parcours local n'est plus une simulation. Docker Compose démarre
 PostgreSQL 18.3, Mailpit 1.30.6, Java 25 / Quarkus 3.33.3 LTS et React/Vite.
@@ -106,21 +130,21 @@ graphe local intégré.
 | Phase roadmap | État observé | Preuve restante avant clôture | Responsable |
 | --- | --- | --- | --- |
 | F02 — Surface et squelette | `in_progress` | Générer le client OpenAPI et rejouer le démarrage depuis un clone propre | nclsppr |
-| F03 — Identité et communauté | `in_progress` | Anti-abus, décision fournisseur OIDC et OTP externe ; matrice tenant A/B et RLS vérifiées localement | nclsppr |
-| F04 — Partager et réserver | `in_progress` | Test réellement concurrent, annulation, fuseaux et heure d'été | nclsppr |
+| F03 — Identité et communauté | `in_progress` | Tenant Auth0/Resend, OTP et délivrabilité externes ; anti-abus, matrice tenant A/B et RLS sont vérifiés localement | nclsppr |
+| F04 — Partager et réserver | `in_progress` | Parcours public réel et matrice heure d'été ; concurrence, annulation, retrait et fuseau API sont vérifiés localement | nclsppr |
 
 ## Livré et vérifié
 
 | Capacité | Périmètre réel | Preuve | Limite connue |
 | --- | --- | --- | --- |
 | Identité locale | Lien 256 bits, hash en base, durée 15 min, consommation unique, session `HttpOnly` 7 jours | Tests Quarkus, smoke Compose, parcours navigateur | Endpoints supprimés du build `prod` |
-| Identité OIDC candidate | Auth0 EU Universal Login Email OTP, client confidentiel, PKCE/state/nonce, issuer/audience exacts, claims vérifiés et pont `app_session` tenant | Tests de profils, claims et provisioning PostgreSQL sous rôle runtime non propriétaire ; contrat adversarial et images de production | ADR non approuvée ; coût, tenant, secrets réels, callback public et flux OTP externe absents |
+| Identité OIDC sélectionnée | Auth0 EU Universal Login Email OTP, client confidentiel, PKCE/state/nonce, issuer/audience exacts, claims vérifiés et pont `app_session` tenant | Tests de profils, claims et provisioning PostgreSQL sous rôle runtime non propriétaire ; contrat adversarial et images de production | Tenant, secrets réels, callback public et flux OTP externe absents |
 | Communauté | Invitation exacte prioritaire, sinon organisation communautaire unique par domaine | PostgreSQL réel et tests d'intégration | Domaine partagé/filiales et liste anti-abus à durcir |
-| Application React | Connexion, dashboard de synthèse, routes dédiées de partage et recherche, réservation, invitation, chargements, erreurs, états vides et choix clair/sombre persistant | 35 tests Vitest, build, navigation History API et navigateur sans erreur console | Client OpenAPI encore manuel ; recherche limitée à l'agenda de sept jours |
+| Application React | Connexion, dashboard de synthèse, routes dédiées de partage et recherche, réservation, annulation, retrait, invitation, chargements, erreurs, états vides et choix clair/sombre persistant | 48 tests Vitest, build, navigation History API et navigateur sans erreur console | Client OpenAPI encore manuel ; recherche limitée à l'agenda de sept jours |
 | Identité visuelle | Master SVG fourni utilisé dans les huit emplacements React, les favicons, le header Nimbus et les cartes Open Graph ; palettes sombre et claire sémantiques ; plaque de contraste claire sans recoloration du master | Gate anti-dérive, tests de ratios et revue des deux thèmes desktop/mobile | Symbole seul ; aucun wordmark vectoriel ni variante monochrome |
-| API Quarkus | Session, dashboard, place, partage, réservation idempotente et invitation | Un test V1 dédié puis quatre tests sur chacune des images exactes PostgreSQL 17.10 et 18.3, contrat OpenAPI `0.3.0` | Annulation et administration absentes |
-| PostgreSQL | Schéma multi-tenant, sessions, outbox, audit, idempotence, exclusions GiST et RLS forcée | V1 isolée, migration jusqu'à V3, `btree_gist`, trois exclusions, test adversarial et parcours sous rôle non propriétaire sur 17.10 et 18.3 | Rôle runtime et migrations Atlas restent à vérifier en live avant activation |
-| Notifications | Invitation et réservation écrites avec l'outbox puis livrées avec reprise bornée | Messages observés dans Mailpit | Délivrabilité externe non prouvée |
+| API Quarkus | Session, dashboard, place, partage borné, réservation/annulation/retrait idempotents et invitation | Migration V1 isolée, reprise V3 vers V5 non vide et 41 tests sur chacune des images exactes PostgreSQL 17.10 et 18.3, contrat OpenAPI `0.4.3` | Administration absente |
+| PostgreSQL | Schéma multi-tenant, sessions, métier, outbox ordonnée par agrégat, audit, idempotence, exclusions GiST, index de gestion des offres et RLS forcée | V1 isolée, migration jusqu'à V5, `btree_gist`, trois exclusions, test adversarial et parcours sous rôle non propriétaire sur 17.10 et 18.3 | Rôle runtime et migrations Atlas restent à vérifier en live avant activation |
+| Notifications | Invitation, réservation et annulation écrites avec l'outbox ordonnée puis livrées avec reprise bornée | Messages observés dans Mailpit | Délivrabilité Resend externe non prouvée |
 | Environnement | Quatre services Compose, images par digest, healthchecks et volumes | Checker indépendant, smoke complet et stack locale saine | Docker ou OrbStack requis |
 | Démo Pages | Landing animée, dashboard, partage et recherche statiques sous `/parkventory/` | Run Pages `32071732707` réussi sur `583e0e2` | Aucun compte, email ou stockage distant |
 | Documentation Nimbus | Vision, parcours, rôles et règles produit sous `/parkventory/docs/` | Run Pages `31499873475`, routes publiques HTTP 200 et routes exclues HTTP 404 sur `c61fb2e` | Seule la collection produit est publique ; le corpus complet reste local |
@@ -217,23 +241,22 @@ Compose, PostgreSQL ou migrateur Parkventory n'a été démarré sur Atlas.
 
 | Blocage | Impact | Propriétaire | Condition de reprise |
 | --- | --- | --- | --- |
-| Auth0 EU non approuvé et fournisseur email non choisi | Interdit de présenter le candidat OIDC préparé comme une connexion de production active | nclsppr | ADR/coût/région/conditions approuvés, puis tenant, callback, secrets, OTP réel et retrait testés |
-| Production applicative non décidée | Bloque toute API, identité ou persistance publique | nclsppr | Architecture d'exploitation, services externes et gates du runbook validés |
+| Comptes Auth0 EU et Resend non provisionnés | Empêche toute connexion et délivrabilité réelle malgré les contrats acceptés | nclsppr | Tenant, domaine, callback et secrets installés hors Git, puis OTP, invitation et notification réels testés |
+| Sauvegarde offsite et alertes non raccordées | Empêche de prouver restauration et détection d'incident avant le cutover | nclsppr | Stockage chiffré sélectionné, restauration isolée réussie et routage Alertmanager testé |
 | Contrôleur Compose non activé et cutover plateforme non livré | Le candidat publié ne peut pas remplacer la démo statique en sécurité ; le code du contrôleur central est fusionné mais son entrée reste désactivée | nclsppr | Convergence live prouvée, base et secrets provisionnés, migration compatible, route transférée exclusivement sous le verrou partagé, rollback et probes publics testés |
 | Privilèges PostgreSQL de production non provisionnés | Le migrateur possède le schéma et le runtime doit recevoir uniquement les droits DML/usage nécessaires, y compris les default privileges des migrations futures | nclsppr | Rôles, grants et rotation créés par Atlas puis test négatif DDL rejoué avec les identités de production |
-| Version PostgreSQL Atlas non alignée par ADR | Interdit d'utiliser la preuve 17.10 comme décision de production | nclsppr | Choix 17 ou 18, rôles, migration, sauvegarde et restauration approuvés dans les deux dépôts |
-| Droits des cinq JPEG non documentés | Interdit leur publication comme assets servis | nclsppr | Confirmer origine et droits ; le site sert une création originale |
+| Mentions légales incomplètes | L'adresse postale et la forme juridique définitive ne sont pas publiées | nclsppr | Fournir les informations exactes sans les transmettre dans un canal public si elles doivent rester privées |
 
 ## Dérives et travaux ouverts
 
 | Intention | Réalité observée | Risque | Action |
 | --- | --- | --- | --- |
-| Isolation en profondeur | Filtres tenant et clés composites, sans RLS | Contournement en cas de défaut repository | Rôle non propriétaire, `SET LOCAL`, RLS forcée et matrice A/B |
+| Isolation Atlas en profondeur | RLS forcée et matrice A/B prouvées localement | Dérive des rôles ou ACL en production | Rejouer les preuves owner/migrator/runtime sur Atlas avant cutover |
 | Client issu d'OpenAPI | Client TypeScript écrit à la main | Dérive de types | Générer et contrôler le diff avant clôture F02 |
-| Défense anti-abus | Refus minimal de domaines personnels | Spam et tenant indésirable | Rate limit, liste versionnée et réponses/timings comparés |
-| Intégrité temporelle complète | Contraintes GiST et conflits testés séquentiellement | Course, annulation ou DST mal traitée | Tests parallèles, annulation et matrice de fuseaux |
+| Défense anti-abus | Denylist versionnée, quotas et limites IP mono-instance | Spam distribué ou nouveau domaine jetable | Observer les abus réels puis distribuer ou ajuster les limites si nécessaire |
+| Intégrité temporelle complète | Contraintes GiST, concurrence HTTP, annulation et retrait testés | Cas limites d'heure d'été | Compléter la matrice de fuseaux après ouverture |
 | Recherche d'un intervalle arbitraire | Route dédiée alimentée par l'agenda réel à sept jours | Besoin non couvert au-delà de cette fenêtre | Ajouter un contrat de recherche borné avant d'afficher des filtres date/site |
-| Identité de production | Candidat Auth0 fail-closed intégré à la RLS ; local et OIDC exclusifs au build | Sous-traitant non approuvé ou configuration distante incorrecte | Décision fournisseur, puis tenant réel, callback Caddy, anti-abus/CSRF et séquence identité → membership → `SET LOCAL` prouvée en préproduction |
+| Identité de production | Auth0 retenu, adaptateur fail-closed intégré à la RLS ; local et OIDC exclusifs au build | Configuration distante incorrecte | Tenant réel, callback Caddy, anti-abus/CSRF et séquence identité → membership → `SET LOCAL` prouvés avant cutover |
 
 ## Risques et hypothèses
 

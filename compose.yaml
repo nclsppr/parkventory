@@ -74,7 +74,7 @@ services:
           grep -Eq '"status"[[:space:]]*:[[:space:]]*"UP"' <&3
       interval: 5s
       timeout: 4s
-      retries: 36
+      retries: 96
       start_period: 60s
     volumes:
       - type: bind
@@ -113,8 +113,8 @@ services:
         - fetch('http://127.0.0.1:5173/').then(response=>{if(!response.ok)process.exit(1)}).catch(()=>process.exit(1))
       interval: 5s
       timeout: 4s
-      retries: 24
-      start_period: 15s
+      retries: 72
+      start_period: 60s
     volumes:
       - type: bind
         source: .

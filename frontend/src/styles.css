@@ -306,8 +306,18 @@ svg {
   background: var(--cyan-deep);
 }
 
+.button-danger {
+  border-color: var(--danger);
+  background: transparent;
+  color: var(--danger);
+}
+
+.button-danger:hover {
+  background: var(--danger-deep);
+}
+
 .button-small {
-  min-height: 42px;
+  min-height: 44px;
   padding-inline: 17px;
   font-size: 14px;
 }
@@ -1381,6 +1391,177 @@ svg {
   color: var(--green);
 }
 
+/* Informations légales */
+.legal-page {
+  min-height: 100vh;
+  color: var(--text);
+  background:
+    linear-gradient(90deg, transparent 49.95%, color-mix(in srgb, var(--border) 45%, transparent) 50%, transparent 50.05%) 0 0 / 64px 64px,
+    var(--bg);
+}
+
+.legal-header,
+.legal-main,
+.legal-footer {
+  width: min(860px, calc(100% - 48px));
+  margin-inline: auto;
+}
+
+.legal-header {
+  min-height: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
+
+.legal-header > a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.legal-main {
+  padding: 72px 0 112px;
+}
+
+.legal-back {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 72px;
+  color: var(--muted);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.legal-back svg {
+  width: 15px;
+  height: 15px;
+}
+
+.legal-back:hover,
+.legal-main a:hover,
+.legal-footer a:hover {
+  color: var(--green);
+}
+
+.legal-main > h1 {
+  max-width: 780px;
+  margin: 16px 0 32px;
+  font-size: clamp(48px, 9vw, 88px);
+  line-height: 0.94;
+  letter-spacing: -0.065em;
+}
+
+.legal-lead {
+  max-width: 720px;
+  margin: 0;
+  color: var(--muted);
+  font-size: clamp(19px, 2.5vw, 25px);
+  line-height: 1.45;
+}
+
+.legal-main section {
+  max-width: 720px;
+  margin-top: 64px;
+  padding-top: 28px;
+  border-top: 1px solid var(--border);
+}
+
+.legal-main section h2 {
+  margin: 0 0 16px;
+  font-size: 21px;
+  letter-spacing: -0.025em;
+}
+
+.legal-main section p,
+.legal-main section li,
+.legal-details dd {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+.legal-main section p {
+  margin: 0;
+}
+
+.legal-main section p + p {
+  margin-top: 16px;
+}
+
+.legal-main section ul {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 18px;
+  padding-left: 22px;
+}
+
+.legal-main section a {
+  color: var(--text);
+  text-underline-offset: 4px;
+}
+
+.legal-main section svg {
+  width: 13px;
+  height: 13px;
+  vertical-align: -1px;
+}
+
+.legal-details {
+  margin: 0 0 24px;
+}
+
+.legal-details > div {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.75fr) 1fr;
+  gap: 24px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.legal-details dt {
+  color: var(--muted-2);
+  font-size: 11px;
+  line-height: 1.5;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.legal-details dd {
+  margin: 0;
+}
+
+.legal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 28px 0 42px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.legal-footer nav {
+  display: flex;
+  gap: 24px;
+}
+
+.legal-footer a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.legal-footer a[aria-current="page"] {
+  color: var(--text);
+}
+
+.legal-footer p {
+  margin: 0;
+}
+
 /* Authentification locale */
 .auth-page,
 .dashboard-state {
@@ -2371,6 +2552,38 @@ svg {
 
   .landing-footer > div {
     justify-self: start;
+    flex-wrap: wrap;
+  }
+
+  .legal-header,
+  .legal-main,
+  .legal-footer {
+    width: min(100% - 32px, 860px);
+  }
+
+  .legal-main {
+    padding: 48px 0 80px;
+  }
+
+  .legal-back {
+    margin-bottom: 48px;
+  }
+
+  .legal-main section {
+    margin-top: 48px;
+  }
+
+  .legal-details > div {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .legal-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .legal-footer nav {
     flex-wrap: wrap;
   }
 
@@ -3458,6 +3671,10 @@ svg {
   gap: var(--space-5);
 }
 
+.managed-availability {
+  margin-top: var(--space-5);
+}
+
 .availability-agenda {
   display: grid;
   border-top: 1px solid var(--border);
@@ -3566,6 +3783,17 @@ svg {
   width: 17px;
 }
 
+.availability-agenda-actions {
+  min-width: 128px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.availability-agenda-actions .button,
+.availability-agenda > li > .button {
+  min-width: 112px;
+}
+
 .reservation-summary {
   position: sticky;
   top: var(--space-5);
@@ -3665,6 +3893,10 @@ svg {
   color: var(--muted);
   font-size: 14px;
   line-height: 1.5;
+}
+
+.route-empty-state-compact {
+  min-height: 180px;
 }
 
 .status {
@@ -4029,7 +4261,9 @@ svg {
   }
 
   .availability-agenda > li > .choose-spot-button,
-  .availability-agenda > li > .availability-agenda-static {
+  .availability-agenda > li > .availability-agenda-static,
+  .availability-agenda > li > .availability-agenda-actions,
+  .availability-agenda > li > .button {
     grid-column: 2;
     grid-row: 1 / 4;
     align-self: stretch;
@@ -4170,11 +4404,17 @@ svg {
   }
 
   .availability-agenda > li > .choose-spot-button,
-  .availability-agenda > li > .availability-agenda-static {
+  .availability-agenda > li > .availability-agenda-static,
+  .availability-agenda > li > .availability-agenda-actions,
+  .availability-agenda > li > .button {
     grid-column: 1;
     grid-row: auto;
     width: 100%;
     justify-content: center;
+  }
+
+  .availability-agenda-actions .button {
+    width: 100%;
   }
 
 }

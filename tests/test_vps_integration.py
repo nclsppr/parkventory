@@ -148,6 +148,16 @@ class VpsIntegrationTest(unittest.TestCase):
                         "sha256": "12ff4aa7286aa05ca192a10594d55283c41f40b191c1aa4e77a11faaba8334ca",
                         "version": 3,
                     },
+                    {
+                        "path": "backend/src/main/resources/db/migration/V4__outbox_aggregate_ordering.sql",
+                        "sha256": "d98accc0e841a6eabcf42a4c8abe1b19f247ac58b52acbfcfef13d93ec1de1a2",
+                        "version": 4,
+                    },
+                    {
+                        "path": "backend/src/main/resources/db/migration/V5__active_share_management.sql",
+                        "sha256": "28a4335b505dab433a3066648217d04a2dee22facb87dd6ffb0eba817904ba4f",
+                        "version": 5,
+                    },
                 ],
             )
 

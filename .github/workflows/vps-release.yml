@@ -77,7 +77,8 @@ jobs:
               and .source.repository == "nclsppr/parkventory"
               and .source.revision == $revision
               and ([.routes[].path] | contains([
-                "/", "/app/", "/app/partager/", "/app/trouver/", "/auth/callback/"
+                "/", "/app/", "/app/partager/", "/app/trouver/", "/auth/callback/",
+                "/confidentialite/", "/mentions-legales/"
               ]))' \
             "${RELEASE_DIRECTORY}/routes.json" >/dev/null
 

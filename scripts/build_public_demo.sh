@@ -29,13 +29,17 @@ VITE_DEMO_MODE=true \
 mkdir -p \
   "${DIST_DIR}/app/partager" \
   "${DIST_DIR}/app/trouver" \
-  "${DIST_DIR}/auth/callback"
+  "${DIST_DIR}/auth/callback" \
+  "${DIST_DIR}/confidentialite" \
+  "${DIST_DIR}/mentions-legales"
 
 for route in \
   app/index.html \
   app/partager/index.html \
   app/trouver/index.html \
   auth/callback/index.html \
+  confidentialite/index.html \
+  mentions-legales/index.html \
   404.html
 do
   cp "${DIST_DIR}/index.html" "${DIST_DIR}/${route}"
@@ -51,6 +55,10 @@ if [[ $target == pages ]]; then
     echo "Le build Pages ne porte pas le chemin de base /parkventory/." >&2
     exit 1
   }
+  grep -Fq '<script src="/parkventory/theme-init.js"></script>' "${DIST_DIR}/index.html" || {
+    echo "Le bootstrap de thème Pages ne porte pas le chemin /parkventory/." >&2
+    exit 1
+  }
 else
   if grep -Eq '(src|href)="/parkventory/' "${DIST_DIR}/index.html"; then
     echo "Le build Atlas contient encore un chemin GitHub Pages." >&2
@@ -60,6 +68,10 @@ else
     echo "Le build Atlas ne porte pas le chemin de base racine." >&2
     exit 1
   }
+  grep -Fq '<script src="/theme-init.js"></script>' "${DIST_DIR}/index.html" || {
+    echo "Le bootstrap de thème Atlas ne porte pas le chemin racine." >&2
+    exit 1
+  }
 fi
 
-echo "Démo ${target} construite avec les routes /app, /app/partager, /app/trouver et /auth/callback."
+echo "Démo ${target} construite avec les routes applicatives et légales directes."

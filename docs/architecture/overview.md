@@ -161,7 +161,8 @@ développement et ses endpoints sont absents du build `prod`. Elle est document�
 La mutation métier et un `outbox_event` sont commités ensemble. Un worker
 Quarkus :
 
-1. sélectionne un lot avec `FOR UPDATE SKIP LOCKED` ;
+1. sélectionne avec `FOR UPDATE SKIP LOCKED` le premier événement disponible
+   dont aucun prédécesseur du même agrégat n'attend encore ;
 2. appelle le port du fournisseur email avec une clé d'idempotence ;
 3. marque succès ou prochain essai ;
 4. place un échec terminal en diagnostic sans annuler la mutation métier.
@@ -185,7 +186,8 @@ La topologie cible reste volontairement petite :
 
 - frontend statique ;
 - un conteneur Quarkus JVM immuable ;
-- PostgreSQL 18 managé de préférence ;
+- cluster partagé Atlas PostgreSQL 17.10 pour la bêta publique, avec PostgreSQL
+  18.3 comme baseline locale et de compatibilité ;
 - reverse proxy TLS ;
 - fournisseur OIDC ;
 - fournisseur email ;

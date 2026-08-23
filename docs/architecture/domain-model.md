@@ -1,7 +1,7 @@
 # Modèle de domaine
 
 Ce document décrit les agrégats et invariants cibles. Les migrations Flyway V1
-à V3 sont la source exécutable du schéma local ; toute divergence est signalée
+à V5 sont la source exécutable du schéma local ; toute divergence est signalée
 et corrigée.
 
 ## Vue d'ensemble
@@ -40,7 +40,7 @@ Chaque notification       -> OutboxEvent
 | `availability_offer` | Intervalle partagé | Affectation, début, fin, statut, auteur |
 | `reservation` | Droit d'usage temporaire | Place, offre, réservataire, intervalle, statut, idempotence |
 | `outbox_event` | Livraison asynchrone fiable | Type, payload minimal, essais, prochaine tentative |
-| `outbox_dispatch` | Ordonnancement global du worker | Tenant, identifiant d'événement et échéance uniquement ; aucun payload |
+| `outbox_dispatch` | Ordonnancement global du worker | Tenant, identifiant d'événement, agrégat technique et échéance uniquement ; aucun payload ni email |
 | `audit_event` | Trace de sécurité | Acteur, tenant, action, cible, instant, résultat |
 
 ## Identifiants
@@ -71,7 +71,9 @@ V3 force RLS sur les tables contenant identités, sessions et données tenant.
 `app_session.organization_id` lie la session à son adhésion par une clé étrangère
 composite. `outbox_dispatch` est l'exception globale minimale : elle permet au
 worker de découvrir un tenant, puis `outbox_event` redevient accessible
-uniquement après contexte transactionnel.
+uniquement après contexte transactionnel. V4 duplique seulement le type et
+l'identifiant technique de l'agrégat dans cette file afin qu'un événement en
+retry bloque ses successeurs du même agrégat sans exposer leur payload.
 
 ## Temps
 
@@ -156,6 +158,11 @@ Une table ou contrainte garantit l'unicité de :
 
 Le résultat de la première commande peut être rejoué sans créer une seconde
 réservation. Les clés expirent selon une rétention documentée.
+
+L'annulation et le retrait utilisent l'état persistant comme résultat
+idempotent : rejouer `CANCELLED` ou `WITHDRAWN` retourne un succès sans écrire
+un second audit ni un second événement d'outbox. Le détail de ces transitions
+vit dans l'ADR-0013.
 
 ## Plan de parking futur
 

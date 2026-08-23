@@ -73,12 +73,21 @@ public class OutboxDeliveryService {
 
     private PendingDispatch lockNextDispatch(Connection connection) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
-                SELECT event_id, organization_id
-                  FROM outbox_dispatch
-                 WHERE available_at <= now()
-                 ORDER BY created_at
+                SELECT candidate.event_id, candidate.organization_id
+                  FROM outbox_dispatch candidate
+                 WHERE candidate.available_at <= now()
+                   AND NOT EXISTS (
+                       SELECT 1
+                         FROM outbox_dispatch predecessor
+                        WHERE predecessor.organization_id = candidate.organization_id
+                          AND predecessor.aggregate_type = candidate.aggregate_type
+                          AND predecessor.aggregate_id IS NOT DISTINCT FROM candidate.aggregate_id
+                          AND (predecessor.created_at, predecessor.event_id)
+                              < (candidate.created_at, candidate.event_id)
+                   )
+                 ORDER BY candidate.created_at, candidate.event_id
                  LIMIT 1
-                 FOR UPDATE SKIP LOCKED
+                 FOR UPDATE OF candidate SKIP LOCKED
                 """);
              ResultSet result = statement.executeQuery()) {
             if (!result.next()) {
@@ -99,7 +108,11 @@ public class OutboxDeliveryService {
                    AND id = ?
                    AND delivered_at IS NULL
                    AND next_attempt_at <= now()
-                   AND event_type IN ('INVITATION_REQUESTED', 'RESERVATION_CONFIRMED')
+                   AND event_type IN (
+                       'INVITATION_REQUESTED',
+                       'RESERVATION_CONFIRMED',
+                       'RESERVATION_CANCELLED'
+                   )
                  FOR UPDATE
                 """)) {
             statement.setObject(1, dispatch.organizationId());
@@ -143,6 +156,22 @@ public class OutboxDeliveryService {
                             Début du créneau : %s
 
                             Vous pouvez retrouver ce partage dans Parkventory.
+                            """.formatted(reserver, spot, startsAt)));
+            return;
+        }
+        if ("RESERVATION_CANCELLED".equals(event.eventType())) {
+            String reserver = requiredText(event.payload(), "reserverName");
+            String spot = requiredText(event.payload(), "spot");
+            String startsAt = requiredText(event.payload(), "startsAt");
+            mailer.send(Mail.withText(
+                    email,
+                    "La réservation de votre place " + spot + " a été annulée",
+                    """
+                            %s a annulé sa réservation de votre place %s.
+
+                            Début du créneau : %s
+
+                            Le créneau est de nouveau disponible dans Parkventory.
                             """.formatted(reserver, spot, startsAt)));
             return;
         }

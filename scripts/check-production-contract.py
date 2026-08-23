@@ -98,6 +98,20 @@ def validate_runtime_contract() -> None:
     if "%prod.quarkus.flyway.migrate-at-start=true" in properties:
         fail("le runtime de production active Flyway")
     require_text(
+        "backend/src/main/java/com/parkventory/security/PublicRequestSecurityFilter.java",
+        (
+            '@IfBuildProfile("prod")',
+            'request.getHeaderString("Origin")',
+            'request.getHeaderString("Sec-Fetch-Site")',
+            'request.getHeaderString("X-Forwarded-For")',
+            'HttpHeaders.RETRY_AFTER',
+        ),
+    )
+    require_text(
+        "backend/src/main/resources/email-domain-policy.txt",
+        ("PERSONAL gmail.com", "DISPOSABLE mailinator.com", "SHARED co.uk"),
+    )
+    require_text(
         "infra/images/backend-entrypoint.sh",
         (
             "PARKVENTORY_MIGRATION_ONLY=false",
@@ -167,6 +181,17 @@ def validate_integration_sources() -> None:
             fail(f"le Compose applicatif contient une primitive interdite : {forbidden}")
     if compose.count("image: ${PARKVENTORY_BACKEND_IMAGE:?") != 2:
         fail("le backend et le migrateur n'utilisent pas exactement la même image")
+    require_text(
+        "deploy/vps/caddy/parkventory.caddy",
+        (
+            "Content-Security-Policy",
+            "request>uri query",
+            "delete code",
+            "delete state",
+            "delete session_state",
+            "header_up X-Forwarded-For {remote_host}",
+        ),
+    )
     probes_path = ROOT / "deploy/vps/probes.json"
     probes_raw = probes_path.read_bytes()
     probes = json.loads(probes_raw.decode("ascii"))

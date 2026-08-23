@@ -15,6 +15,7 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
+    public readonly retryAfterSeconds?: number,
   ) {
     super(message);
     this.name = "ApiError";
@@ -53,11 +54,28 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     const problem = await response.json().catch(() => null);
-    const message =
-      problem && typeof problem.detail === "string"
-        ? problem.detail
-        : `La requête a échoué (${response.status}).`;
-    throw new ApiError(message, response.status);
+    const serverDetail = problem && typeof problem.detail === "string"
+      ? problem.detail
+      : null;
+    const retryAfterHeader = response.headers.get("Retry-After");
+    const retryAfter = retryAfterHeader && /^\d+$/.test(retryAfterHeader)
+      ? Number(retryAfterHeader)
+      : undefined;
+    let message = serverDetail ?? `La requête a échoué (${response.status}).`;
+    if (response.status === 401 && !serverDetail) {
+      message = "Votre session a expiré. Reconnectez-vous pour continuer.";
+    } else if (response.status === 403 && !serverDetail) {
+      message = "Vous n’avez pas l’autorisation d’effectuer cette action.";
+    } else if (response.status === 409 && !serverDetail) {
+      message = "Ces données viennent de changer. Actualisez la page et réessayez.";
+    } else if (response.status === 429) {
+      message = retryAfter
+        ? `Trop de demandes. Réessayez dans ${retryAfter} seconde${retryAfter > 1 ? "s" : ""}.`
+        : "Trop de demandes. Patientez un instant avant de réessayer.";
+    } else if (response.status >= 500) {
+      message = "Le service rencontre un problème. Réessayez dans un instant.";
+    }
+    throw new ApiError(message, response.status, retryAfter);
   }
 
   return response.json() as Promise<T>;
@@ -132,7 +150,10 @@ export async function shareSpot(payload: ShareRequest): Promise<ActionResponse> 
   });
 }
 
-export async function reserveSpot(id: string): Promise<ActionResponse> {
+export async function reserveSpot(
+  id: string,
+  idempotencyKey: string,
+): Promise<ActionResponse> {
   if (isPublicDemo) {
     return {
       accepted: true,
@@ -141,8 +162,28 @@ export async function reserveSpot(id: string): Promise<ActionResponse> {
   }
   return request<ActionResponse>(`/availability/${id}/reservations`, {
     method: "POST",
-    headers: { "Idempotency-Key": crypto.randomUUID() },
+    headers: { "Idempotency-Key": idempotencyKey },
   });
+}
+
+export async function cancelReservation(id: string): Promise<ActionResponse> {
+  if (isPublicDemo) {
+    return {
+      accepted: true,
+      message: `La réservation est annulée dans cette ${demoContext}.`,
+    };
+  }
+  return request<ActionResponse>(`/reservations/${id}`, { method: "DELETE" });
+}
+
+export async function withdrawAvailability(id: string): Promise<ActionResponse> {
+  if (isPublicDemo) {
+    return {
+      accepted: true,
+      message: `La disponibilité est retirée de cette ${demoContext}.`,
+    };
+  }
+  return request<ActionResponse>(`/availability/${id}`, { method: "DELETE" });
 }
 
 export function inviteColleague(

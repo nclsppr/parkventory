@@ -15,7 +15,8 @@ public final class ApiModels {
             String fullName,
             String initials,
             String assignedSpot,
-            String assignedLevel) {
+            String assignedLevel,
+            String assignedSiteTimeZone) {
     }
 
     public record Organization(String name, int sharedTotal) {
@@ -28,9 +29,14 @@ public final class ApiModels {
             String id,
             String dateLabel,
             String timeLabel,
+            String timeZone,
             String spot,
             String level,
-            String status) {
+            String status,
+            String viewerRelation,
+            String reservationId,
+            boolean canCancel,
+            boolean canWithdraw) {
     }
 
     public record Thanks(String id, String initials, String author, String message, String when) {
@@ -42,6 +48,7 @@ public final class ApiModels {
             Organization organization,
             Stats stats,
             List<Availability> availability,
+            List<Availability> activeShares,
             List<Thanks> thanks) {
     }
 

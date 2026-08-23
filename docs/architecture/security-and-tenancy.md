@@ -33,9 +33,11 @@ Contraintes :
 - cookies `HttpOnly`, `Secure`, `SameSite=Lax` ou plus strict selon le flow ;
 - état et token de session chiffrés avec secret injecté ;
 - rotation de session après authentification ;
-- protection CSRF et vérification `Origin` pour les mutations ;
-- expiration courte du flux et rate limiting email/IP ;
-- aucun log d'email complet, code, token ou cookie.
+- mutations à cookie refusées sans `Origin` exact ou avec
+  `Sec-Fetch-Site: cross-site` dans le profil de production ;
+- expiration courte du flux, rate limiting par IP/session et quota
+  transactionnel des invitations ;
+- aucun log d'email complet, code, `state`, token ou cookie.
 
 La configuration fixe `connection=email`, `prompt=login`, les endpoints Auth0 et l’issuer
 exact. Le compte interne conserve une clé opaque dérivée de `(issuer, subject)`
@@ -65,8 +67,9 @@ Le parcours Compose de développement utilise l'adaptateur accepté par
 [`ADR-0005`](../decisions/adr-0005-adaptateur-identite-mailpit-local.md) :
 jeton aléatoire de 256 bits, hash SHA-256 en base, consommation atomique,
 session de sept jours en cookie `HttpOnly` et Mailpit. Cet adaptateur reste
-fonctionnel hors production seulement. Il ne prouve pas le tenant Auth0, la
-délivrabilité OTP, le rate limiting ou la protection CSRF complète.
+fonctionnel hors production seulement. Il ne prouve pas le tenant Auth0 ni la
+délivrabilité OTP. Les deux adaptateurs refusent désormais toute réactivation
+implicite d'un compte ou d'une adhésion suspendus.
 
 ## Tenant métier
 
@@ -93,6 +96,7 @@ requête.
 2. Le bootstrap borné résout une invitation exacte ou un domaine, sans révéler
    le reste du tenant.
 3. Parkventory crée ou relit le compte et l'adhésion active dans PostgreSQL ;
+   un état suspendu ou quitté échoue en `403` et n'est jamais réactivé ;
    les rôles proviennent toujours de cette adhésion, jamais d'un header ou d'un
    claim non recoupé.
 4. La session serveur lie `user_account_id`, `active_membership_id` et
@@ -132,7 +136,10 @@ la suite d'intégration l'exerce sous un rôle non propriétaire sans `BYPASSRLS
 L'outbox utilise `outbox_dispatch`, index global sans payload ni email, pour
 verrouiller le prochain identifiant et son tenant. Le worker pose ensuite le
 contexte avant de lire `outbox_event`, protégé par RLS. Un retry recopie la même
-échéance dans les deux tables.
+échéance dans les deux tables. La migration V4 ajoute à l'index global le type
+et l'identifiant technique de l'agrégat : tant qu'un événement antérieur reste
+en attente, ses successeurs du même agrégat ne peuvent pas être livrés. Une
+annulation ne peut ainsi pas précéder l'e-mail de confirmation qu'elle annule.
 
 La livraison d’invitation est elle aussi séparée au build. Hors production,
 elle crée le magic-link Mailpit local. En production, elle n’écrit aucun
@@ -162,15 +169,19 @@ Risques :
 Mesures :
 
 - normalisation IDNA et casse sans réécriture de l'alias local ;
-- liste versionnée de domaines personnels/jetables avec procédure de contestation ;
-- invitation exacte prioritaire ;
+- denylist versionnée `email-domain-policy.txt` couvrant les principaux domaines
+  personnels, jetables et racines partagées, sans allowlist d'entreprises ;
+- invitation exacte prioritaire uniquement dans un domaine actif de
+  l'organisation cible ;
 - unicité transactionnelle d'un domaine actif ;
 - aucun nom ou membre révélé avant vérification ;
 - preuve de contrôle renforcée pour la première administration ;
 - audit et procédure de séparation ou fusion à concevoir avant besoin réel.
 
-Un domaine vérifié reste un signal organisationnel, pas une preuve de contrat de
-travail.
+Tout domaine IDNA syntaxiquement valide absent de la denylist reste admis. Un
+domaine vérifié reste un signal organisationnel, pas une preuve de contrat de
+travail. Les limites, conséquences et procédures de correction sont fixées par
+[`ADR-0012`](../decisions/adr-0012-garde-fous-beta-publique.md).
 
 ## Autorisation
 
@@ -193,13 +204,13 @@ Les contrôles portent sur l'objet et le tenant, pas seulement sur un rôle glob
 | Énumération d'emails ou d'entreprises | Réponses et timings génériques | Tests publics comparatifs |
 | Rejeu du flow passwordless | OIDC, nonce, état, PKCE et expiration | Rejeu refusé |
 | Vol de session | Cookie sécurisé, rotation, TTL, révocation | Tests de cookie et logout |
-| CSRF | SameSite, token CSRF et validation Origin | Mutations cross-site refusées |
+| CSRF | SameSite, validation Origin et Fetch Metadata | Mutations cross-site refusées |
 | Fuite inter-tenant | Autorisation objet, clés composites, RLS | Matrice tenant A/B |
 | Double réservation | Contrainte d'exclusion PostgreSQL | Test réellement concurrent |
 | Escalade admin | Preuve de domaine et audit | Promotion/retrait testés |
-| Spam d'invitations | Quotas, rate limit et révocation | Limites et alertes |
+| Spam d'invitations | Budget IP obligatoire 30/10 min et quota transactionnel 20/24 h par adhésion | Rejets `429`, `Retry-After` et cookie forgé sans contournement |
 | Email indisponible | Outbox et retry | Réservation conservée |
-| Secret dans un log | Redaction et tests de log | Scan des sorties |
+| Secret dans un log | Redaction Caddy de `code`, `state` et `session_state` | Scan des sorties |
 | Migration destructive | Backup et restauration isolée | Preuve avant production |
 
 ## Données et rétention
@@ -213,7 +224,8 @@ Catégories :
 - audit de gouvernance ;
 - événements de notification.
 
-Avant un pilote réel, une décision doit fixer :
+Pour la bêta publique, la notice fixe des durées initiales et le traitement
+manuel des droits. L'automatisation doit couvrir :
 
 - durée d'une session ;
 - rétention des invitations et demandes de connexion ;
@@ -221,7 +233,7 @@ Avant un pilote réel, une décision doit fixer :
 - rétention et accès à l'audit ;
 - export et suppression d'un compte ;
 - anonymisation des métriques ;
-- fondement et information des utilisateurs selon la juridiction cible.
+- preuve du fondement et de l'information des utilisateurs selon la juridiction cible.
 
 Le motif d'absence n'est jamais collecté.
 
@@ -265,7 +277,7 @@ pas un texte libre contenant des données personnelles inutiles.
 - session expirée et logout refusent les appels ;
 - heure d'été et fuseau du site ;
 - logs sans token, cookie ni email complet ;
-- sauvegarde restaurée dans une cible isolée avant pilote.
+- sauvegarde restaurée dans une cible isolée avant l'ouverture dynamique.
 
 ## Références officielles
 

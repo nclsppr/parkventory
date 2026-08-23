@@ -82,7 +82,8 @@ fonction ne bloque pas l'usage communautaire.
 
 ## Invitations
 
-- Une invitation exacte prévaut sur la résolution automatique du domaine.
+- Une invitation exacte prévaut sur la résolution automatique du domaine, mais
+  ne peut viser qu'un domaine `CLAIMED` ou `VERIFIED` de l'organisation.
 - Elle est limitée à une adresse, une organisation, une expiration et un nombre
   de consommations.
 - Une réponse publique ne révèle jamais si l'adresse ou l'organisation existe.

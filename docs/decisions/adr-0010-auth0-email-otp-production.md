@@ -1,11 +1,11 @@
 # ADR-0010 — Auth0 EU et email OTP pour l’identité de production
 
-- Statut : proposé
-- Statut d'implémentation : candidat intégré à la RLS et localement vérifié ; décision et tenant absents
+- Statut : accepté
+- Statut d'implémentation : candidat intégré à la RLS et localement vérifié ; tenant et preuve externe absents
 - Date : 2026-08-18
 - Dernière vérification : Quarkus 3.33.3, tests de profils, claims et PostgreSQL le 2026-08-18
-- Décision requise de : propriétaire Parkventory
-- Portée : identité de production, sans provisionnement ni activation Atlas
+- Décideur : nclsppr, le 2026-08-23
+- Portée : identité de production ; provisionnement et activation restent des étapes vérifiées séparément
 - Précise : [ADR-0003](adr-0003-authentication-et-isolation.md)
 
 ## Contexte
@@ -19,10 +19,11 @@ Auth0 propose un tenant régional européen et un parcours Passwordless Email
 dans Universal Login. Ce parcours utilise un code à usage unique ; le magic
 link Auth0 appartient au Classic Login et n’est pas le contrat retenu.
 
-## Proposition
+## Décision
 
-Retenir, après approbation explicite, Auth0 EU comme premier fournisseur OIDC de
-production. Cette tranche ne crée aucun tenant et n’autorise aucune activation.
+Retenir Auth0 EU comme premier fournisseur OIDC de production afin de minimiser
+le délai d'ouverture de la bêta publique. Cette décision ne prétend pas qu'un
+tenant existe déjà et n'autorise pas une activation sans preuve externe.
 
 - Le backend est une application confidentielle Quarkus `web-app`. Le secret
   client reste côté serveur et aucun token OIDC n’est donné au JavaScript.
@@ -42,9 +43,10 @@ production. Cette tranche ne crée aucun tenant et n’autorise aucune activatio
 - Le compte interne est lié à une clé opaque et stable dérivée du couple
   `(issuer, subject)`. L’email vérifié sert au rattachement initial, jamais
   comme identifiant OIDC durable.
-- L’invitation exacte est prioritaire ; sinon le domaine professionnel résout
-  ou crée l’organisation communautaire. Une adhésion suspendue ou quittée
-  n’est jamais réactivée automatiquement.
+- L’invitation exacte, préalablement bornée à un domaine actif de
+  l’organisation, est prioritaire ; sinon le domaine professionnel résout ou
+  crée l’organisation communautaire. Une adhésion suspendue ou quittée n’est
+  jamais réactivée automatiquement.
 - L’email d’invitation de production ne crée aucun magic-link Parkventory : il
   pointe vers `/api/v1/auth/oidc/login`, puis l’email vérifié par le fournisseur
   permet de réclamer l’invitation en base. Le lien local avec token reste
@@ -113,8 +115,9 @@ exécutée par le rôle runtime non propriétaire :
 3. elle résout le compte par cet email, pose l’identifiant utilisateur local,
    puis lie ou vérifie la clé opaque dérivée de `(issuer, subject)` ; un sujet
    déjà lié à un autre email, ou l’inverse, produit un conflit explicite ;
-4. elle résout une invitation exacte ou un domaine professionnel, choisit
-   l’organisation issue de la base et pose `SET LOCAL app.organization_id` ;
+4. elle résout une invitation exacte déjà bornée au domaine de l’organisation,
+   ou un domaine professionnel, choisit l’organisation issue de la base et pose
+   `SET LOCAL app.organization_id` ;
 5. elle relit ou crée l’adhésion active dans ce tenant ; une adhésion suspendue
    ou quittée reste refusée ;
 6. elle crée enfin l’`app_session`, liée par clé étrangère composite au
@@ -139,9 +142,9 @@ La préparation locale ne prouve pas :
   configuration live ;
 - le logout d’une future session SSO fournisseur.
 
-L’activation reste interdite tant que cette ADR, ces points, les conditions
-commerciales et le traitement des données Auth0 ne sont pas explicitement
-acceptés par le propriétaire.
+L’activation reste interdite tant que le tenant, ces contrôles, les conditions
+commerciales applicables et le traitement des données Auth0 ne sont pas
+vérifiés dans l'environnement réel.
 
 ## Vérification et retour arrière
 

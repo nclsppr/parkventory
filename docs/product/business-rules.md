@@ -9,7 +9,7 @@ change durablement une règle structurante exige une ADR.
 | --- | --- |
 | ORG-001 | Aucun compte actif, adhésion ou tenant n'est créé avant vérification de l'adresse. |
 | ORG-002 | Toute réponse de demande de connexion ou d'invitation reste anti-énumération. |
-| ORG-003 | Une invitation exacte valide prévaut sur le domaine. |
+| ORG-003 | Une invitation exacte valide ne cible qu'un domaine actif de l'organisation, puis prévaut sur la résolution automatique. |
 | ORG-004 | Un domaine professionnel normalisé n'appartient qu'à une organisation active à un instant donné. |
 | ORG-005 | Deux premières inscriptions concurrentes du même domaine créent une seule organisation. |
 | ORG-006 | Les domaines personnels et jetables sont refusés au MVP. |
@@ -17,6 +17,8 @@ change durablement une règle structurante exige une ADR.
 | ORG-008 | Un utilisateur peut avoir plusieurs adhésions, mais toute commande possède un tenant actif explicite et autorisé. |
 | ORG-009 | Une organisation peut fonctionner avec zéro administrateur. |
 | ORG-010 | Le premier inscrit n'est jamais administrateur par défaut. |
+| ORG-011 | Un compte, une adhésion ou une organisation suspendus ne sont jamais réactivés automatiquement par une nouvelle connexion, et une session existante perd immédiatement l'accès. |
+| ORG-012 | Les domaines professionnels inconnus sont admis par défaut ; seuls les domaines personnels, jetables ou racines partagées de la denylist versionnée sont refusés. |
 
 ## Places et affectations
 
@@ -37,10 +39,12 @@ change durablement une règle structurante exige une ADR.
 | AVL-001 | Une offre possède un début strictement antérieur à sa fin. |
 | AVL-002 | Un intervalle métier est semi-ouvert : début inclus, fin exclue. |
 | AVL-003 | Les instants sont stockés en UTC ; le site conserve un fuseau IANA. |
+| AVL-003a | L'API renvoie le fuseau IANA du site affecté et celui de chaque disponibilité ; l'interface interprète chaque créneau dans le fuseau de son parking, jamais implicitement dans celui du navigateur. |
 | AVL-004 | Une offre ne chevauche pas une autre offre active du même titulaire pour la même place. |
 | AVL-005 | Une offre retirée n'est plus réservable mais reste traçable. |
-| AVL-006 | Une offre couvrant une réservation confirmée ne peut pas être retirée silencieusement. |
+| AVL-006 | Une offre couvrant une réservation active ne peut pas être retirée ; le réservataire doit d'abord annuler. |
 | AVL-007 | La journée entière est convertie depuis le calendrier et le fuseau du site, jamais en durée fixe de vingt-quatre heures. |
+| AVL-008 | Un membre possède au plus 366 offres futures encore publiées ; les publications concurrentes sont sérialisées avant contrôle de cette limite. |
 
 ## Réservations
 
@@ -52,9 +56,10 @@ change durablement une règle structurante exige une ADR.
 | RSV-004 | La base de données, pas un contrôle préalable du client, est l'arbitre final des collisions. |
 | RSV-005 | Une commande de réservation possède une clé d'idempotence unique par organisation et acteur. |
 | RSV-006 | Un conflit concurrent devient une réponse HTTP `409` stable et compréhensible. |
-| RSV-007 | Une annulation conserve l'historique et peut remettre l'intervalle en disponibilité. |
+| RSV-007 | Seul le réservataire peut annuler strictement avant le début ; l'historique est conservé et l'intervalle redevient disponible. |
 | RSV-008 | Une panne de notification ne modifie pas le statut métier déjà commité. |
 | RSV-009 | Une action administrative sur une réservation exige une raison et un audit. |
+| RSV-010 | Rejouer une annulation déjà réussie ne crée ni second audit ni seconde notification. |
 
 ## Gouvernance
 
@@ -74,7 +79,7 @@ change durablement une règle structurante exige une ADR.
 | PRV-002 | Les membres ne voient que les données nécessaires au partage et à la réservation. |
 | PRV-003 | Emails complets, tokens et identifiants de session sont absents des logs. |
 | PRV-004 | Les événements d'audit contiennent acteur, tenant, action, cible, instant et résultat, sans contenu libre inutile. |
-| PRV-005 | Export, suppression et rétention sont définis avant tout pilote réel. |
+| PRV-005 | Les durées de bêta sont publiées ; accès, export et suppression sont traités manuellement jusqu’à l’automatisation des purges. |
 | PRV-006 | L'existence d'une organisation ou d'un membre n'est pas révélée à un visiteur non vérifié. |
 
 ## Notifications
