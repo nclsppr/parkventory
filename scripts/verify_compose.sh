@@ -153,8 +153,10 @@ const run = async () => {
   });
   const ownerDashboard = await request("/api/v1/dashboard", { cookie: ownerCookie });
   if (ownerDashboard.body.demo !== false
-      || ownerDashboard.body.timeZone !== "Europe/Paris"
-      || ownerDashboard.body.user.assignedSpot !== "A-24") {
+      || ownerDashboard.body.user.assignedSpot !== "A-24"
+      || ownerDashboard.body.user.assignedSiteTimeZone !== "Europe/Paris"
+      || ownerDashboard.body.availability.length !== 1
+      || ownerDashboard.body.availability.some((item) => item.timeZone !== "Europe/Paris")) {
     throw new Error("owner dashboard is not backed by PostgreSQL");
   }
 

@@ -28,7 +28,9 @@ import java.util.regex.Pattern;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -74,9 +76,10 @@ class DashboardResourceTest {
                 .then()
                 .statusCode(200)
                 .body("demo", equalTo(false))
-                .body("timeZone", equalTo("Europe/Paris"))
+                .body("$", not(hasKey("timeZone")))
                 .body("user.firstName", equalTo("Alex"))
                 .body("user.assignedSpot", equalTo(null))
+                .body("user.assignedSiteTimeZone", equalTo(null))
                 .body("availability", hasSize(0));
 
         given()
@@ -108,7 +111,9 @@ class DashboardResourceTest {
                 .then()
                 .statusCode(200)
                 .body("user.assignedSpot", equalTo("A-24"))
+                .body("user.assignedSiteTimeZone", equalTo("Europe/Paris"))
                 .body("stats.shares", equalTo(1))
+                .body("availability[0].timeZone", equalTo("Europe/Paris"))
                 .body("availability[0].status", equalTo("UNAVAILABLE"))
                 .body("availability[0].viewerRelation", equalTo("OFFERED"))
                 .body("availability[0].canWithdraw", equalTo(true));
@@ -121,6 +126,7 @@ class DashboardResourceTest {
                 .statusCode(200)
                 .body("organization.name", equalTo(organizationName(domain)))
                 .body("stats.availableSpots", equalTo(1))
+                .body("availability[0].timeZone", equalTo("Europe/Paris"))
                 .body("availability[0].status", equalTo("AVAILABLE"))
                 .body("availability[0].viewerRelation", equalTo("NONE"))
                 .extract().path("availability[0].id");
@@ -231,6 +237,48 @@ class DashboardResourceTest {
                 .then()
                 .statusCode(200)
                 .body("availability", hasSize(0));
+    }
+
+    @Test
+    void returnsTheAssignedSiteTimezoneAndEachAvailabilityTimezone() throws Exception {
+        String domain = uniqueDomain();
+        String ownerSession = authenticate("owner@" + domain);
+
+        given()
+                .cookie(SessionService.COOKIE_NAME, ownerSession)
+                .contentType(ContentType.JSON)
+                .body("{\"label\":\"A-24\",\"level\":\"Niveau A\"}")
+                .when().post("/api/v1/spots")
+                .then()
+                .statusCode(200);
+        given()
+                .cookie(SessionService.COOKIE_NAME, ownerSession)
+                .contentType(ContentType.JSON)
+                .body("""
+                        {"spot":"A-24","date":"%s","from":"08:00","to":"18:00"}
+                        """.formatted(LocalDate.now().plusDays(1)))
+                .when().post("/api/v1/shares")
+                .then()
+                .statusCode(200);
+
+        assignSpotAtSecondarySite(
+                sessions.require(ownerSession),
+                "Parking Toronto",
+                "America/Toronto",
+                "B-02",
+                "Niveau B");
+
+        given()
+                .cookie(SessionService.COOKIE_NAME, ownerSession)
+                .when().get("/api/v1/dashboard")
+                .then()
+                .statusCode(200)
+                .body("$", not(hasKey("timeZone")))
+                .body("user.assignedSpot", equalTo("B-02"))
+                .body("user.assignedSiteTimeZone", equalTo("America/Toronto"))
+                .body("availability", hasSize(1))
+                .body("availability[0].spot", equalTo("A-24"))
+                .body("availability[0].timeZone", equalTo("Europe/Paris"));
     }
 
     @Test
@@ -554,6 +602,68 @@ class DashboardResourceTest {
             tenantContext.applyTenant(connection, session.organizationId());
             statement.setObject(1, session.userId());
             assertEquals(1, statement.executeUpdate());
+            connection.commit();
+        }
+    }
+
+    private void assignSpotAtSecondarySite(
+            SessionContext session,
+            String siteName,
+            String timeZone,
+            String spotLabel,
+            String level) throws Exception {
+        try (var connection = dataSource.getConnection()) {
+            connection.setAutoCommit(false);
+            tenantContext.applyTenant(connection, session.organizationId());
+
+            UUID siteId;
+            try (PreparedStatement statement = connection.prepareStatement("""
+                    INSERT INTO parking_site (organization_id, name, timezone)
+                    VALUES (?, ?, ?)
+                    RETURNING id
+                    """)) {
+                statement.setObject(1, session.organizationId());
+                statement.setString(2, siteName);
+                statement.setString(3, timeZone);
+                try (var result = statement.executeQuery()) {
+                    result.next();
+                    siteId = result.getObject("id", UUID.class);
+                }
+            }
+
+            UUID spotId;
+            try (PreparedStatement statement = connection.prepareStatement("""
+                    INSERT INTO parking_spot (
+                        organization_id,
+                        parking_site_id,
+                        label,
+                        level_label
+                    ) VALUES (?, ?, ?, ?)
+                    RETURNING id
+                    """)) {
+                statement.setObject(1, session.organizationId());
+                statement.setObject(2, siteId);
+                statement.setString(3, spotLabel);
+                statement.setString(4, level);
+                try (var result = statement.executeQuery()) {
+                    result.next();
+                    spotId = result.getObject("id", UUID.class);
+                }
+            }
+
+            try (PreparedStatement statement = connection.prepareStatement("""
+                    INSERT INTO spot_assignment (
+                        organization_id,
+                        parking_spot_id,
+                        membership_id,
+                        starts_at
+                    ) VALUES (?, ?, ?, now() - interval '1 day')
+                    """)) {
+                statement.setObject(1, session.organizationId());
+                statement.setObject(2, spotId);
+                statement.setObject(3, session.membershipId());
+                assertEquals(1, statement.executeUpdate());
+            }
             connection.commit();
         }
     }

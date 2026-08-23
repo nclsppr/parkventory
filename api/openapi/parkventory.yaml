@@ -405,15 +405,11 @@ components:
         role: { type: string, enum: [MEMBER, ADMIN] }
     Dashboard:
       type: object
-      required: [demo, timeZone, user, organization, stats, availability, thanks]
+      required: [demo, user, organization, stats, availability, thanks]
       properties:
         demo:
           type: boolean
           const: false
-        timeZone:
-          type: string
-          description: Fuseau IANA du parking utilisé pour interpréter et afficher les créneaux
-          example: Europe/Paris
         user:
           $ref: "#/components/schemas/User"
         organization:
@@ -431,13 +427,23 @@ components:
             $ref: "#/components/schemas/Thanks"
     User:
       type: object
-      required: [firstName, fullName, initials]
+      required:
+        - firstName
+        - fullName
+        - initials
+        - assignedSpot
+        - assignedLevel
+        - assignedSiteTimeZone
       properties:
         firstName: { type: string }
         fullName: { type: string }
         initials: { type: string }
         assignedSpot: { type: [string, "null"] }
         assignedLevel: { type: [string, "null"] }
+        assignedSiteTimeZone:
+          type: [string, "null"]
+          description: Fuseau IANA du site de la place affectée, ou null sans affectation
+          example: Europe/Paris
     Organization:
       type: object
       required: [name, sharedTotal]
@@ -457,6 +463,7 @@ components:
         - id
         - dateLabel
         - timeLabel
+        - timeZone
         - spot
         - level
         - status
@@ -468,6 +475,10 @@ components:
         id: { type: string, format: uuid }
         dateLabel: { type: string }
         timeLabel: { type: string }
+        timeZone:
+          type: string
+          description: Fuseau IANA du parking auquel appartient cette disponibilité
+          example: Europe/Paris
         spot: { type: string }
         level: { type: string }
         status:

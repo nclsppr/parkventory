@@ -1,6 +1,17 @@
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
-import App from "../App";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+
+const testContactEmail = "contact@parkventory.test";
+let App: typeof import("../App").default;
+
+beforeAll(async () => {
+  vi.stubEnv("VITE_CONTACT_EMAIL", testContactEmail);
+  App = (await import("../App")).default;
+});
+
+afterAll(() => {
+  vi.unstubAllEnvs();
+});
 
 afterEach(() => {
   cleanup();
@@ -14,9 +25,9 @@ describe("informations légales", () => {
 
     expect(screen.getByRole("heading", { name: "Confidentialité", level: 1 })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Données utilisées avec un compte" })).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: "nicolas@pieper.fr" })[0]).toHaveAttribute(
+    expect(screen.getAllByRole("link", { name: testContactEmail })[0]).toHaveAttribute(
       "href",
-      "mailto:nicolas@pieper.fr",
+      `mailto:${testContactEmail}`,
     );
     expect(screen.getByRole("link", { name: "Mentions légales" })).toHaveAttribute(
       "href",

@@ -47,7 +47,6 @@ export function FindPage({
   const reserveLock = useRef(false);
   const cancelLock = useRef<string | null>(null);
   const reservationAttempt = useRef<{ availabilityId: string; key: string } | null>(null);
-  const timeZone = data.timeZone;
   const selected = data.availability.find((item) => item.id === selectedId) ?? null;
   const availableCount = data.availability.filter((item) => item.status === "AVAILABLE").length;
 
@@ -189,11 +188,11 @@ export function FindPage({
           <div><h2 id="scope-title">Disponibilités des 7 prochains jours</h2><p>Créneaux publiés par les collègues de votre entreprise.</p></div>
         </div>
         <dl>
-          <div><dt>Site</dt><dd><MapPin aria-hidden="true" /> Parking principal</dd></div>
-          <div><dt>Fuseau</dt><dd><Clock3 aria-hidden="true" /> {timeZone}</dd></div>
+          <div><dt>Sites</dt><dd><MapPin aria-hidden="true" /> Tous les parkings</dd></div>
+          <div><dt>Fuseaux</dt><dd><Clock3 aria-hidden="true" /> Par créneau</dd></div>
           <div><dt>Disponibles</dt><dd className="scope-available"><CarFront aria-hidden="true" /> {availableCount}</dd></div>
         </dl>
-        <p><Info aria-hidden="true" /> Tous les créneaux sont affichés dans le fuseau du parking.</p>
+        <p><Info aria-hidden="true" /> Chaque créneau est affiché dans le fuseau de son parking.</p>
       </section>
 
       {resultMessage && (
@@ -233,7 +232,7 @@ export function FindPage({
                       <CarFront aria-hidden="true" />
                       <p><strong>{item.spot}</strong><span>{item.level}</span></p>
                     </div>
-                    <p className="availability-agenda-time"><Clock3 aria-hidden="true" />{item.timeLabel}</p>
+                    <p className="availability-agenda-time"><Clock3 aria-hidden="true" />{item.timeLabel} · {item.timeZone}</p>
                     {item.status === "AVAILABLE" ? (
                       <button
                         className="choose-spot-button"
@@ -298,7 +297,7 @@ export function FindPage({
                 <div><dt>Niveau</dt><dd>{selected.level}</dd></div>
                 <div><dt>Date</dt><dd>{selected.dateLabel}</dd></div>
                 <div><dt>Horaire</dt><dd>{selected.timeLabel}</dd></div>
-                <div><dt>Fuseau</dt><dd>{timeZone}</dd></div>
+                <div><dt>Fuseau</dt><dd>{selected.timeZone}</dd></div>
               </dl>
               <p><ShieldCheck aria-hidden="true" /> La confirmation attribuera ce créneau uniquement à votre compte.</p>
               <button className="button button-primary workflow-primary-action" type="button" onClick={() => void handleReserve()} disabled={reserveBusy} aria-busy={reserveBusy}>

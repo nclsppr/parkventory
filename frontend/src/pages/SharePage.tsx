@@ -44,7 +44,7 @@ export function SharePage({
   const shareLock = useRef(false);
   const spotLock = useRef(false);
   const withdrawLock = useRef<string | null>(null);
-  const timeZone = data.timeZone;
+  const timeZone = data.user.assignedSiteTimeZone;
   const ownShares = useMemo(
     () => data.availability.filter((item) => item.viewerRelation === "OFFERED"),
     [data.availability],
@@ -161,7 +161,7 @@ export function SharePage({
   };
 
   const readyToShare = Boolean(
-    shareForm.spot && shareForm.date && shareForm.from && shareForm.to,
+    shareForm.spot && shareForm.date && shareForm.from && shareForm.to && timeZone,
   );
   return (
     <div className="app-page route-page share-route-page">
@@ -244,7 +244,7 @@ export function SharePage({
               </label>
             </div>
 
-            <p className="timezone-note"><Clock3 aria-hidden="true" /> Fuseau : <strong>{timeZone}</strong></p>
+            <p className="timezone-note"><Clock3 aria-hidden="true" /> Fuseau : <strong>{timeZone ?? "Non renseigné"}</strong></p>
             {timeOrderInvalid && <p className="field-error" id="share-time-error" role="alert">{timeOrderMessage}</p>}
           </form>
 
@@ -255,7 +255,7 @@ export function SharePage({
               <div><dt>Emplacement</dt><dd><MapPin aria-hidden="true" />{data.user.assignedLevel ?? "Niveau non renseigné"}</dd></div>
               <div><dt>Date</dt><dd>{formatInputDate(shareForm.date)}</dd></div>
               <div><dt>Horaire</dt><dd>{shareForm.from || "—"} – {shareForm.to || "—"}</dd></div>
-              <div><dt>Fuseau</dt><dd>{timeZone}</dd></div>
+              <div><dt>Fuseau</dt><dd>{timeZone ?? "Non renseigné"}</dd></div>
             </dl>
             <p className="workflow-trust"><ShieldCheck aria-hidden="true" /> Votre absence et son motif ne sont jamais demandés.</p>
             <button
@@ -336,7 +336,7 @@ export function SharePage({
                     <CarFront aria-hidden="true" />
                     <p><strong>{item.spot}</strong><span>{item.level}</span></p>
                   </div>
-                  <p className="availability-agenda-time"><Clock3 aria-hidden="true" />{item.timeLabel}</p>
+                  <p className="availability-agenda-time"><Clock3 aria-hidden="true" />{item.timeLabel} · {item.timeZone}</p>
                   {item.canWithdraw ? (
                     <button
                       className="button button-danger button-small"

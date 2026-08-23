@@ -110,13 +110,13 @@ public class DashboardService {
 
             return new Dashboard(
                     false,
-                    loadPrimaryTimezone(connection, session.organizationId()),
                     new User(
                             firstName(session.displayName()),
                             session.displayName(),
                             initials(session.displayName()),
                             assignedSpot == null ? null : assignedSpot.label(),
-                            assignedSpot == null ? null : assignedSpot.level()),
+                            assignedSpot == null ? null : assignedSpot.level(),
+                            assignedSpot == null ? null : assignedSpot.timeZone()),
                     new Organization(session.organizationName(), sharedTotal),
                     new Stats(shares, reservations, availableSpots),
                     loadAvailability(connection, session),
@@ -628,11 +628,16 @@ public class DashboardService {
     private AssignedSpot loadAssignedSpot(Connection connection, SessionContext session)
             throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
-                SELECT spot.label, COALESCE(spot.level_label, 'Niveau non renseigné') AS level
+                SELECT spot.label,
+                       COALESCE(spot.level_label, 'Niveau non renseigné') AS level,
+                       site.timezone
                   FROM spot_assignment assignment
                   JOIN parking_spot spot
                     ON spot.organization_id = assignment.organization_id
                    AND spot.id = assignment.parking_spot_id
+                  JOIN parking_site site
+                    ON site.organization_id = spot.organization_id
+                   AND site.id = spot.parking_site_id
                  WHERE assignment.organization_id = ?
                    AND assignment.membership_id = ?
                    AND assignment.status = 'ACTIVE'
@@ -647,7 +652,10 @@ public class DashboardService {
                 if (!result.next()) {
                     return null;
                 }
-                return new AssignedSpot(result.getString("label"), result.getString("level"));
+                return new AssignedSpot(
+                        result.getString("label"),
+                        result.getString("level"),
+                        safeZone(result.getString("timezone")).getId());
             }
         }
     }
@@ -790,6 +798,7 @@ public class DashboardService {
                             TIME_FORMATTER.format(localStart)
                                     + " – "
                                     + TIME_FORMATTER.format(localEnd),
+                            zone.getId(),
                             result.getString("label"),
                             result.getString("level"),
                             status,
@@ -989,26 +998,6 @@ public class DashboardService {
                     throw new IllegalStateException("Aucun parking actif pour cette organisation.");
                 }
                 return result.getObject("id", UUID.class);
-            }
-        }
-    }
-
-    private String loadPrimaryTimezone(Connection connection, UUID organizationId)
-            throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement("""
-                SELECT timezone
-                  FROM parking_site
-                 WHERE organization_id = ?
-                   AND status = 'ACTIVE'
-                 ORDER BY created_at
-                 LIMIT 1
-                """)) {
-            statement.setObject(1, organizationId);
-            try (ResultSet result = statement.executeQuery()) {
-                if (!result.next()) {
-                    throw new IllegalStateException("Aucun parking actif pour cette organisation.");
-                }
-                return safeZone(result.getString("timezone")).getId();
             }
         }
     }
@@ -1259,7 +1248,7 @@ public class DashboardService {
         return value.isEmpty() ? "PV" : value.toString();
     }
 
-    private record AssignedSpot(String label, String level) {
+    private record AssignedSpot(String label, String level, String timeZone) {
     }
 
     private record AssignedSpotWithIds(UUID assignmentId, UUID spotId, String label) {

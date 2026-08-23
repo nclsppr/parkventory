@@ -1,14 +1,16 @@
 import type { DashboardData } from "../types";
 
+const demoTimeZone = "Europe/Paris";
+
 export const demoDashboard: DashboardData = {
   demo: true,
-  timeZone: "Europe/Paris",
   user: {
     firstName: "Nicolas",
     fullName: "Nicolas D.",
     initials: "ND",
     assignedSpot: "A-24",
     assignedLevel: "Niveau A",
+    assignedSiteTimeZone: demoTimeZone,
   },
   organization: {
     name: "Victor Buck Services",
@@ -24,6 +26,7 @@ export const demoDashboard: DashboardData = {
       id: "availability-a24-thu",
       dateLabel: "Jeu. 30 juillet",
       timeLabel: "08:00 – 18:00",
+      timeZone: demoTimeZone,
       spot: "A-24",
       level: "Niveau A",
       status: "UNAVAILABLE",
@@ -36,6 +39,7 @@ export const demoDashboard: DashboardData = {
       id: "availability-b18-fri",
       dateLabel: "Ven. 31 juillet",
       timeLabel: "09:00 – 17:00",
+      timeZone: demoTimeZone,
       spot: "B-18",
       level: "Niveau B",
       status: "RESERVED",
@@ -48,6 +52,7 @@ export const demoDashboard: DashboardData = {
       id: "availability-c07-mon",
       dateLabel: "Lun. 3 août",
       timeLabel: "12:00 – 16:00",
+      timeZone: demoTimeZone,
       spot: "C-07",
       level: "Niveau C",
       status: "AVAILABLE",
@@ -60,6 +65,7 @@ export const demoDashboard: DashboardData = {
       id: "availability-d12-tue",
       dateLabel: "Mar. 4 août",
       timeLabel: "08:30 – 18:00",
+      timeZone: demoTimeZone,
       spot: "D-12",
       level: "Niveau D",
       status: "AVAILABLE",
@@ -72,6 +78,7 @@ export const demoDashboard: DashboardData = {
       id: "availability-e03-wed",
       dateLabel: "Mer. 5 août",
       timeLabel: "10:00 – 14:00",
+      timeZone: demoTimeZone,
       spot: "E-03",
       level: "Niveau E",
       status: "AVAILABLE",

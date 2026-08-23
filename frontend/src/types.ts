@@ -5,6 +5,7 @@ export interface AvailabilityItem {
   id: string;
   dateLabel: string;
   timeLabel: string;
+  timeZone: string;
   spot: string;
   level: string;
   status: AvailabilityStatus;
@@ -30,13 +31,13 @@ export interface ThanksMessage {
 
 export interface DashboardData {
   demo: boolean;
-  timeZone: string;
   user: {
     firstName: string;
     fullName: string;
     initials: string;
     assignedSpot: string | null;
     assignedLevel: string | null;
+    assignedSiteTimeZone: string | null;
   };
   organization: {
     name: string;

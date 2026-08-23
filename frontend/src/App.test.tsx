@@ -59,6 +59,7 @@ function dashboardResponse(overrides: Partial<DashboardData> = {}): DashboardDat
       initials: "AM",
       assignedSpot: "A-24",
       assignedLevel: "Niveau A",
+      assignedSiteTimeZone: "Europe/Paris",
     },
     organization: { name: "Acme — communauté", sharedTotal: 12 },
     stats: { shares: 2, reservations: 1, availableSpots: 3 },
@@ -170,6 +171,7 @@ describe("Parkventory", () => {
             initials: "AM",
             assignedSpot: assigned ? "A-24" : null,
             assignedLevel: assigned ? "Niveau A" : null,
+            assignedSiteTimeZone: assigned ? "Europe/Paris" : null,
           },
           stats: { shares: 0, reservations: 0, availableSpots: 0 },
           availability: [],
@@ -259,6 +261,7 @@ describe("Parkventory", () => {
       }
       if (url.endsWith("/dashboard")) {
         const dashboard = dashboardResponse();
+        dashboard.availability[0].timeZone = "America/Toronto";
         if (reserved) dashboard.availability[0].status = "RESERVED";
         return jsonResponse(dashboard);
       }
@@ -270,6 +273,8 @@ describe("Parkventory", () => {
 
     await screen.findByRole("heading", { name: "Trouver une place" });
     await user.click(screen.getAllByRole("button", { name: "Choisir" })[0]);
+    expect(document.querySelector(".reservation-summary"))
+      .toHaveTextContent("America/Toronto");
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/reservations"))).toBe(false);
     await user.click(screen.getByRole("button", { name: "Confirmer la réservation" }));
 

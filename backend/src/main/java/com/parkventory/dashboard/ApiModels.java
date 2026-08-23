@@ -15,7 +15,8 @@ public final class ApiModels {
             String fullName,
             String initials,
             String assignedSpot,
-            String assignedLevel) {
+            String assignedLevel,
+            String assignedSiteTimeZone) {
     }
 
     public record Organization(String name, int sharedTotal) {
@@ -28,6 +29,7 @@ public final class ApiModels {
             String id,
             String dateLabel,
             String timeLabel,
+            String timeZone,
             String spot,
             String level,
             String status,
@@ -42,7 +44,6 @@ public final class ApiModels {
 
     public record Dashboard(
             boolean demo,
-            String timeZone,
             User user,
             Organization organization,
             Stats stats,

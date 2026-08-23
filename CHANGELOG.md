@@ -10,8 +10,9 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 - retour lisible vers l'interface lorsqu'Auth0 vérifie une adresse refusée par
   la politique professionnelle, sans refléter l'adresse ni laisser de session
   OIDC locale réutilisable ;
-- fuseau IANA du parking inclus dans le dashboard et utilisé par les écrans de
-  partage et de recherche, indépendamment du fuseau du navigateur ;
+- fuseau IANA du site affecté inclus avec le profil et fuseau du parking inclus
+  avec chaque disponibilité, puis utilisés par les écrans de partage et de
+  recherche indépendamment du fuseau du navigateur ;
 - ADR-0015 sélectionnant le cluster partagé Atlas PostgreSQL 17.10 pour la
   bêta publique, avec PostgreSQL 18.3 conservé comme baseline locale et preuve
   d'upgrade V3 vers V4 sous le vrai profil de migrateur non privilégié ;
@@ -47,9 +48,9 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 - relation du membre courant, identifiant de sa réservation et actions
   autorisées dans le dashboard, puis contrôles accessibles sur les routes
   existantes Partager et Trouver sans ajouter de fausse destination ;
-- contrat OpenAPI `0.4.1` pour l'annulation, le retrait et le fuseau du parking, aligné avec les
-  modèles Java et TypeScript et les réponses `401`, `403`, `409`, `429` et
-  `5xx` ;
+- contrat OpenAPI `0.4.1` pour l'annulation, le retrait et les fuseaux par site
+  et disponibilité, aligné avec les modèles Java et TypeScript et les réponses
+  `401`, `403`, `409`, `429` et `5xx` ;
 - clé d'idempotence stable conservée par le frontend pendant un retry de
   réservation et verrous immédiats contre les doubles soumissions ;
 - test PostgreSQL de deux réservations HTTP réellement simultanées produisant

@@ -39,7 +39,7 @@ change durablement une règle structurante exige une ADR.
 | AVL-001 | Une offre possède un début strictement antérieur à sa fin. |
 | AVL-002 | Un intervalle métier est semi-ouvert : début inclus, fin exclue. |
 | AVL-003 | Les instants sont stockés en UTC ; le site conserve un fuseau IANA. |
-| AVL-003a | L'interface affiche et interprète les créneaux dans le fuseau IANA du parking renvoyé par l'API, jamais implicitement dans celui du navigateur. |
+| AVL-003a | L'API renvoie le fuseau IANA du site affecté et celui de chaque disponibilité ; l'interface interprète chaque créneau dans le fuseau de son parking, jamais implicitement dans celui du navigateur. |
 | AVL-004 | Une offre ne chevauche pas une autre offre active du même titulaire pour la même place. |
 | AVL-005 | Une offre retirée n'est plus réservable mais reste traçable. |
 | AVL-006 | Une offre couvrant une réservation active ne peut pas être retirée ; le réservataire doit d'abord annuler. |
