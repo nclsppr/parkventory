@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.parkventory.auth.ProfessionalEmail;
 import com.parkventory.auth.SecurityTokens;
 import com.parkventory.auth.SessionContext;
+import com.parkventory.tenancy.TenantTransactionContext;
 import io.agroal.api.AgroalDataSource;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
@@ -44,19 +45,23 @@ public class DashboardService {
     private final AgroalDataSource dataSource;
     private final SecurityTokens tokens;
     private final ObjectMapper objectMapper;
+    private final TenantTransactionContext tenantContext;
 
     public DashboardService(
             AgroalDataSource dataSource,
             SecurityTokens tokens,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            TenantTransactionContext tenantContext) {
         this.dataSource = dataSource;
         this.tokens = tokens;
         this.objectMapper = objectMapper;
+        this.tenantContext = tenantContext;
     }
 
     @Transactional
     public Dashboard dashboard(SessionContext session) {
         try (Connection connection = dataSource.getConnection()) {
+            tenantContext.applyTenant(connection, session.organizationId());
             AssignedSpot assignedSpot = loadAssignedSpot(connection, session);
             int sharedTotal = count(connection, """
                     SELECT count(*)
@@ -117,6 +122,7 @@ public class DashboardService {
         String level = normalizeLevel(request.level());
 
         try (Connection connection = dataSource.getConnection()) {
+            tenantContext.applyTenant(connection, session.organizationId());
             UUID siteId = loadPrimarySite(connection, session.organizationId());
             AssignedSpotWithIds current = loadAssignedSpotForUpdate(connection, session);
             if (current != null && current.label().equals(label)) {
@@ -183,6 +189,7 @@ public class DashboardService {
     @Transactional
     public ActionResponse share(SessionContext session, ShareRequest request) {
         try (Connection connection = dataSource.getConnection()) {
+            tenantContext.applyTenant(connection, session.organizationId());
             ShareAssignment assignment = loadShareAssignment(connection, session);
             if (assignment == null) {
                 throw new ClientErrorException(
@@ -250,6 +257,7 @@ public class DashboardService {
         validateIdempotencyKey(idempotencyKey);
 
         try (Connection connection = dataSource.getConnection()) {
+            tenantContext.applyTenant(connection, session.organizationId());
             if (hasReservationForKey(connection, session, idempotencyKey)) {
                 return new ActionResponse(
                         true,
@@ -341,6 +349,7 @@ public class DashboardService {
         }
 
         try (Connection connection = dataSource.getConnection()) {
+            tenantContext.applyTenant(connection, session.organizationId());
             UUID invitationId = findPendingInvitation(
                     connection,
                     session.organizationId(),
@@ -743,6 +752,7 @@ public class DashboardService {
             String aggregateType,
             UUID aggregateId,
             Map<String, String> payload) throws SQLException {
+        UUID eventId;
         try (PreparedStatement statement = connection.prepareStatement("""
                 INSERT INTO outbox_event (
                     organization_id,
@@ -751,6 +761,7 @@ public class DashboardService {
                     aggregate_id,
                     payload
                 ) VALUES (?, ?, ?, ?, CAST(? AS jsonb))
+                RETURNING id
                 """)) {
             statement.setObject(1, organizationId);
             statement.setString(2, eventType);
@@ -761,6 +772,17 @@ public class DashboardService {
             } catch (JsonProcessingException exception) {
                 throw new IllegalStateException("Payload de notification invalide.", exception);
             }
+            try (ResultSet result = statement.executeQuery()) {
+                result.next();
+                eventId = result.getObject("id", UUID.class);
+            }
+        }
+        try (PreparedStatement statement = connection.prepareStatement("""
+                INSERT INTO outbox_dispatch (event_id, organization_id)
+                VALUES (?, ?)
+                """)) {
+            statement.setObject(1, eventId);
+            statement.setObject(2, organizationId);
             statement.executeUpdate();
         }
     }

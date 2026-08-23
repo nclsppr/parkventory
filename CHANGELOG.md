@@ -7,6 +7,22 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Ajouté
 
+- migration Flyway V3 activant et forçant RLS sur les tables d'identité,
+  session et données tenant, avec contexte `SET LOCAL` transactionnel et rôle
+  runtime non propriétaire testé ;
+- matrice adversariale prouvant l'absence de lecture sans contexte, le refus
+  d'un mauvais tenant, et l'impossibilité pour le tenant A de lire, modifier ou
+  créer une ligne du tenant B ;
+- reprise Flyway V1 vers V3, suite Quarkus et parcours métier répétés sur
+  PostgreSQL 17.10 et 18.3, y compris sous rôle runtime non propriétaire et sans
+  `BYPASSRLS` ; cette preuve reste locale et ne migre pas Atlas ;
+- bootstrap borné pour l'email et le domaine déjà vérifiés, réutilisable par le
+  futur adaptateur OIDC sans couplage au lien magique local ;
+- file `outbox_dispatch` globale limitée aux UUID techniques et à l'échéance,
+  tandis que les payloads restent sous RLS et que les retries synchronisent les
+  deux échéances ;
+- ADR-0009 documentant le contrat RLS, les rôles PostgreSQL, les exceptions
+  bootstrap/outbox et les limites face à un credential runtime compromis ;
 - clarification du cadenceur de réconciliation Atlas : planification toutes les
   dix minutes en best-effort, avec retards GitHub possibles, et dispatch manuel ;
 - publication de la PR #4 sur `main` au SHA
@@ -33,7 +49,7 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 - Compose VPS app-only sans port, build ni volume, avec secrets fichiers,
   réseaux externes, healthchecks, ressources et logs bornés ;
 - bundle `vps-integration` déterministe lié au SHA, inventaires exacts des
-  migrations V1/V2 et probes, puis descripteur canonique
+  migrations V1 à V3 et probes, puis descripteur canonique
   `vps-infra.application-release.v1` liant tous les digests ;
 - workflow de publication après gate complète, scans bloquants, SBOM,
   provenance et attestations, avec revalidation des images réellement poussées
@@ -150,6 +166,9 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Corrigé
 
+- attente du sujet de notification de réservation attendu, plutôt que du seul
+  nombre d'e-mails déjà présents, afin de supprimer la course entre le mailer
+  réactif et l'assertion CI ;
 - attente du processus PostgreSQL final, et pas du serveur temporaire de
   l'entrypoint, avant de tester les images réellement poussées, avec timeout et
   journaux explicites en cas d'échec ;

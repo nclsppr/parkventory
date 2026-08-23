@@ -145,7 +145,7 @@ migration_versions=$(docker exec "${postgres_container}" psql \
   --username postgres \
   --dbname parkventory \
   --command "SELECT string_agg(version, ',' ORDER BY installed_rank) FROM flyway_schema_history WHERE success")
-[[ ${migration_versions} == "1,2" ]]
+[[ ${migration_versions} == "1,2,3" ]]
 
 docker exec -i "${postgres_container}" psql \
   --set ON_ERROR_STOP=1 \
@@ -156,6 +156,30 @@ GRANT USAGE ON SCHEMA public TO parkventory_runtime;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO parkventory_runtime;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO parkventory_runtime;
 SQL
+
+runtime_flags=$(docker exec "${postgres_container}" psql \
+  --tuples-only \
+  --no-align \
+  --username postgres \
+  --dbname parkventory \
+  --command "SELECT rolsuper::text || ',' || rolbypassrls::text FROM pg_roles WHERE rolname = 'parkventory_runtime'")
+[[ ${runtime_flags} == "false,false" ]]
+
+runtime_owned_tables=$(docker exec "${postgres_container}" psql \
+  --tuples-only \
+  --no-align \
+  --username postgres \
+  --dbname parkventory \
+  --command "SELECT count(*) FROM pg_class WHERE relkind = 'r' AND relowner = 'parkventory_runtime'::regrole")
+[[ ${runtime_owned_tables} == "0" ]]
+
+forced_rls_tables=$(docker exec "${postgres_container}" psql \
+  --tuples-only \
+  --no-align \
+  --username postgres \
+  --dbname parkventory \
+  --command "SELECT count(*) FROM pg_class WHERE relnamespace = 'public'::regnamespace AND relrowsecurity AND relforcerowsecurity")
+[[ ${forced_rls_tables} == "17" ]]
 
 if docker exec \
   --env PGPASSWORD=runtime-password-local-test \
