@@ -141,9 +141,9 @@ essentiel ne descend sous 14 px ; les champs restent à 16 px sur mobile.
 | Landing | Promesse et CTA email professionnel | Fonctionnement, bénéfices, sécurité, FAQ | Logos clients, pricing, revenus |
 | Onboarding | Étape courante et confiance | Explication du domaine et de la confidentialité | Membres avant vérification |
 | Dashboard — `/app` | Partager ou trouver | Prochaine réservation, prochain partage, invitation | Activité factice |
-| Partager — `/app/partager` | Place et intervalle | Résumé, fuseau et confidentialité | Récurrence infinie au MVP |
-| Trouver — `/app/trouver` | Disponibilités réelles à sept jours | Sélection, résumé et confirmation | Filtres sans contrat API, plan avant F07 |
-| Réservations | Prochaine réservation | Historique et annulation | Gamification |
+| Partager — `/app/partager` | Place et intervalle | Résumé, fuseau, confidentialité et retrait des partages actifs non réservés | Récurrence infinie au MVP |
+| Trouver — `/app/trouver` | Disponibilités réelles à sept jours | Sélection, confirmation et annulation de la réservation active avant son début | Filtres sans contrat API, plan avant F07 |
+| Réservations, future route | Prochaine réservation | Historique paginé ; l'annulation active existe déjà dans Trouver | Gamification |
 | Administration | Gouvernance et inventaire | Audit et enrichissement | Accès visible aux non-admins |
 
 ## Composants

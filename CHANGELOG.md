@@ -29,6 +29,27 @@ la source du diff technique et les ADR expliquent les décisions importantes.
   `session_state` des journaux d'accès ;
 - ADR-0012 documentant les compromis, limites et retours arrière de ces
   protections mono-instance pour l'ouverture publique ;
+- annulation idempotente d'une réservation par son réservataire avant le début,
+  avec conservation de l'historique, remise à disposition immédiate, audit et
+  notification du titulaire par l'outbox transactionnelle ;
+- retrait idempotent d'une disponibilité par son titulaire lorsque aucune
+  réservation active ne la couvre, avec refus explicite `403`/`409` et audit ;
+- relation du membre courant, identifiant de sa réservation et actions
+  autorisées dans le dashboard, puis contrôles accessibles sur les routes
+  existantes Partager et Trouver sans ajouter de fausse destination ;
+- contrat OpenAPI `0.4.0` pour l'annulation et le retrait, aligné avec les
+  modèles Java et TypeScript et les réponses `401`, `403`, `409`, `429` et
+  `5xx` ;
+- clé d'idempotence stable conservée par le frontend pendant un retry de
+  réservation et verrous immédiats contre les doubles soumissions ;
+- test PostgreSQL de deux réservations HTTP réellement simultanées produisant
+  exactement un succès et un conflit, plus attente déterministe de l'email
+  outbox par sujet au lieu de dépendre de l'ordre global des événements ;
+- smoke Compose étendu jusqu'à l'annulation et au retrait, avec projet de test
+  isolable et fenêtres de santé adaptées à un téléchargement réellement froid ;
+- ADR-0013 fixant la politique minimale d'annulation avant le début et de
+  retrait sans réservation active ; ces capacités restent locales et non
+  déployées ;
 - migration Flyway V3 activant et forçant RLS sur les tables d'identité,
   session et données tenant, avec contexte `SET LOCAL` transactionnel et rôle
   runtime non propriétaire testé ;

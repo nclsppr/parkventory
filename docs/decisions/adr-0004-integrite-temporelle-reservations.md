@@ -1,7 +1,8 @@
 # ADR-0004 : intégrité temporelle des réservations dans PostgreSQL
 
 - Statut : accepté
-- Statut d'implémentation : non commencé
+- Statut d'implémentation : partiellement implémenté ; arbitrage concurrent,
+  idempotence et annulation vérifiés, matrice DST encore ouverte
 - Date : 2026-07-30
 - Dernière vérification : documentation PostgreSQL 18 consultée le 2026-07-30
 - Propriétaire : nclsppr
@@ -119,9 +120,13 @@ WHERE (status IN ('HELD', 'CONFIRMED'));
 - Environnements : local et CI Linux.
 - Résultat attendu : exactement un succès, un conflit `409`, aucune ligne
   chevauchante ; deux intervalles adjacents sont acceptés.
-- Preuve observée : capacité des range types et contraintes d'exclusion vérifiée
-  dans la documentation PostgreSQL.
-- Limites de la preuve : aucune migration ou implémentation n'existe encore.
+- Preuve observée : migrations V1 à V3 appliquées sur PostgreSQL 18.3 ; deux
+  requêtes HTTP concurrentes vers la même offre produisent exactement un succès
+  et un conflit `409`. L'annulation et le retrait idempotents sont couverts par
+  le parcours d'intégration de l'ADR-0013.
+- Limites de la preuve : la matrice complète des bornes adjacentes, des heures
+  d'été/hiver et d'un retrait strictement concurrent à la réservation reste à
+  exécuter ; aucune migration ni requête de production n'est prouvée.
 
 ## Rollback
 
@@ -144,3 +149,4 @@ Réexaminer si :
 - [Types intervalle PostgreSQL 18](https://www.postgresql.org/docs/18/rangetypes.html)
 - [Règles métier](../product/business-rules.md)
 - [Modèle de domaine](../architecture/domain-model.md)
+- [ADR-0013 : annulation et retrait dans le parcours public initial](adr-0013-annulation-et-retrait-mvp.md)

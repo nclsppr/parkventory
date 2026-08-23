@@ -30,7 +30,11 @@ public final class ApiModels {
             String timeLabel,
             String spot,
             String level,
-            String status) {
+            String status,
+            String viewerRelation,
+            String reservationId,
+            boolean canCancel,
+            boolean canWithdraw) {
     }
 
     public record Thanks(String id, String initials, String author, String message, String when) {

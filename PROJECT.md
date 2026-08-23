@@ -166,6 +166,10 @@ ni contrat, ni données, ni autre module, et son retrait est local.
 6. PostgreSQL refuse tout chevauchement actif.
 7. La réservation et son événement de notification sont commités ensemble.
 8. Le worker d'outbox envoie l'email sans pouvoir annuler la réservation.
+9. Avant le début, le réservataire peut annuler ; l'offre redevient disponible
+   et le titulaire est notifié par la même outbox.
+10. Le titulaire peut retirer une offre seulement lorsqu'aucune réservation
+    active ne la couvre.
 
 ### Dépendances externes
 
@@ -194,8 +198,8 @@ ni contrat, ni données, ni autre module, et son retrait est local.
 | Route | Responsabilité | Données locales | Comportement Pages |
 | --- | --- | --- | --- |
 | `/app` | Synthèse et accès aux deux tâches principales | Session, compteurs, prochains créneaux, invitation | Démo statique signalée |
-| `/app/partager` | Déclarer une place si nécessaire puis publier son absence | Place assignée et création réelle d'une disponibilité | Démo statique signalée |
-| `/app/trouver` | Lire, sélectionner puis confirmer une disponibilité | Agenda réel à sept jours et réservation idempotente | Démo statique signalée |
+| `/app/partager` | Déclarer une place, publier puis retirer un partage non réservé | Place assignée, création réelle et offres actives du membre | Démo statique signalée, mutations locales uniquement |
+| `/app/trouver` | Lire, sélectionner, confirmer puis annuler avant le début | Agenda réel à sept jours, réservation idempotente et réservation active du membre | Démo statique signalée, mutations locales uniquement |
 
 Les anciens liens `/app?intent=share` et `/app?intent=find` sont remplacés dans
 l'historique du navigateur par leur route dédiée. Toute autre route rend une

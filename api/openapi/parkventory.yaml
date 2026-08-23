@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Parkventory API
-  version: 0.3.0
+  version: 0.4.0
   description: >-
     Contrat des adaptateurs d’identité exclusifs par profil. Le lien magique et
     Mailpit existent hors production ; Auth0 Universal Login Email OTP existe
@@ -222,10 +222,121 @@ paths:
                 $ref: "#/components/schemas/ActionResponse"
         "400":
           description: Clé d’idempotence invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiProblem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "404":
           description: Disponibilité inconnue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiProblem"
         "409":
           description: Disponibilité prise, expirée ou appartenant au membre
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiProblem"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /reservations/{reservationId}:
+    delete:
+      tags: [Reservations]
+      operationId: cancelReservation
+      summary: Annule une réservation confirmée avant son début
+      description: >-
+        L’annulation est idempotente, conserve l’historique, libère le créneau
+        et place la notification du titulaire dans l’outbox de la même
+        transaction.
+      security:
+        - cookieSession: []
+      parameters:
+        - name: reservationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Réservation annulée ou déjà annulée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Réservation créée par un autre membre
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiProblem"
+        "404":
+          description: Réservation inconnue dans le tenant actif
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiProblem"
+        "409":
+          description: Réservation commencée ou dans un état non annulable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiProblem"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /availability/{availabilityId}:
+    delete:
+      tags: [Sharing]
+      operationId: withdrawAvailability
+      summary: Retire une disponibilité sans réservation active
+      description: >-
+        Le retrait est idempotent et historisé. Une réservation active bloque
+        l’action afin qu’elle ne soit jamais supprimée silencieusement.
+      security:
+        - cookieSession: []
+      parameters:
+        - name: availabilityId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Disponibilité retirée ou déjà retirée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Disponibilité publiée par un autre membre
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiProblem"
+        "404":
+          description: Disponibilité inconnue dans le tenant actif
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiProblem"
+        "409":
+          description: Réservation active ou disponibilité non retirable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiProblem"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
   /invitations:
     post:
       tags: [Invitations]
@@ -248,6 +359,28 @@ paths:
         "400":
           description: Adresse absente, invalide, personnelle ou identique
 components:
+  responses:
+    Unauthorized:
+      description: Session absente, expirée ou révoquée
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiProblem"
+    RateLimited:
+      description: Trop de requêtes ; le client doit attendre avant de réessayer
+      headers:
+        Retry-After:
+          schema: { type: integer, minimum: 1 }
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiProblem"
+    ServerError:
+      description: Erreur interne sans détail sensible
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiProblem"
   securitySchemes:
     cookieSession:
       type: apiKey
@@ -314,7 +447,17 @@ components:
         availableSpots: { type: integer, minimum: 0 }
     Availability:
       type: object
-      required: [id, dateLabel, timeLabel, spot, level, status]
+      required:
+        - id
+        - dateLabel
+        - timeLabel
+        - spot
+        - level
+        - status
+        - viewerRelation
+        - reservationId
+        - canCancel
+        - canWithdraw
       properties:
         id: { type: string, format: uuid }
         dateLabel: { type: string }
@@ -324,6 +467,12 @@ components:
         status:
           type: string
           enum: [AVAILABLE, RESERVED, UNAVAILABLE]
+        viewerRelation:
+          type: string
+          enum: [NONE, OFFERED, RESERVED]
+        reservationId: { type: [string, "null"], format: uuid }
+        canCancel: { type: boolean }
+        canWithdraw: { type: boolean }
     Thanks:
       type: object
       required: [id, initials, author, message, when]
@@ -358,3 +507,9 @@ components:
       properties:
         accepted: { type: boolean }
         message: { type: string }
+    ApiProblem:
+      type: object
+      required: [status, detail]
+      properties:
+        status: { type: integer, minimum: 400, maximum: 599 }
+        detail: { type: string }

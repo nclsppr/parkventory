@@ -306,8 +306,18 @@ svg {
   background: var(--cyan-deep);
 }
 
+.button-danger {
+  border-color: var(--danger);
+  background: transparent;
+  color: var(--danger);
+}
+
+.button-danger:hover {
+  background: var(--danger-deep);
+}
+
 .button-small {
-  min-height: 42px;
+  min-height: 44px;
   padding-inline: 17px;
   font-size: 14px;
 }
@@ -3661,6 +3671,10 @@ svg {
   gap: var(--space-5);
 }
 
+.managed-availability {
+  margin-top: var(--space-5);
+}
+
 .availability-agenda {
   display: grid;
   border-top: 1px solid var(--border);
@@ -3769,6 +3783,17 @@ svg {
   width: 17px;
 }
 
+.availability-agenda-actions {
+  min-width: 128px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.availability-agenda-actions .button,
+.availability-agenda > li > .button {
+  min-width: 112px;
+}
+
 .reservation-summary {
   position: sticky;
   top: var(--space-5);
@@ -3868,6 +3893,10 @@ svg {
   color: var(--muted);
   font-size: 14px;
   line-height: 1.5;
+}
+
+.route-empty-state-compact {
+  min-height: 180px;
 }
 
 .status {
@@ -4232,7 +4261,9 @@ svg {
   }
 
   .availability-agenda > li > .choose-spot-button,
-  .availability-agenda > li > .availability-agenda-static {
+  .availability-agenda > li > .availability-agenda-static,
+  .availability-agenda > li > .availability-agenda-actions,
+  .availability-agenda > li > .button {
     grid-column: 2;
     grid-row: 1 / 4;
     align-self: stretch;
@@ -4373,11 +4404,17 @@ svg {
   }
 
   .availability-agenda > li > .choose-spot-button,
-  .availability-agenda > li > .availability-agenda-static {
+  .availability-agenda > li > .availability-agenda-static,
+  .availability-agenda > li > .availability-agenda-actions,
+  .availability-agenda > li > .button {
     grid-column: 1;
     grid-row: auto;
     width: 100%;
     justify-content: center;
+  }
+
+  .availability-agenda-actions .button {
+    width: 100%;
   }
 
 }

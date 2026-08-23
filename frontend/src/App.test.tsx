@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { relativePathname } from "./config";
 import { demoDashboard } from "./data/demo";
+import type { DashboardData } from "./types";
 
 afterEach(() => {
   cleanup();
@@ -30,7 +31,15 @@ function sessionResponse() {
   };
 }
 
-function dashboardResponse(overrides: Record<string, unknown> = {}) {
+function dashboardResponse(overrides: Partial<DashboardData> = {}): DashboardData {
+  const availability = structuredClone(demoDashboard.availability).map((item) => ({
+    ...item,
+    status: "AVAILABLE" as const,
+    viewerRelation: "NONE" as const,
+    reservationId: null,
+    canCancel: false,
+    canWithdraw: false,
+  }));
   return {
     ...structuredClone(demoDashboard),
     demo: false,
@@ -43,6 +52,7 @@ function dashboardResponse(overrides: Record<string, unknown> = {}) {
     },
     organization: { name: "Acme — communauté", sharedTotal: 12 },
     stats: { shares: 2, reservations: 1, availableSpots: 3 },
+    availability,
     thanks: [],
     ...overrides,
   };
@@ -260,6 +270,91 @@ describe("Parkventory", () => {
       credentials: "include",
       headers: expect.objectContaining({ "Idempotency-Key": expect.any(String) }),
     }));
+  });
+
+  it("annule une réservation une seule fois malgré une double soumission", async () => {
+    const available = dashboardResponse().availability[0];
+    const reserved = {
+      ...available,
+      status: "RESERVED" as const,
+      viewerRelation: "RESERVED" as const,
+      reservationId: "8f8cdfa7-2f0c-4d96-b546-d02e23e21f7a",
+      canCancel: true,
+      canWithdraw: false,
+    };
+    let cancelled = false;
+    let cancellationCalls = 0;
+    let releaseCancellation!: () => void;
+    const cancellationGate = new Promise<void>((resolve) => {
+      releaseCancellation = resolve;
+    });
+    const fetchMock = stubAuthenticatedApi((url, init) => {
+      if (url.endsWith(`/reservations/${reserved.reservationId}`) && init?.method === "DELETE") {
+        cancellationCalls += 1;
+        return cancellationGate.then(() => {
+          cancelled = true;
+          return jsonResponse({ accepted: true, message: "La réservation est annulée." });
+        });
+      }
+      if (url.endsWith("/dashboard")) {
+        return jsonResponse(dashboardResponse({
+          availability: cancelled ? [available] : [reserved],
+        }));
+      }
+      return undefined;
+    });
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    window.history.replaceState({}, "", "/app/trouver");
+    render(<App />);
+
+    const cancelButton = await screen.findByRole("button", { name: "Annuler" });
+    fireEvent.click(cancelButton);
+    fireEvent.click(cancelButton);
+    expect(cancellationCalls).toBe(1);
+    expect(cancelButton).toHaveAttribute("aria-busy", "true");
+
+    releaseCancellation();
+    expect(await screen.findByRole("status")).toHaveTextContent(/réservation est annulée/i);
+    await waitFor(() => expect(fetchMock.mock.calls.filter(
+      ([url, init]) => String(url).includes("/reservations/") && init?.method === "DELETE",
+    )).toHaveLength(1));
+  });
+
+  it("retire un partage non réservé depuis la route de partage", async () => {
+    const ownShare = {
+      ...dashboardResponse().availability[0],
+      status: "UNAVAILABLE" as const,
+      viewerRelation: "OFFERED" as const,
+      reservationId: null,
+      canCancel: false,
+      canWithdraw: true,
+    };
+    let withdrawn = false;
+    const fetchMock = stubAuthenticatedApi((url, init) => {
+      if (url.endsWith(`/availability/${ownShare.id}`) && init?.method === "DELETE") {
+        withdrawn = true;
+        return jsonResponse({ accepted: true, message: "La disponibilité est retirée." });
+      }
+      if (url.endsWith("/dashboard")) {
+        return jsonResponse(dashboardResponse({
+          availability: withdrawn ? [] : [ownShare],
+        }));
+      }
+      return undefined;
+    });
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    window.history.replaceState({}, "", "/app/partager");
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: "Retirer" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(/disponibilité est retirée/i);
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/v1/availability/${ownShare.id}`,
+      expect.objectContaining({ method: "DELETE", credentials: "include" }),
+    );
+    expect(await screen.findByRole("heading", { name: "Aucun partage actif." })).toBeInTheDocument();
   });
 
   it("navigue dans le shell, met la route active à jour et conserve les données", async () => {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   CalendarDays,
@@ -10,9 +10,10 @@ import {
   MapPin,
   Search,
   ShieldCheck,
+  Trash2,
   X,
 } from "lucide-react";
-import { ApiError, reserveSpot } from "../api/client";
+import { ApiError, cancelReservation, reserveSpot } from "../api/client";
 import { AppLink } from "../components/AppLink";
 import { appUrl, isPublicDemo } from "../config";
 import { browserTimeZone } from "../lib/dates";
@@ -25,9 +26,11 @@ interface FindPageProps {
   onSessionExpired: () => void;
 }
 
-function statusLabel(status: AvailabilityItem["status"]) {
-  if (status === "AVAILABLE") return "Disponible";
-  if (status === "RESERVED") return "Réservée";
+function statusLabel(item: AvailabilityItem) {
+  if (item.viewerRelation === "RESERVED") return "Votre réservation";
+  if (item.viewerRelation === "OFFERED") return "Votre partage";
+  if (item.status === "AVAILABLE") return "Disponible";
+  if (item.status === "RESERVED") return "Réservée";
   return "Votre partage";
 }
 
@@ -39,23 +42,41 @@ export function FindPage({
 }: FindPageProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reserveBusy, setReserveBusy] = useState(false);
+  const [cancelBusyId, setCancelBusyId] = useState<string | null>(null);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
   const [resultTone, setResultTone] = useState<"success" | "error">("success");
+  const reserveLock = useRef(false);
+  const cancelLock = useRef<string | null>(null);
+  const reservationAttempt = useRef<{ availabilityId: string; key: string } | null>(null);
   const timeZone = useMemo(browserTimeZone, []);
   const selected = data.availability.find((item) => item.id === selectedId) ?? null;
   const availableCount = data.availability.filter((item) => item.status === "AVAILABLE").length;
 
   const handleReserve = async () => {
-    if (!selected || selected.status !== "AVAILABLE" || reserveBusy) return;
+    if (!selected || selected.status !== "AVAILABLE" || reserveLock.current) return;
+    reserveLock.current = true;
     setReserveBusy(true);
     setResultMessage(null);
+    const attempt = reservationAttempt.current?.availabilityId === selected.id
+      ? reservationAttempt.current
+      : { availabilityId: selected.id, key: crypto.randomUUID() };
+    reservationAttempt.current = attempt;
     try {
-      await reserveSpot(selected.id);
+      await reserveSpot(selected.id, attempt.key);
       if (isPublicDemo) {
         onDemoMutation((current) => ({
           ...current,
           availability: current.availability.map((item) => (
-            item.id === selected.id ? { ...item, status: "RESERVED" as const } : item
+            item.id === selected.id
+              ? {
+                  ...item,
+                  status: "RESERVED" as const,
+                  viewerRelation: "RESERVED" as const,
+                  reservationId: `demo-reservation-${item.id}`,
+                  canCancel: true,
+                  canWithdraw: false,
+                }
+              : item
           )),
           stats: {
             ...current.stats,
@@ -70,6 +91,7 @@ export function FindPage({
       setResultTone("success");
       setResultMessage(message);
       setSelectedId(null);
+      reservationAttempt.current = null;
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
         onSessionExpired();
@@ -83,10 +105,71 @@ export function FindPage({
           : "La place n’a pas pu être réservée.";
       setResultTone("error");
       setResultMessage(message);
-      setSelectedId(null);
-      if (!isPublicDemo) await onRefresh(false);
+      if (conflict) {
+        setSelectedId(null);
+        reservationAttempt.current = null;
+        if (!isPublicDemo) await onRefresh(false);
+      }
     } finally {
+      reserveLock.current = false;
       setReserveBusy(false);
+    }
+  };
+
+  const handleCancel = async (item: AvailabilityItem) => {
+    if (!item.reservationId || !item.canCancel || cancelLock.current) return;
+    if (!window.confirm(
+      `Annuler votre réservation de ${item.spot}, ${item.dateLabel}, ${item.timeLabel} ?`,
+    )) return;
+
+    cancelLock.current = item.reservationId;
+    setCancelBusyId(item.reservationId);
+    setResultMessage(null);
+    try {
+      const response = await cancelReservation(item.reservationId);
+      if (isPublicDemo) {
+        onDemoMutation((current) => ({
+          ...current,
+          availability: current.availability.map((currentItem) => (
+            currentItem.id === item.id
+              ? {
+                  ...currentItem,
+                  status: "AVAILABLE" as const,
+                  viewerRelation: "NONE" as const,
+                  reservationId: null,
+                  canCancel: false,
+                  canWithdraw: false,
+                }
+              : currentItem
+          )),
+          stats: {
+            ...current.stats,
+            reservations: Math.max(0, current.stats.reservations - 1),
+            availableSpots: current.stats.availableSpots + 1,
+          },
+        }));
+      } else {
+        await onRefresh(false);
+      }
+      setResultTone("success");
+      setResultMessage(response.message);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        onSessionExpired();
+        return;
+      }
+      setResultTone("error");
+      setResultMessage(
+        error instanceof Error
+          ? error.message
+          : "La réservation n’a pas pu être annulée.",
+      );
+      if (error instanceof ApiError && error.status === 409 && !isPublicDemo) {
+        await onRefresh(false);
+      }
+    } finally {
+      cancelLock.current = null;
+      setCancelBusyId(null);
     }
   };
 
@@ -144,7 +227,7 @@ export function FindPage({
                 return (
                   <li className={isSelected ? "selected" : undefined} key={item.id}>
                     <div className="availability-agenda-status">
-                      <span className={`status status-${item.status.toLowerCase()}`}><i />{statusLabel(item.status)}</span>
+                      <span className={`status status-${item.status.toLowerCase()}`}><i />{statusLabel(item)}</span>
                       <span>{item.dateLabel}</span>
                     </div>
                     <div className="availability-agenda-place">
@@ -159,6 +242,7 @@ export function FindPage({
                         aria-pressed={isSelected}
                         onClick={() => {
                           setSelectedId(item.id);
+                          reservationAttempt.current = null;
                           setResultMessage(null);
                           window.requestAnimationFrame(() => {
                             const summary = document.querySelector(".reservation-summary");
@@ -170,10 +254,29 @@ export function FindPage({
                       >
                         {isSelected ? "Sélectionnée" : "Choisir"}<ArrowRight aria-hidden="true" />
                       </button>
+                    ) : item.viewerRelation === "RESERVED" && item.reservationId ? (
+                      <div className="availability-agenda-actions">
+                        {item.canCancel ? (
+                          <button
+                            className="button button-danger button-small"
+                            type="button"
+                            onClick={() => void handleCancel(item)}
+                            disabled={cancelBusyId === item.reservationId}
+                            aria-busy={cancelBusyId === item.reservationId}
+                          >
+                            {cancelBusyId === item.reservationId
+                              ? <LoaderCircle className="spin" aria-hidden="true" />
+                              : <Trash2 aria-hidden="true" />}
+                            {cancelBusyId === item.reservationId ? "Annulation…" : "Annuler"}
+                          </button>
+                        ) : (
+                          <span className="availability-agenda-static">Annulation fermée</span>
+                        )}
+                      </div>
                     ) : (
                       <span className="availability-agenda-static">
                         {item.status === "RESERVED" ? <Check aria-hidden="true" /> : <CalendarDays aria-hidden="true" />}
-                        {statusLabel(item.status)}
+                        {statusLabel(item)}
                       </span>
                     )}
                   </li>
@@ -186,7 +289,10 @@ export function FindPage({
         <aside className={`reservation-summary ${selected ? "reservation-summary-active" : ""}`} aria-live="polite">
           {selected ? (
             <>
-              <button className="reservation-summary-close" type="button" onClick={() => setSelectedId(null)} aria-label="Annuler la sélection"><X aria-hidden="true" /></button>
+              <button className="reservation-summary-close" type="button" onClick={() => {
+                setSelectedId(null);
+                reservationAttempt.current = null;
+              }} aria-label="Annuler la sélection"><X aria-hidden="true" /></button>
               <p className="section-kicker">Votre sélection</p>
               <h2>{selected.spot}</h2>
               <dl>
@@ -196,7 +302,7 @@ export function FindPage({
                 <div><dt>Fuseau</dt><dd>{timeZone}</dd></div>
               </dl>
               <p><ShieldCheck aria-hidden="true" /> La confirmation attribuera ce créneau uniquement à votre compte.</p>
-              <button className="button button-primary workflow-primary-action" type="button" onClick={() => void handleReserve()} disabled={reserveBusy}>
+              <button className="button button-primary workflow-primary-action" type="button" onClick={() => void handleReserve()} disabled={reserveBusy} aria-busy={reserveBusy}>
                 {reserveBusy ? <LoaderCircle className="spin" aria-hidden="true" /> : <Check aria-hidden="true" />}
                 {reserveBusy ? "Confirmation…" : "Confirmer la réservation"}
               </button>

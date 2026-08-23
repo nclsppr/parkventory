@@ -41,7 +41,7 @@ change durablement une règle structurante exige une ADR.
 | AVL-003 | Les instants sont stockés en UTC ; le site conserve un fuseau IANA. |
 | AVL-004 | Une offre ne chevauche pas une autre offre active du même titulaire pour la même place. |
 | AVL-005 | Une offre retirée n'est plus réservable mais reste traçable. |
-| AVL-006 | Une offre couvrant une réservation confirmée ne peut pas être retirée silencieusement. |
+| AVL-006 | Une offre couvrant une réservation active ne peut pas être retirée ; le réservataire doit d'abord annuler. |
 | AVL-007 | La journée entière est convertie depuis le calendrier et le fuseau du site, jamais en durée fixe de vingt-quatre heures. |
 
 ## Réservations
@@ -54,9 +54,10 @@ change durablement une règle structurante exige une ADR.
 | RSV-004 | La base de données, pas un contrôle préalable du client, est l'arbitre final des collisions. |
 | RSV-005 | Une commande de réservation possède une clé d'idempotence unique par organisation et acteur. |
 | RSV-006 | Un conflit concurrent devient une réponse HTTP `409` stable et compréhensible. |
-| RSV-007 | Une annulation conserve l'historique et peut remettre l'intervalle en disponibilité. |
+| RSV-007 | Seul le réservataire peut annuler strictement avant le début ; l'historique est conservé et l'intervalle redevient disponible. |
 | RSV-008 | Une panne de notification ne modifie pas le statut métier déjà commité. |
 | RSV-009 | Une action administrative sur une réservation exige une raison et un audit. |
+| RSV-010 | Rejouer une annulation déjà réussie ne crée ni second audit ni seconde notification. |
 
 ## Gouvernance
 

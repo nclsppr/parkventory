@@ -157,6 +157,11 @@ Une table ou contrainte garantit l'unicité de :
 Le résultat de la première commande peut être rejoué sans créer une seconde
 réservation. Les clés expirent selon une rétention documentée.
 
+L'annulation et le retrait utilisent l'état persistant comme résultat
+idempotent : rejouer `CANCELLED` ou `WITHDRAWN` retourne un succès sans écrire
+un second audit ni un second événement d'outbox. Le détail de ces transitions
+vit dans l'ADR-0013.
+
 ## Plan de parking futur
 
 F07 pourra ajouter sans changer l'identité d'une place :

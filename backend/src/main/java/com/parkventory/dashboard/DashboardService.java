@@ -267,18 +267,26 @@ public class DashboardService {
 
         try (Connection connection = dataSource.getConnection()) {
             tenantContext.applyTenant(connection, session.organizationId());
-            if (hasReservationForKey(connection, session, idempotencyKey)) {
-                return new ActionResponse(
-                        true,
-                        "Cette réservation avait déjà été confirmée.");
-            }
-
             ReservationOffer offer = loadReservationOffer(
                     connection,
                     session.organizationId(),
                     availabilityId);
             if (offer == null) {
                 throw new ClientErrorException("Disponibilité introuvable.", 404);
+            }
+            UUID existingAvailabilityId = loadReservationAvailabilityForKey(
+                    connection,
+                    session,
+                    idempotencyKey);
+            if (existingAvailabilityId != null) {
+                if (existingAvailabilityId.equals(availabilityId)) {
+                    return new ActionResponse(
+                            true,
+                            "Cette réservation avait déjà été confirmée.");
+                }
+                throw new ClientErrorException(
+                        "Cette clé d’idempotence a déjà servi pour une autre réservation.",
+                        409);
             }
             if (offer.ownerMembershipId().equals(session.membershipId())) {
                 throw new ClientErrorException(
@@ -347,6 +355,157 @@ public class DashboardService {
                         "Cette place vient d’être réservée par un autre collègue.", 409);
             }
             throw new IllegalStateException("Impossible de confirmer la réservation.", exception);
+        }
+    }
+
+    @Transactional
+    public ActionResponse cancelReservation(
+            SessionContext session,
+            String rawReservationId) {
+        UUID reservationId = parseUuid(rawReservationId, "Réservation introuvable.");
+
+        try (Connection connection = dataSource.getConnection()) {
+            tenantContext.applyTenant(connection, session.organizationId());
+            CancellableReservation reservation = loadCancellableReservationForUpdate(
+                    connection,
+                    session.organizationId(),
+                    reservationId);
+            if (reservation == null) {
+                throw new ClientErrorException("Réservation introuvable.", 404);
+            }
+            if (!reservation.reservedByMembershipId().equals(session.membershipId())) {
+                throw new ClientErrorException(
+                        "Seul le collègue qui a réservé peut annuler ce créneau.",
+                        403);
+            }
+            if ("CANCELLED".equals(reservation.status())) {
+                return new ActionResponse(
+                        true,
+                        "Cette réservation avait déjà été annulée.");
+            }
+            if (!"CONFIRMED".equals(reservation.status())) {
+                throw new ClientErrorException(
+                        "Cette réservation ne peut plus être annulée.",
+                        409);
+            }
+            if (!reservation.startsAt().isAfter(Instant.now())) {
+                throw new ClientErrorException(
+                        "Une réservation commencée ne peut plus être annulée.",
+                        409);
+            }
+
+            try (PreparedStatement statement = connection.prepareStatement("""
+                    UPDATE reservation
+                       SET status = 'CANCELLED'
+                     WHERE organization_id = ?
+                       AND id = ?
+                       AND status = 'CONFIRMED'
+                    """)) {
+                statement.setObject(1, session.organizationId());
+                statement.setObject(2, reservationId);
+                if (statement.executeUpdate() != 1) {
+                    throw new ClientErrorException(
+                            "Cette réservation vient de changer. Actualisez la page.",
+                            409);
+                }
+            }
+
+            String ownerEmail = loadMembershipEmail(
+                    connection,
+                    reservation.ownerMembershipId());
+            insertOutbox(
+                    connection,
+                    session.organizationId(),
+                    "RESERVATION_CANCELLED",
+                    "RESERVATION",
+                    reservationId,
+                    Map.of(
+                            "email", ownerEmail,
+                            "reserverName", session.displayName(),
+                            "spot", reservation.spotLabel(),
+                            "startsAt", reservation.startsAt().toString()));
+            insertAudit(
+                    connection,
+                    session,
+                    "RESERVATION_CANCELLED",
+                    "RESERVATION",
+                    reservationId);
+            return new ActionResponse(
+                    true,
+                    "La réservation de la place "
+                            + reservation.spotLabel()
+                            + " est annulée. Le créneau est de nouveau disponible.");
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Impossible d’annuler la réservation.", exception);
+        }
+    }
+
+    @Transactional
+    public ActionResponse withdrawAvailability(
+            SessionContext session,
+            String rawAvailabilityId) {
+        UUID availabilityId = parseUuid(
+                rawAvailabilityId,
+                "Disponibilité introuvable.");
+
+        try (Connection connection = dataSource.getConnection()) {
+            tenantContext.applyTenant(connection, session.organizationId());
+            WithdrawableOffer offer = loadWithdrawableOfferForUpdate(
+                    connection,
+                    session.organizationId(),
+                    availabilityId);
+            if (offer == null) {
+                throw new ClientErrorException("Disponibilité introuvable.", 404);
+            }
+            if (!offer.ownerMembershipId().equals(session.membershipId())) {
+                throw new ClientErrorException(
+                        "Seul le titulaire qui a publié ce partage peut le retirer.",
+                        403);
+            }
+            if ("WITHDRAWN".equals(offer.status())) {
+                return new ActionResponse(
+                        true,
+                        "Cette disponibilité avait déjà été retirée.");
+            }
+            if (!"PUBLISHED".equals(offer.status())) {
+                throw new ClientErrorException(
+                        "Cette disponibilité ne peut plus être retirée.",
+                        409);
+            }
+            if (hasActiveReservationForUpdate(connection, session.organizationId(), availabilityId)) {
+                throw new ClientErrorException(
+                        "Cette disponibilité est réservée. Le collègue doit d’abord annuler sa réservation.",
+                        409);
+            }
+
+            try (PreparedStatement statement = connection.prepareStatement("""
+                    UPDATE availability_offer
+                       SET status = 'WITHDRAWN'
+                     WHERE organization_id = ?
+                       AND id = ?
+                       AND status = 'PUBLISHED'
+                    """)) {
+                statement.setObject(1, session.organizationId());
+                statement.setObject(2, availabilityId);
+                if (statement.executeUpdate() != 1) {
+                    throw new ClientErrorException(
+                            "Cette disponibilité vient de changer. Actualisez la page.",
+                            409);
+                }
+            }
+            insertAudit(
+                    connection,
+                    session,
+                    "AVAILABILITY_WITHDRAWN",
+                    "AVAILABILITY_OFFER",
+                    availabilityId);
+            return new ActionResponse(
+                    true,
+                    "La disponibilité de la place "
+                            + offer.spotLabel()
+                            + " est retirée.");
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Impossible de retirer la disponibilité.", exception);
         }
     }
 
@@ -550,7 +709,8 @@ public class DashboardService {
                        spot.label,
                        COALESCE(spot.level_label, 'Niveau non renseigné') AS level,
                        site.timezone,
-                       reserved.id AS reservation_id
+                       reserved.id AS reservation_id,
+                       reserved.reserved_by_membership_id
                   FROM availability_offer offer
                   JOIN parking_spot spot
                     ON spot.organization_id = offer.organization_id
@@ -570,6 +730,7 @@ public class DashboardService {
                  LIMIT 50
                 """;
         List<Availability> items = new ArrayList<>();
+        Instant now = Instant.now();
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setObject(1, session.organizationId());
             try (ResultSet result = statement.executeQuery()) {
@@ -581,14 +742,23 @@ public class DashboardService {
                     ZonedDateTime localEnd = endsAt.atZone(zone);
                     UUID ownerMembershipId =
                             result.getObject("offered_by_membership_id", UUID.class);
+                    UUID reservationId = result.getObject("reservation_id", UUID.class);
+                    UUID reservedByMembershipId =
+                            result.getObject("reserved_by_membership_id", UUID.class);
+                    boolean offeredByViewer = ownerMembershipId.equals(session.membershipId());
+                    boolean reservedByViewer = reservedByMembershipId != null
+                            && reservedByMembershipId.equals(session.membershipId());
                     String status;
-                    if (result.getObject("reservation_id") != null) {
+                    if (reservationId != null) {
                         status = "RESERVED";
-                    } else if (ownerMembershipId.equals(session.membershipId())) {
+                    } else if (offeredByViewer) {
                         status = "UNAVAILABLE";
                     } else {
                         status = "AVAILABLE";
                     }
+                    String viewerRelation = offeredByViewer
+                            ? "OFFERED"
+                            : reservedByViewer ? "RESERVED" : "NONE";
                     items.add(new Availability(
                             result.getObject("id", UUID.class).toString(),
                             DATE_FORMATTER.format(localStart),
@@ -597,7 +767,11 @@ public class DashboardService {
                                     + TIME_FORMATTER.format(localEnd),
                             result.getString("label"),
                             result.getString("level"),
-                            status));
+                            status,
+                            viewerRelation,
+                            reservedByViewer ? reservationId.toString() : null,
+                            reservedByViewer && startsAt.isAfter(now),
+                            offeredByViewer && reservationId == null));
                 }
             }
         }
@@ -640,12 +814,100 @@ public class DashboardService {
         }
     }
 
-    private boolean hasReservationForKey(
+    private CancellableReservation loadCancellableReservationForUpdate(
+            Connection connection,
+            UUID organizationId,
+            UUID reservationId) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT reserved.reserved_by_membership_id,
+                       reserved.starts_at,
+                       reserved.status,
+                       offer.offered_by_membership_id,
+                       spot.label
+                  FROM reservation reserved
+                  JOIN availability_offer offer
+                    ON offer.organization_id = reserved.organization_id
+                   AND offer.id = reserved.availability_offer_id
+                  JOIN parking_spot spot
+                    ON spot.organization_id = reserved.organization_id
+                   AND spot.id = reserved.parking_spot_id
+                 WHERE reserved.organization_id = ?
+                   AND reserved.id = ?
+                 FOR UPDATE OF offer, reserved
+                """)) {
+            statement.setObject(1, organizationId);
+            statement.setObject(2, reservationId);
+            try (ResultSet result = statement.executeQuery()) {
+                if (!result.next()) {
+                    return null;
+                }
+                return new CancellableReservation(
+                        result.getObject("reserved_by_membership_id", UUID.class),
+                        result.getObject("offered_by_membership_id", UUID.class),
+                        result.getObject("starts_at", OffsetDateTime.class).toInstant(),
+                        result.getString("status"),
+                        result.getString("label"));
+            }
+        }
+    }
+
+    private WithdrawableOffer loadWithdrawableOfferForUpdate(
+            Connection connection,
+            UUID organizationId,
+            UUID availabilityId) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT offer.offered_by_membership_id,
+                       offer.status,
+                       spot.label
+                  FROM availability_offer offer
+                  JOIN parking_spot spot
+                    ON spot.organization_id = offer.organization_id
+                   AND spot.id = offer.parking_spot_id
+                 WHERE offer.organization_id = ?
+                   AND offer.id = ?
+                 FOR UPDATE OF offer
+                """)) {
+            statement.setObject(1, organizationId);
+            statement.setObject(2, availabilityId);
+            try (ResultSet result = statement.executeQuery()) {
+                if (!result.next()) {
+                    return null;
+                }
+                return new WithdrawableOffer(
+                        result.getObject("offered_by_membership_id", UUID.class),
+                        result.getString("status"),
+                        result.getString("label"));
+            }
+        }
+    }
+
+    private boolean hasActiveReservationForUpdate(
+            Connection connection,
+            UUID organizationId,
+            UUID availabilityId) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT 1
+                  FROM reservation
+                 WHERE organization_id = ?
+                   AND availability_offer_id = ?
+                   AND status IN ('HELD', 'CONFIRMED')
+                 LIMIT 1
+                 FOR UPDATE
+                """)) {
+            statement.setObject(1, organizationId);
+            statement.setObject(2, availabilityId);
+            try (ResultSet result = statement.executeQuery()) {
+                return result.next();
+            }
+        }
+    }
+
+    private UUID loadReservationAvailabilityForKey(
             Connection connection,
             SessionContext session,
             String idempotencyKey) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
-                SELECT 1
+                SELECT availability_offer_id
                   FROM reservation
                  WHERE organization_id = ?
                    AND reserved_by_membership_id = ?
@@ -656,7 +918,9 @@ public class DashboardService {
             statement.setObject(2, session.membershipId());
             statement.setString(3, idempotencyKey);
             try (ResultSet result = statement.executeQuery()) {
-                return result.next();
+                return result.next()
+                        ? result.getObject("availability_offer_id", UUID.class)
+                        : null;
             }
         }
     }
@@ -962,6 +1226,20 @@ public class DashboardService {
             UUID ownerMembershipId,
             Instant startsAt,
             Instant endsAt,
+            String status,
+            String spotLabel) {
+    }
+
+    private record CancellableReservation(
+            UUID reservedByMembershipId,
+            UUID ownerMembershipId,
+            Instant startsAt,
+            String status,
+            String spotLabel) {
+    }
+
+    private record WithdrawableOffer(
+            UUID ownerMembershipId,
             String status,
             String spotLabel) {
     }

@@ -10,6 +10,28 @@ la documentation, publie de nouveaux candidats statique et applicatif ; leur
 état courant doit être résolu dans les workflows puis vérifié sur Atlas. Les
 invariants durables restent l'activation statique et la désactivation Compose.
 
+## Delta local non publié du 2026-08-23
+
+La branche de préparation issue des candidats RLS et OIDC ajoute le parcours
+minimal d'annulation et de retrait décrit par l'ADR-0013. Le réservataire peut
+annuler avant le début ; le créneau redevient disponible et l'outbox notifie le
+titulaire. Celui-ci peut ensuite retirer l'offre, tandis qu'une réservation
+active bloque toujours le retrait. Les deux transitions sont idempotentes et
+auditées.
+
+Le test d'intégration Quarkus exerce également deux réservations HTTP
+simultanées et observe exactement un succès et un conflit `409`. Le gate local
+complet `npm run verify` réussit : catalogue et builds documentaires, 42 tests
+React, audit npm sans vulnérabilité, builds frontend, suites Quarkus sur
+PostgreSQL 17.10 et 18.3 ainsi que sous rôle runtime RLS, puis smoke Compose
+isolé couvrant identité, partage, réservation, annulation, retrait,
+notification et invitation. Ce delta ne constitue ni un push, ni une release,
+ni une activation de production, ni une preuve publique. Les routes Partager
+et Trouver ont aussi été relues dans Chromium à 390 × 844 et 1 280 × 720 :
+aucun débordement horizontal, cibles d'action de 44 px minimum et aucune erreur
+console observée. Safari et les technologies d'assistance réelles restent hors
+de cette preuve.
+
 ## Référence
 
 | Champ | Valeur |

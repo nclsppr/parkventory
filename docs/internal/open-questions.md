@@ -11,7 +11,6 @@ qui doit être tranché avant la phase nommée, sans bloquer la documentation F0
 | Quelle preuve exacte pour le premier administrateur ? | Empêche l'escalade du premier inscrit | F06, prototype possible en F03 | nclsppr |
 | Quelle politique de rétention et suppression ? | Données professionnelles et habitudes de présence | F03 | nclsppr |
 | Qui peut déclarer ou contester une place assignée ? | Évite les offres illégitimes | F04 | nclsppr |
-| Quand un titulaire peut-il annuler une offre réservée ? | Impact direct sur le collègue réservataire | F04 | nclsppr |
 
 ## Produit
 

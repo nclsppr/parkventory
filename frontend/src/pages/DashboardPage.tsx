@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   CalendarDays,
@@ -19,9 +19,11 @@ import type { AvailabilityItem, DashboardData } from "../types";
 
 const personalDomains = ["gmail.com", "outlook.com", "hotmail.com", "yahoo.com", "icloud.com"];
 
-function statusLabel(status: AvailabilityItem["status"]) {
-  if (status === "AVAILABLE") return "Disponible";
-  if (status === "RESERVED") return "Réservée";
+function statusLabel(item: AvailabilityItem) {
+  if (item.viewerRelation === "RESERVED") return "Votre réservation";
+  if (item.viewerRelation === "OFFERED") return "Votre partage";
+  if (item.status === "AVAILABLE") return "Disponible";
+  if (item.status === "RESERVED") return "Réservée";
   return "Votre partage";
 }
 
@@ -35,6 +37,7 @@ export function DashboardPage({ data, onNotify, onSessionExpired }: DashboardPag
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteBusy, setInviteBusy] = useState(false);
   const [inviteMessage, setInviteMessage] = useState<string | null>(null);
+  const inviteLock = useRef(false);
   const availableItems = useMemo(
     () => data.availability.filter((item) => item.status === "AVAILABLE"),
     [data.availability],
@@ -42,7 +45,7 @@ export function DashboardPage({ data, onNotify, onSessionExpired }: DashboardPag
 
   const handleInvite = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (inviteBusy) return;
+    if (inviteLock.current) return;
     const normalized = inviteEmail.trim().toLowerCase();
     const domain = normalized.split("@")[1];
     if (!domain || personalDomains.includes(domain)) {
@@ -50,6 +53,7 @@ export function DashboardPage({ data, onNotify, onSessionExpired }: DashboardPag
       return;
     }
 
+    inviteLock.current = true;
     setInviteBusy(true);
     setInviteMessage(null);
     try {
@@ -67,6 +71,7 @@ export function DashboardPage({ data, onNotify, onSessionExpired }: DashboardPag
         onNotify(message, "error");
       }
     } finally {
+      inviteLock.current = false;
       setInviteBusy(false);
     }
   };
@@ -128,7 +133,7 @@ export function DashboardPage({ data, onNotify, onSessionExpired }: DashboardPag
               </li>
             ) : data.availability.slice(0, 4).map((item) => (
               <li key={item.id}>
-                <span className={`status status-${item.status.toLowerCase()}`}><i />{statusLabel(item.status)}</span>
+                <span className={`status status-${item.status.toLowerCase()}`}><i />{statusLabel(item)}</span>
                 <p><strong>{item.dateLabel}</strong><span>{item.timeLabel}</span></p>
                 <p><strong>{item.spot}</strong><span>{item.level}</span></p>
               </li>
@@ -163,7 +168,7 @@ export function DashboardPage({ data, onNotify, onSessionExpired }: DashboardPag
               aria-describedby="invite-message"
               required
             />
-            <button className="button button-primary" type="submit" disabled={inviteBusy}>
+            <button className="button button-primary" type="submit" disabled={inviteBusy} aria-busy={inviteBusy}>
               {inviteBusy ? "Envoi…" : "Envoyer"}
               {inviteBusy ? <LoaderCircle className="spin" aria-hidden="true" /> : <Send aria-hidden="true" />}
             </button>

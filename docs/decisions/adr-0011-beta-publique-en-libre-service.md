@@ -90,4 +90,3 @@ L'ouverture est suspendue si l'identité réelle, la RLS, la réservation, la
 sauvegarde restaurable ou les probes publiques échouent. Le retour arrière
 retire la route applicative sans réexposer l'adaptateur d'identité local et sans
 effacer la base.
-

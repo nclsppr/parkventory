@@ -15,9 +15,14 @@ import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 import java.sql.PreparedStatement;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Predicate;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -57,7 +62,6 @@ class DashboardResourceTest {
         String ownerEmail = "alex@" + domain;
         String colleagueEmail = "sam@" + domain;
         String ownerSession = authenticate(ownerEmail);
-        ownerSession = authenticate(ownerEmail);
 
         given()
                 .when().get("/api/v1/dashboard")
@@ -104,7 +108,9 @@ class DashboardResourceTest {
                 .statusCode(200)
                 .body("user.assignedSpot", equalTo("A-24"))
                 .body("stats.shares", equalTo(1))
-                .body("availability[0].status", equalTo("UNAVAILABLE"));
+                .body("availability[0].status", equalTo("UNAVAILABLE"))
+                .body("availability[0].viewerRelation", equalTo("OFFERED"))
+                .body("availability[0].canWithdraw", equalTo(true));
 
         String colleagueSession = authenticate(colleagueEmail);
         String availabilityId = given()
@@ -115,6 +121,7 @@ class DashboardResourceTest {
                 .body("organization.name", equalTo(organizationName(domain)))
                 .body("stats.availableSpots", equalTo(1))
                 .body("availability[0].status", equalTo("AVAILABLE"))
+                .body("availability[0].viewerRelation", equalTo("NONE"))
                 .extract().path("availability[0].id");
 
         String idempotencyKey = UUID.randomUUID().toString();
@@ -141,17 +148,88 @@ class DashboardResourceTest {
                 .then()
                 .statusCode(409);
 
-        outbox.deliverNext();
-        awaitMessage(ownerEmail, mail -> mail.getSubject().contains("a été réservée"));
+        awaitMailWithSubject(ownerEmail, "a été réservée");
 
-        given()
+        String reservationId = given()
                 .cookie(SessionService.COOKIE_NAME, colleagueSession)
                 .when().get("/api/v1/dashboard")
                 .then()
                 .statusCode(200)
                 .body("stats.reservations", equalTo(1))
                 .body("stats.availableSpots", equalTo(0))
-                .body("availability[0].status", equalTo("RESERVED"));
+                .body("availability[0].status", equalTo("RESERVED"))
+                .body("availability[0].viewerRelation", equalTo("RESERVED"))
+                .body("availability[0].canCancel", equalTo(true))
+                .extract().path("availability[0].reservationId");
+
+        given()
+                .when().delete("/api/v1/reservations/{id}", reservationId)
+                .then()
+                .statusCode(401);
+
+        given()
+                .when().delete("/api/v1/availability/{id}", availabilityId)
+                .then()
+                .statusCode(401);
+
+        given()
+                .cookie(SessionService.COOKIE_NAME, ownerSession)
+                .when().delete("/api/v1/availability/{id}", availabilityId)
+                .then()
+                .statusCode(409);
+
+        given()
+                .cookie(SessionService.COOKIE_NAME, ownerSession)
+                .when().delete("/api/v1/reservations/{id}", reservationId)
+                .then()
+                .statusCode(403);
+
+        given()
+                .cookie(SessionService.COOKIE_NAME, colleagueSession)
+                .when().delete("/api/v1/reservations/{id}", reservationId)
+                .then()
+                .statusCode(200)
+                .body("accepted", equalTo(true));
+
+        given()
+                .cookie(SessionService.COOKIE_NAME, colleagueSession)
+                .when().delete("/api/v1/reservations/{id}", reservationId)
+                .then()
+                .statusCode(200)
+                .body("message", equalTo("Cette réservation avait déjà été annulée."));
+
+        awaitMailWithSubject(ownerEmail, "a été annulée");
+
+        given()
+                .cookie(SessionService.COOKIE_NAME, colleagueSession)
+                .when().get("/api/v1/dashboard")
+                .then()
+                .statusCode(200)
+                .body("stats.reservations", equalTo(0))
+                .body("stats.availableSpots", equalTo(1))
+                .body("availability[0].status", equalTo("AVAILABLE"))
+                .body("availability[0].reservationId", equalTo(null));
+
+        given()
+                .cookie(SessionService.COOKIE_NAME, ownerSession)
+                .when().delete("/api/v1/availability/{id}", availabilityId)
+                .then()
+                .statusCode(200)
+                .body("accepted", equalTo(true));
+
+        given()
+                .cookie(SessionService.COOKIE_NAME, ownerSession)
+                .when().delete("/api/v1/availability/{id}", availabilityId)
+                .then()
+                .statusCode(200)
+                .body("message", equalTo("Cette disponibilité avait déjà été retirée."));
+
+        given()
+                .cookie(SessionService.COOKIE_NAME, ownerSession)
+                .when().get("/api/v1/dashboard")
+                .then()
+                .statusCode(200)
+                .body("availability", hasSize(0));
     }
 
     @Test
@@ -284,6 +362,91 @@ class DashboardResourceTest {
                 .statusCode(429);
     }
 
+    @Test
+    void arbitratesTwoConcurrentReservationsInPostgres() throws Exception {
+        String domain = uniqueDomain();
+        String ownerEmail = "owner@" + domain;
+        String ownerSession = authenticate(ownerEmail);
+        String firstSession = authenticate("first@" + domain);
+        String secondSession = authenticate("second@" + domain);
+
+        given()
+                .cookie(SessionService.COOKIE_NAME, ownerSession)
+                .contentType(ContentType.JSON)
+                .body("{\"label\":\"C-12\",\"level\":\"Niveau C\"}")
+                .when().post("/api/v1/spots")
+                .then()
+                .statusCode(200);
+        given()
+                .cookie(SessionService.COOKIE_NAME, ownerSession)
+                .contentType(ContentType.JSON)
+                .body("""
+                        {"spot":"C-12","date":"%s","from":"08:00","to":"18:00"}
+                        """.formatted(LocalDate.now().plusDays(2)))
+                .when().post("/api/v1/shares")
+                .then()
+                .statusCode(200);
+
+        String availabilityId = given()
+                .cookie(SessionService.COOKIE_NAME, firstSession)
+                .when().get("/api/v1/dashboard")
+                .then()
+                .statusCode(200)
+                .extract().path("availability[0].id");
+
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<Integer> first = executor.submit(() -> reserveConcurrently(
+                    firstSession,
+                    availabilityId,
+                    ready,
+                    start));
+            Future<Integer> second = executor.submit(() -> reserveConcurrently(
+                    secondSession,
+                    availabilityId,
+                    ready,
+                    start));
+            assertTrue(ready.await(5, TimeUnit.SECONDS), "Les deux requêtes doivent être prêtes.");
+            start.countDown();
+
+            List<Integer> statuses = List.of(
+                            first.get(10, TimeUnit.SECONDS),
+                            second.get(10, TimeUnit.SECONDS))
+                    .stream()
+                    .sorted(Comparator.naturalOrder())
+                    .toList();
+            assertEquals(List.of(200, 409), statuses);
+        } finally {
+            start.countDown();
+            executor.shutdownNow();
+        }
+
+        Mail confirmation = awaitMailWithSubject(ownerEmail, "a été réservée");
+        assertTrue(confirmation.getText().contains("C-12"));
+        long confirmationCount = mailbox.getMailsSentTo(ownerEmail).stream()
+                .filter(mail -> mail.getSubject().contains("a été réservée"))
+                .count();
+        assertEquals(1, confirmationCount);
+    }
+
+    private int reserveConcurrently(
+            String session,
+            String availabilityId,
+            CountDownLatch ready,
+            CountDownLatch start) throws InterruptedException {
+        ready.countDown();
+        if (!start.await(5, TimeUnit.SECONDS)) {
+            throw new IllegalStateException("Le départ concurrent n’a pas été libéré.");
+        }
+        return given()
+                .cookie(SessionService.COOKIE_NAME, session)
+                .header("Idempotency-Key", UUID.randomUUID().toString())
+                .when().post("/api/v1/availability/{id}/reservations", availabilityId)
+                .statusCode();
+    }
+
     private String authenticate(String email) {
         String rawToken = requestMagicLink(email);
         return verify(rawToken);
@@ -315,6 +478,25 @@ class DashboardResourceTest {
                 .split(";", 2)[0];
     }
 
+    private Mail awaitMailWithSubject(String email, String subjectFragment) {
+        for (int attempt = 0; attempt < 80; attempt += 1) {
+            for (Mail mail : mailbox.getMailsSentTo(email)) {
+                if (mail.getSubject().contains(subjectFragment)) {
+                    return mail;
+                }
+            }
+            outbox.deliverNext();
+            try {
+                Thread.sleep(25);
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("Attente interrompue.", exception);
+            }
+        }
+        throw new AssertionError(
+                "Aucun e-mail contenant « " + subjectFragment + " » reçu pour " + email);
+    }
+
     private List<Mail> awaitMessages(String email, int minimum) {
         for (int attempt = 0; attempt < 40; attempt += 1) {
             List<Mail> messages = mailbox.getMailsSentTo(email);
@@ -329,23 +511,6 @@ class DashboardResourceTest {
             }
         }
         throw new AssertionError("Aucun e-mail reçu pour " + email);
-    }
-
-    private Mail awaitMessage(String email, Predicate<Mail> predicate) {
-        for (int attempt = 0; attempt < 40; attempt += 1) {
-            for (Mail message : mailbox.getMailsSentTo(email)) {
-                if (predicate.test(message)) {
-                    return message;
-                }
-            }
-            try {
-                Thread.sleep(25);
-            } catch (InterruptedException exception) {
-                Thread.currentThread().interrupt();
-                throw new IllegalStateException("Attente interrompue.", exception);
-            }
-        }
-        throw new AssertionError("Aucun e-mail correspondant reçu pour " + email);
     }
 
     private void suspendAccount(SessionContext session) throws Exception {

@@ -1,4 +1,5 @@
 export type AvailabilityStatus = "AVAILABLE" | "RESERVED" | "UNAVAILABLE";
+export type AvailabilityViewerRelation = "NONE" | "OFFERED" | "RESERVED";
 
 export interface AvailabilityItem {
   id: string;
@@ -7,6 +8,10 @@ export interface AvailabilityItem {
   spot: string;
   level: string;
   status: AvailabilityStatus;
+  viewerRelation: AvailabilityViewerRelation;
+  reservationId: string | null;
+  canCancel: boolean;
+  canWithdraw: boolean;
 }
 
 export interface DashboardStats {

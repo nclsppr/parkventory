@@ -5,6 +5,7 @@ import com.parkventory.auth.SessionService;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.CookieParam;
+import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.POST;
@@ -63,6 +64,26 @@ public class DashboardResource {
                 sessions.require(rawSessionToken),
                 availabilityId,
                 idempotencyKey);
+    }
+
+    @DELETE
+    @Path("/reservations/{reservationId}")
+    public ActionResponse cancelReservation(
+            @CookieParam(SessionService.COOKIE_NAME) String rawSessionToken,
+            @PathParam("reservationId") String reservationId) {
+        return service.cancelReservation(
+                sessions.require(rawSessionToken),
+                reservationId);
+    }
+
+    @DELETE
+    @Path("/availability/{availabilityId}")
+    public ActionResponse withdrawAvailability(
+            @CookieParam(SessionService.COOKIE_NAME) String rawSessionToken,
+            @PathParam("availabilityId") String availabilityId) {
+        return service.withdrawAvailability(
+                sessions.require(rawSessionToken),
+                availabilityId);
     }
 
     @POST
