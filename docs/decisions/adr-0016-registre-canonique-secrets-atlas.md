@@ -1,7 +1,7 @@
 # ADR-0016 — Registre canonique des secrets Atlas
 
 - Statut : accepté
-- Statut d'implémentation : règle adoptée ; registre central proposé dans `vps-infra` PR #99
+- Statut d'implémentation : règle adoptée ; registre central publié par `vps-infra` PR #99
 - Date : 2026-08-23
 - Décideur : nclsppr
 - Portée : contrats des secrets Parkventory déployés sur Atlas
