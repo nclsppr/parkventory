@@ -13,7 +13,7 @@ Moteur déclaré : `nimbus`.
 | Architecture et sécurité | `internal` | 3 |
 | Questions de travail | `internal` | 1 |
 | Configuration des skills | `internal` | 3 |
-| Décisions | `internal` | 15 |
+| Décisions | `internal` | 16 |
 | Références visuelles | `reference` | 1 |
 | Socle vendorisé | `reference` | 9 |
 | Maintenance Nimbus | `reference` | 1 |
@@ -73,6 +73,7 @@ Moteur déclaré : `nimbus`.
 - [docs/decisions/adr-0013-annulation-et-retrait-mvp.md](docs/decisions/adr-0013-annulation-et-retrait-mvp.md)
 - [docs/decisions/adr-0014-resend-email-beta-publique.md](docs/decisions/adr-0014-resend-email-beta-publique.md)
 - [docs/decisions/adr-0015-postgresql-17-atlas-beta-publique.md](docs/decisions/adr-0015-postgresql-17-atlas-beta-publique.md)
+- [docs/decisions/adr-0016-registre-canonique-secrets-atlas.md](docs/decisions/adr-0016-registre-canonique-secrets-atlas.md)
 
 ## Références visuelles
 
