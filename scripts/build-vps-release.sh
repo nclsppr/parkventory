@@ -136,7 +136,15 @@ for path in files:
         }
     )
 
-required_routes = {"/", "/app/", "/app/partager/", "/app/trouver/", "/auth/callback/"}
+required_routes = {
+    "/",
+    "/app/",
+    "/app/partager/",
+    "/app/trouver/",
+    "/auth/callback/",
+    "/confidentialite/",
+    "/mentions-legales/",
+}
 missing_routes = sorted(required_routes - seen_routes)
 if missing_routes:
     raise SystemExit(f"public archive is missing direct routes: {', '.join(missing_routes)}")

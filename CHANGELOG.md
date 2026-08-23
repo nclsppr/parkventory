@@ -7,6 +7,9 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Ajouté
 
+- pages publiques de confidentialité et de mentions légales, accessibles par
+  URL directe dans les artefacts Pages et Atlas, avec contenu distinct pour la
+  démo statique et le service dynamique, contact opérateur et couverture React ;
 - ADR-0011 acceptant une bêta publique en libre-service plutôt qu'un pilote
   fermé, avec barrières de lancement minimales et dette post-lancement
   explicitement suivie ;

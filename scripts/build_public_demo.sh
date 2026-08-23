@@ -29,13 +29,17 @@ VITE_DEMO_MODE=true \
 mkdir -p \
   "${DIST_DIR}/app/partager" \
   "${DIST_DIR}/app/trouver" \
-  "${DIST_DIR}/auth/callback"
+  "${DIST_DIR}/auth/callback" \
+  "${DIST_DIR}/confidentialite" \
+  "${DIST_DIR}/mentions-legales"
 
 for route in \
   app/index.html \
   app/partager/index.html \
   app/trouver/index.html \
   auth/callback/index.html \
+  confidentialite/index.html \
+  mentions-legales/index.html \
   404.html
 do
   cp "${DIST_DIR}/index.html" "${DIST_DIR}/${route}"
@@ -62,4 +66,4 @@ else
   }
 fi
 
-echo "Démo ${target} construite avec les routes /app, /app/partager, /app/trouver et /auth/callback."
+echo "Démo ${target} construite avec les routes applicatives et légales directes."

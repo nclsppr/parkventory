@@ -105,7 +105,15 @@ import sys
 from pathlib import Path
 
 inventory = json.loads(Path(sys.argv[1]).read_text(encoding="ascii"))
-required = {"/", "/app/", "/app/partager/", "/app/trouver/", "/auth/callback/"}
+required = {
+    "/",
+    "/app/",
+    "/app/partager/",
+    "/app/trouver/",
+    "/auth/callback/",
+    "/confidentialite/",
+    "/mentions-legales/",
+}
 actual = {route["path"] for route in inventory["routes"]}
 if inventory["source"]["repository"] != "nclsppr/parkventory":
     raise SystemExit("L'inventaire Atlas porte un dépôt source inattendu.")

@@ -12,6 +12,7 @@ import { ApplicationPage } from "./pages/ApplicationPage";
 import { LandingPage } from "./pages/LandingPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { AuthCallbackPage, SignInPage } from "./pages/AuthPages";
+import { LegalNoticePage, PrivacyPage } from "./pages/LegalPages";
 import { ThemeProvider, ThemeToggle } from "./components/Theme";
 
 const applicationRoutes: Record<string, ApplicationRoute> = {
@@ -65,12 +66,16 @@ function AppContent() {
       "/app/partager": "Partager ma place — Parkventory",
       "/app/trouver": "Trouver une place — Parkventory",
       "/auth/callback": "Connexion — Parkventory",
+      "/confidentialite": "Confidentialité — Parkventory",
+      "/mentions-legales": "Mentions légales — Parkventory",
     };
     document.title = titles[path] ?? "Page introuvable — Parkventory";
   }, [path]);
 
   if (path === "/") return <LandingPage />;
   if (path === "/auth/callback") return <AuthCallbackPage />;
+  if (path === "/confidentialite") return <PrivacyPage />;
+  if (path === "/mentions-legales") return <LegalNoticePage />;
   if (applicationRoutes[path]) {
     return <AuthenticatedApplication route={applicationRoutes[path]} />;
   }
