@@ -12,6 +12,7 @@ Moteur déclaré : `nimbus`.
 | Produit | `public` | 4 |
 | Architecture et sécurité | `internal` | 3 |
 | Questions de travail | `internal` | 1 |
+| Configuration des skills | `internal` | 3 |
 | Décisions | `internal` | 15 |
 | Références visuelles | `reference` | 1 |
 | Socle vendorisé | `reference` | 9 |
@@ -48,6 +49,12 @@ Moteur déclaré : `nimbus`.
 ## Questions de travail
 
 - [docs/internal/open-questions.md](docs/internal/open-questions.md)
+
+## Configuration des skills
+
+- [docs/agents/domain.md](docs/agents/domain.md)
+- [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md)
+- [docs/agents/triage-labels.md](docs/agents/triage-labels.md)
 
 ## Décisions
 

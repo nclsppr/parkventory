@@ -7,6 +7,9 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ### Ajouté
 
+- configuration des skills d'ingénierie avec GitHub Issues, les labels de
+  triage canoniques et un contexte de domaine unique qui réutilise le modèle
+  existant et les ADR sous `docs/decisions/` ;
 - liste de gestion distincte contenant tous les partages futurs du membre,
   sans reprendre la fenêtre de recherche bornée à sept jours, afin qu'un
   créneau publié longtemps à l'avance reste visible et retirable ;

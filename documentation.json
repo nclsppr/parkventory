@@ -30,6 +30,12 @@
       "include": ["docs/internal/**/*.md"]
     },
     {
+      "id": "agent-skills",
+      "title": "Configuration des skills",
+      "visibility": "internal",
+      "include": ["docs/agents/**/*.md"]
+    },
+    {
       "id": "decisions",
       "title": "Décisions",
       "visibility": "internal",
