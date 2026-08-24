@@ -6,20 +6,7 @@ export const findUrl = `${baseUrl}app/trouver`;
 export const authCallbackUrl = `${baseUrl}auth/callback`;
 export const privacyUrl = `${baseUrl}confidentialite`;
 export const legalUrl = `${baseUrl}mentions-legales`;
-
-export const isPublicDemo = import.meta.env.VITE_DEMO_MODE === "true";
-export const isOidcIdentity = !isPublicDemo && import.meta.env.VITE_AUTH_MODE === "oidc";
-export const oidcLoginUrl = "/api/v1/auth/oidc/login";
-export const demoLabel = isPublicDemo
-  ? "Démo publique"
-  : isOidcIdentity
-    ? "Bêta publique"
-    : "Environnement local";
-export const demoContext = isPublicDemo
-  ? "démo publique"
-  : isOidcIdentity
-    ? "service en ligne"
-    : "environnement local";
+export const environmentLabel = "Bêta Cloudflare";
 
 export function relativePathname(pathname: string, base = baseUrl) {
   const normalizedBase = base === "/" ? "" : base.replace(/\/+$/, "");

@@ -1,13 +1,13 @@
 # ADR-0002 : monolithe Java Quarkus et PostgreSQL
 
-- Statut : accepté
+- Statut : remplacé par ADR-0017
 - Statut d'implémentation : non commencé
 - Date : 2026-07-30
 - Dernière vérification : versions officielles consultées le 2026-07-30
 - Propriétaire : nclsppr
 - Domaine : architecture et données
 - Remplace : aucune
-- Remplacé par : aucune
+- Remplacé par : [ADR-0017](adr-0017-cloudflare-native.md)
 
 ## Contexte
 

@@ -5,6 +5,20 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ## Non publié
 
+### Réécriture Cloudflare-native
+
+- remplacement en une fois de Quarkus, PostgreSQL, Compose, Auth0, Resend et de
+  la chaîne Atlas par un Worker TypeScript, Workers Static Assets, D1,
+  Cloudflare Email Service et Turnstile ;
+- schéma D1 MVP avec tenant par domaine, magic links et sessions hashés,
+  disponibilités sans chevauchement et réservation confirmée unique ;
+- suppression du faux mode démo et branchement de React sur les vraies API pour
+  la connexion, le partage, la réservation, l’annulation et le retrait ;
+- base `parkventory-preview` créée en juridiction UE, migration initiale
+  appliquée et préversion Worker publiée, sans changement DNS ni activation de
+  la production dynamique ;
+- ADR-0017, documentation et gate CI recentrées sur le parcours MVP.
+
 ### Ajouté
 
 - configuration des skills d'ingénierie avec GitHub Issues, les labels de

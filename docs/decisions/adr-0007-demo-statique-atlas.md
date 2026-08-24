@@ -1,13 +1,13 @@
 # ADR-0007 : démo statique distincte sur Atlas
 
-- Statut : accepté
+- Statut : remplacé par ADR-0017 après le futur cutover
 - Statut d'implémentation : démo statique active sur Atlas et automatiquement réconciliée
 - Date : 2026-08-12
 - Dernière vérification : snapshot d'activation de la release `583e0e2` et HTTPS public vérifiés le 2026-08-18, avant consolidation documentaire
 - Propriétaire : nclsppr
 - Domaine : démonstration publique et exploitation
 - Remplace : aucune
-- Remplacé par : aucune
+- Remplacé par : [ADR-0017](adr-0017-cloudflare-native.md)
 
 ## Contexte
 

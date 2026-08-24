@@ -3,7 +3,7 @@ import { ArrowLeft, ExternalLink } from "lucide-react";
 import { AppLink } from "../components/AppLink";
 import { Logo } from "../components/Logo";
 import { ThemeToggle } from "../components/Theme";
-import { homeUrl, isPublicDemo, legalUrl, privacyUrl } from "../config";
+import { homeUrl, legalUrl, privacyUrl } from "../config";
 
 const contactEmail = import.meta.env.VITE_CONTACT_EMAIL?.trim() || "nicolas@pieper.fr";
 
@@ -29,7 +29,7 @@ function LegalLayout({
         <AppLink className="legal-back" href={homeUrl}>
           <ArrowLeft aria-hidden="true" /> Accueil
         </AppLink>
-        <p className="section-kicker">Bêta publique · mise à jour le 23 août 2026</p>
+        <p className="section-kicker">Bêta publique · mise à jour le 24 août 2026</p>
         <h1>{title}</h1>
         {children}
       </main>
@@ -52,22 +52,9 @@ export function PrivacyPage() {
   return (
     <LegalLayout current="privacy" title="Confidentialité">
       <p className="legal-lead">
-        {isPublicDemo
-          ? "Cette démonstration ne crée aucun compte et n’envoie aucune donnée de réservation à Parkventory."
-          : "Parkventory collecte uniquement ce qui est nécessaire pour partager et réserver une place entre collègues."}
-        {" "}Aucun outil publicitaire ou de mesure d’audience n’est chargé dans l’application.
+        Parkventory collecte uniquement ce qui est nécessaire pour partager et réserver une place
+        entre collègues. Aucun outil publicitaire ou de mesure d’audience n’est chargé dans l’application.
       </p>
-
-      {isPublicDemo && (
-        <section>
-          <h2>Cette démonstration</h2>
-          <p>
-            Les exemples affichés et les actions réalisées dans la démo restent dans votre
-            navigateur et sont réinitialisés lorsque la page est rechargée. Aucun e-mail n’est
-            envoyé. L’hébergeur peut conserver des journaux de connexion techniques et bornés.
-          </p>
-        </section>
-      )}
 
       <section>
         <h2>Responsable et contact</h2>
@@ -81,9 +68,9 @@ export function PrivacyPage() {
       <section>
         <h2>Données utilisées avec un compte</h2>
         <ul>
-          <li>adresse e-mail professionnelle et identité fournie par le service de connexion ;</li>
-          <li>organisation, adhésion et site de rattachement ;</li>
-          <li>place déclarée, disponibilités, réservations et invitations ;</li>
+          <li>adresse e-mail professionnelle et nom déduit de cette adresse ;</li>
+          <li>organisation et adhésion déduites du domaine professionnel ;</li>
+          <li>place déclarée, disponibilités et réservations ;</li>
           <li>identifiants techniques de session, événements de sécurité et journaux bornés.</li>
         </ul>
         <p>
@@ -104,18 +91,16 @@ export function PrivacyPage() {
       <section>
         <h2>Prestataires</h2>
         <p>
-          {isPublicDemo ? "La version dynamique sera hébergée" : "L’application est hébergée"}
-          {" "}sur un serveur OVHcloud en France. Auth0 EU
-          {isPublicDemo ? " traitera" : " traite"} le parcours de connexion par e-mail. Un
-          prestataire d’e-mail transactionnel achemine les invitations et notifications. Ces
-          prestataires reçoivent seulement les données utiles à leur fonction.
+          L’application, la base D1, la protection anti-abus Turnstile et l’envoi des liens de
+          connexion sont opérés par Cloudflare. Cloudflare reçoit les requêtes techniques et les
+          adresses nécessaires à l’envoi ; Parkventory limite les données à ce qui est utile au service.
         </p>
       </section>
 
       <section>
         <h2>Conservation pendant la bêta</h2>
         <ul>
-          <li>les sessions et invitations deviennent inutilisables au plus tard après 7 jours ;</li>
+          <li>les liens de connexion expirent après 15 minutes et les sessions après 7 jours ;</li>
           <li>le compte, l’adhésion et l’historique métier sont conservés pendant la bêta pour faire fonctionner et sécuriser le service ;</li>
           <li>les journaux techniques et sauvegardes suivent les limites configurées par l’hébergeur et ne sont pas conservés au-delà du besoin d’exploitation.</li>
         </ul>
@@ -172,18 +157,11 @@ export function LegalNoticePage() {
       <section>
         <h2>Hébergement</h2>
         <p>
-          Le service public sur parkventory.com est hébergé par OVH SAS, 2 rue Kellermann,
-          59100 Roubaix, France —
-          {" "}<a href="https://www.ovhcloud.com/fr/" rel="noreferrer" target="_blank">
-            ovhcloud.com <ExternalLink aria-hidden="true" />
+          Le service Parkventory est hébergé sur le réseau Cloudflare —
+          {" "}<a href="https://www.cloudflare.com/" rel="noreferrer" target="_blank">
+            cloudflare.com <ExternalLink aria-hidden="true" />
           </a>.
         </p>
-        {isPublicDemo && (
-          <p>
-            La copie de démonstration disponible sur GitHub Pages est également servie par
-            GitHub, Inc., 88 Colin P Kelly Jr Street, San Francisco, CA 94107, États-Unis.
-          </p>
-        )}
       </section>
 
       <section>

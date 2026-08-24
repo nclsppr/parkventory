@@ -1,6 +1,6 @@
 # ADR-0014 — Resend pour les e-mails de la bêta publique
 
-- Statut : accepté
+- Statut : remplacé par ADR-0017
 - Statut d'implémentation : configuration applicative prête ; compte, domaine et clés non provisionnés
 - Date : 2026-08-23
 - Décideur : nclsppr

@@ -1,4 +1,4 @@
-import { FormEvent, PointerEvent as ReactPointerEvent, useRef, useState } from "react";
+import { PointerEvent as ReactPointerEvent, useRef, useState } from "react";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -15,29 +15,19 @@ import {
 import { DashboardPreview } from "../components/DashboardPreview";
 import { Logo } from "../components/Logo";
 import { ThemeToggle } from "../components/Theme";
-import { requestMagicLink } from "../api/client";
 import {
   appUrl,
-  demoLabel,
   findUrl,
   homeUrl,
-  isOidcIdentity,
-  isPublicDemo,
   legalUrl,
-  oidcLoginUrl,
   privacyUrl,
   shareUrl,
 } from "../config";
 import { useLandingMotion } from "../hooks/useLandingMotion";
 
-const personalDomains = ["gmail.com", "outlook.com", "hotmail.com", "yahoo.com", "icloud.com"];
-
 export function LandingPage() {
   const landingRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [email, setEmail] = useState("");
-  const [registrationMessage, setRegistrationMessage] = useState<string | null>(null);
-  const [registrationBusy, setRegistrationBusy] = useState(false);
 
   useLandingMotion(landingRef);
 
@@ -57,31 +47,6 @@ export function LandingPage() {
     event.currentTarget.style.setProperty("--preview-pointer-y", "50%");
     event.currentTarget.style.setProperty("--preview-rotate-x", "0deg");
     event.currentTarget.style.setProperty("--preview-rotate-y", "0deg");
-  };
-
-  const handleRegistration = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const domain = email.trim().toLowerCase().split("@")[1];
-
-    if (!domain || personalDomains.includes(domain)) {
-      setRegistrationMessage("Utilisez une adresse professionnelle pour rejoindre votre espace.");
-      return;
-    }
-
-    setRegistrationBusy(true);
-    setRegistrationMessage(null);
-    try {
-      const response = await requestMagicLink(email.trim().toLowerCase());
-      setRegistrationMessage(response.message);
-    } catch (error) {
-      setRegistrationMessage(
-        error instanceof Error
-          ? error.message
-          : "Le lien de connexion n’a pas pu être envoyé.",
-      );
-    } finally {
-      setRegistrationBusy(false);
-    }
   };
 
   return (
@@ -275,39 +240,12 @@ export function LandingPage() {
             <p className="section-index">Prêt à partager ?</p>
             <h2 id="start-title">Votre prochaine place libre peut déjà aider quelqu’un.</h2>
           </div>
-          {isOidcIdentity ? (
-            <div className="registration-form" data-reveal>
-              <a className="button button-primary" href={oidcLoginUrl}>
-                Continuer par e-mail <ArrowUpRight aria-hidden="true" />
-              </a>
-              <p>Votre adresse professionnelle sera vérifiée avant l’accès.</p>
-            </div>
-          ) : <form className="registration-form" data-reveal onSubmit={handleRegistration} noValidate>
-            <label htmlFor="professional-email">Adresse e-mail professionnelle</label>
-            <div className="registration-control">
-              <input
-                id="professional-email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                placeholder="vous@entreprise.com"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                aria-describedby="registration-help registration-message"
-                required
-              />
-              <button className="button button-primary" type="submit" disabled={registrationBusy}>
-                {registrationBusy ? "Envoi du lien…" : "Rejoindre Parkventory"}
-                {!registrationBusy && <ArrowUpRight aria-hidden="true" />}
-              </button>
-            </div>
-            <p id="registration-help">
-              {isPublicDemo
-                ? `${demoLabel} : aucun e-mail ne sera envoyé.`
-                : "Local : ouvrez l’e-mail capturé dans Mailpit sur http://127.0.0.1:8025."}
-            </p>
-            {registrationMessage && <p id="registration-message" className="registration-message" role="status">{registrationMessage}</p>}
-          </form>}
+          <div className="registration-form" data-reveal>
+            <a className="button button-primary" href={appUrl}>
+              Continuer par e-mail <ArrowUpRight aria-hidden="true" />
+            </a>
+            <p>Votre adresse professionnelle sera vérifiée avant l’accès.</p>
+          </div>
         </section>
       </main>
 

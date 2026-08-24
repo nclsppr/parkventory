@@ -8,8 +8,6 @@ import {
 import { Logo } from "../components/Logo";
 import { Toast } from "../components/Toast";
 import { useDashboardData } from "../hooks/useDashboardData";
-import { isOidcIdentity } from "../config";
-import type { DashboardData } from "../types";
 import { DashboardPage } from "./DashboardPage";
 import { FindPage } from "./FindPage";
 import { SharePage } from "./SharePage";
@@ -25,17 +23,12 @@ export function ApplicationPage({ route, onSessionExpired }: ApplicationPageProp
     loading,
     loadError,
     refreshDashboard,
-    setData,
   } = useDashboardData(onSessionExpired);
   const [notice, setNotice] = useState<{ message: string; tone: NoticeTone } | null>(null);
   const hasData = Boolean(data);
 
   const notify = (message: string, tone: NoticeTone = "success") => {
     setNotice({ message, tone });
-  };
-
-  const mutateDemo = (mutation: (current: DashboardData) => DashboardData) => {
-    setData((current) => current ? mutation(current) : current);
   };
 
   useEffect(() => {
@@ -50,12 +43,8 @@ export function ApplicationPage({ route, onSessionExpired }: ApplicationPageProp
       <main className="dashboard-state">
         <Logo />
         {loadError ? <AlertTriangle aria-hidden="true" /> : <LoaderCircle className="spin" aria-hidden="true" />}
-        <h1>{loadError
-          ? isOidcIdentity ? "Le service ne répond pas." : "Le parking local ne répond pas."
-          : "Chargement de votre espace…"}</h1>
-        <p role={loadError ? "alert" : "status"}>{loadError ?? (isOidcIdentity
-          ? "Lecture de votre session et de votre espace."
-          : "Lecture de votre session et des données PostgreSQL.")}</p>
+        <h1>{loadError ? "Le service ne répond pas." : "Chargement de votre espace…"}</h1>
+        <p role={loadError ? "alert" : "status"}>{loadError ?? "Lecture de votre session et de votre espace."}</p>
         {loadError && (
           <button className="button button-primary" type="button" onClick={() => void refreshDashboard()}>
             Réessayer
@@ -81,14 +70,12 @@ export function ApplicationPage({ route, onSessionExpired }: ApplicationPageProp
         ) : route === "share" ? (
           <SharePage
             data={data}
-            onDemoMutation={mutateDemo}
             onRefresh={refreshDashboard}
             onSessionExpired={onSessionExpired}
           />
         ) : (
           <FindPage
             data={data}
-            onDemoMutation={mutateDemo}
             onRefresh={refreshDashboard}
             onSessionExpired={onSessionExpired}
           />

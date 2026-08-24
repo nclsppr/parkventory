@@ -21,16 +21,7 @@ export interface DashboardStats {
   availableSpots: number;
 }
 
-export interface ThanksMessage {
-  id: string;
-  initials: string;
-  author: string;
-  message: string;
-  when: string;
-}
-
 export interface DashboardData {
-  demo: boolean;
   user: {
     firstName: string;
     fullName: string;
@@ -46,7 +37,6 @@ export interface DashboardData {
   stats: DashboardStats;
   availability: AvailabilityItem[];
   activeShares: AvailabilityItem[];
-  thanks: ThanksMessage[];
 }
 
 export interface ShareRequest {
@@ -54,10 +44,6 @@ export interface ShareRequest {
   date: string;
   from: string;
   to: string;
-}
-
-export interface InvitationRequest {
-  email: string;
 }
 
 export interface SpotRequest {

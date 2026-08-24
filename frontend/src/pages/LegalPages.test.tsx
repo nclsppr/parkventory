@@ -41,9 +41,9 @@ describe("informations légales", () => {
 
     expect(screen.getByRole("heading", { name: "Mentions légales", level: 1 })).toBeInTheDocument();
     expect(screen.getByText("Nicolas Pieper")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /ovhcloud\.com/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /cloudflare\.com/i })).toHaveAttribute(
       "href",
-      "https://www.ovhcloud.com/fr/",
+      "https://www.cloudflare.com/",
     );
     expect(screen.getByRole("link", { name: "Confidentialité" })).toHaveAttribute(
       "href",

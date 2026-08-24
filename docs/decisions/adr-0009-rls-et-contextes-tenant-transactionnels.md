@@ -1,13 +1,13 @@
 # ADR-0009 : RLS forcée et contextes tenant transactionnels
 
-- Statut : accepté
+- Statut : remplacé par ADR-0017
 - Statut d'implémentation : implémenté et vérifié localement
 - Date : 2026-08-18
 - Dernière vérification : PostgreSQL 17.10 et 18.3, rôles migrateur et runtime compris, le 2026-08-23
 - Propriétaire : nclsppr
 - Domaine : sécurité, données et exploitation
 - Remplace : aucune
-- Remplacé par : aucune
+- Remplacé par : [ADR-0017](adr-0017-cloudflare-native.md)
 
 ## Contexte
 

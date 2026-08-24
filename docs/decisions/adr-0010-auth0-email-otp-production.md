@@ -1,6 +1,6 @@
 # ADR-0010 — Auth0 EU et email OTP pour l’identité de production
 
-- Statut : accepté
+- Statut : remplacé par ADR-0017
 - Statut d'implémentation : candidat intégré à la RLS et localement vérifié ; tenant et preuve externe absents
 - Date : 2026-08-18
 - Dernière vérification : Quarkus 3.33.3, tests de profils, claims et PostgreSQL le 2026-08-18

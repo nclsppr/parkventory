@@ -1,13 +1,13 @@
 # ADR-0013 : annulation et retrait dans le parcours public initial
 
-- Statut : accepté
+- Statut : accepté, implémentation remplacée par ADR-0017
 - Statut d'implémentation : implémenté localement, non déployé
 - Date : 2026-08-23
 - Dernière vérification : gate local complet et revue Chromium du 2026-08-23
 - Propriétaire : nclsppr
 - Domaine : produit et données
 - Remplace : aucune
-- Remplacé par : aucune
+- Remplacé par : [ADR-0017](adr-0017-cloudflare-native.md) pour l’implémentation
 
 ## Contexte
 

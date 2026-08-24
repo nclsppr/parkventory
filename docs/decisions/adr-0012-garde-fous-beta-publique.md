@@ -1,6 +1,6 @@
 # ADR-0012 — garde-fous minimaux pour une bêta publique sans allowlist
 
-- Statut : accepté
+- Statut : remplacé par ADR-0017
 - Statut d'implémentation : implémenté et vérifié localement
 - Date : 2026-08-23
 - Dernière vérification : tests Quarkus locaux, profil OIDC de production et contrats statiques le 2026-08-23
