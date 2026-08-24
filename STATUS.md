@@ -10,10 +10,12 @@
   a été relevé sans exécuter de restauration.
 - Le Worker `parkventory-production` est déployé avec D1, les assets React,
   Email Service et les deux secrets requis. La version active est
-  `4a13aae6-f8ad-4fc7-b212-d298a4181b0f`.
+  `ff307a0c-57ce-42a3-ac50-e05805cf4de2`.
 - Workers Builds suit `nclsppr/parkventory` sur `main`, avec cache de build et
-  déploiement `--env production`. Le premier build du SHA
-  `1764dfb37c2ec2802c79856c1e83fec55e7165bc` a réussi et publié cette version.
+  déploiement `--env production`. Le push du SHA
+  `ea02cd50aeaeaa005fd7c55a434bef79885bcbe3` a déclenché automatiquement un
+  build réussi et publié cette version. Les changements limités aux Markdown
+  sont exclus des builds.
 - Turnstile est configuré en mode géré pour l’apex, `www` et l’adresse
   `workers.dev`. Sa clé publique est versionnée ; sa clé privée reste un secret
   Worker.

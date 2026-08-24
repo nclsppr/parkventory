@@ -47,7 +47,9 @@ Workers Builds suit la branche `main` du dépôt `nclsppr/parkventory`. Après
 fusion, Cloudflare exécute `npm run build`, puis
 `npx wrangler deploy --env production`. Le token nommé
 `Parkventory Workers Builds` reste exclusivement dans Cloudflare et ne doit
-jamais être copié dans Git ou dans un ticket.
+jamais être copié dans Git ou dans un ticket. Les fichiers `*.md` et `docs/**`
+sont exclus du déclenchement ; une modification de code ou d’image reste
+déployée normalement.
 
 ## Vérifications après déploiement
 
