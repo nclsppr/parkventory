@@ -43,6 +43,12 @@ La production utilise le Worker `parkventory-production`, la base D1
 binding `EMAIL` et les secrets `APP_SECRET` et `TURNSTILE_SECRET_KEY`. Générer
 les types avec `npm run cf:types` après toute modification de binding.
 
+Workers Builds suit la branche `main` du dépôt `nclsppr/parkventory`. Après
+fusion, Cloudflare exécute `npm run build`, puis
+`npx wrangler deploy --env production`. Le token nommé
+`Parkventory Workers Builds` reste exclusivement dans Cloudflare et ne doit
+jamais être copié dans Git ou dans un ticket.
+
 ## Vérifications après déploiement
 
 1. `GET /api/v1/health` répond `200` avec `{"status":"ok"}`.

@@ -15,6 +15,8 @@ la source du diff technique et les ADR expliquent les décisions importantes.
   liés au Worker, avec redirection canonique `www` en `308` ;
 - environnement Wrangler de production, types de bindings générés et commandes
   de migration et de déploiement explicites ajoutés ;
+- Workers Builds relié à `nclsppr/parkventory` sur `main`, avec token Cloudflare
+  privé, cache activé et premier déploiement automatique réussi ;
 - tests et typecheck étendus au routage canonique avant la bascule publique.
 
 ### Réécriture Cloudflare-native
