@@ -10,7 +10,10 @@
   a été relevé sans exécuter de restauration.
 - Le Worker `parkventory-production` est déployé avec D1, les assets React,
   Email Service et les deux secrets requis. La version active est
-  `eb1c0d13-e635-442f-9f40-8fdf3c01be8b`.
+  `4a13aae6-f8ad-4fc7-b212-d298a4181b0f`.
+- Workers Builds suit `nclsppr/parkventory` sur `main`, avec cache de build et
+  déploiement `--env production`. Le premier build du SHA
+  `1764dfb37c2ec2802c79856c1e83fec55e7165bc` a réussi et publié cette version.
 - Turnstile est configuré en mode géré pour l’apex, `www` et l’adresse
   `workers.dev`. Sa clé publique est versionnée ; sa clé privée reste un secret
   Worker.
@@ -40,8 +43,6 @@
 
 - réception réelle d’un magic link et consommation unique non vérifiées ;
 - parcours authentifié à deux membres, partage puis réservation non vérifié ;
-- connexion GitHub Workers Builds créée, mais token de build et réglages du
-  pipeline natif encore à confirmer dans le tableau de bord ;
 - exercice réel de restauration D1 et réactivation DNSSEC Cloudflare non
   prouvés.
 
