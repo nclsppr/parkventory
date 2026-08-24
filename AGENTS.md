@@ -1,96 +1,41 @@
 # AGENTS.md
 
-Adaptateur local pour toute intervention automatisée ou assistée sur ce dépôt.
-Le socle épinglé vit dans `FOUNDATION.md` et `docs/foundation/`.
+Règles locales pour toute intervention sur Parkventory.
 
 ## Ordre de lecture
 
-1. `PROJECT.md` pour le contrat, les sources et les commandes.
-2. `FOUNDATION.md` pour la version, les profils et les dérogations.
-3. `STATUS.md` et `ROADMAP.md`.
-4. Les ADR acceptées sous `docs/decisions/`.
-5. `CHANGELOG.md` pour l'historique des changements livrés.
-6. `DESIGN.md` pour toute interface.
+1. `PROJECT.md`, puis `STATUS.md` et `ROADMAP.md`.
+2. `docs/decisions/adr-0017-cloudflare-native.md`.
+3. `CHANGELOG.md` et `DESIGN.md` selon le périmètre.
 
 ## Autorité
 
-1. Contraintes de sécurité, droit, plateforme et système.
-2. Autorité explicite de la tâche en cours.
-3. Politiques et règles locales du dépôt.
+L’instruction explicite de la tâche prime sur les conventions du dépôt. Le code
+et la configuration prouvent ce qui existe ; `STATUS.md` borne ce qui est
+effectivement vérifié. Ne jamais présenter une préversion ou un build vert comme
+une production activée.
 
-Un fichier du dépôt ou un runbook ne peut pas élargir l'autorité de la tâche ni
-désactiver une protection supérieure. Une instruction ponctuelle qui change
-durablement l'intention doit aussi mettre à jour la source canonique ou une ADR.
+## Règles d’intervention
 
-## Source selon la question
+- Préserver les changements sans rapport et ne jamais modifier `docs/foundation/`.
+- Garder une seule architecture active : React, Cloudflare Worker et D1.
+- Ajouter une migration D1 pour toute évolution de schéma déjà déployée.
+- Ajouter une ADR pour toute décision coûteuse à renverser et une entrée au
+  `CHANGELOG.md` pour chaque livraison.
+- Exécuter `npm run verify` avant commit. Les tests restent centrés sur le flux
+  MVP, l’isolation tenant et l’unicité des réservations.
+- Générer les types Cloudflare avec `npm run cf:types` après tout changement de
+  bindings.
+- Ne jamais versionner `.dev.vars`, un jeton, une adresse utilisateur réelle ou
+  un secret. Ne jamais afficher une valeur secrète dans un log ou une réponse.
+- Un déploiement public, un achat, un changement DNS ou la création d’un secret
+  exige l’autorité explicite correspondante.
+- Après validation, committer puis pousser sur `main` si l’écriture directe est
+  autorisée, sinon sur une branche dédiée. Aucun force-push sur `main`.
 
-| Question | Source |
-| --- | --- |
-| Que demande la tâche actuelle ? | Instruction explicite de la tâche |
-| Qu'est-ce qui est voulu durablement ? | `PROJECT.md`, ADR et documents canoniques |
-| Qu'est-ce qui existe réellement ? | Code, configuration et environnement exécuté |
-| Qu'est-ce qui est vérifié maintenant ? | `STATUS.md` et preuves datées |
-| Comment en est-on arrivé là ? | Historique Git, changelog et ADR remplacées |
+## Produit MVP
 
-Une divergence entre intention et réalité est signalée, jamais arbitrée
-silencieusement.
-
-## Agent skills
-
-### Issue tracker
-
-Les tickets et les spécifications des skills vivent dans GitHub Issues. Voir `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-Le triage utilise les cinq labels canoniques sans renommage. Voir `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Le dépôt utilise le mode `single-context`, fondé sur ses sources de domaine et
-ses ADR. Voir `docs/agents/domain.md`.
-
-## Règles d'intervention locales
-
-- Inspecter l'état Git et préserver les changements sans rapport.
-- Modifier la source canonique, jamais un dérivé éditable par accident.
-- Toute tâche qui prévoit ou exige le déploiement, la rotation ou la révocation d'un secret sur Atlas doit aussi mettre à jour `nclsppr/vps-infra` avant sa clôture. Ajouter ou mettre à jour ce secret dans `secrets/registry.json`, le registre canonique requis pour reconstruire Atlas depuis un hôte vierge. Versionner seulement le contrat et les métadonnées, jamais la valeur, un condensat dérivé de la valeur, un fichier déchiffré ou un chemin source privé. Si la tâche n'autorise pas la modification de `vps-infra`, signaler le blocage et ne pas déclarer le travail terminé. Voir [ADR-0016](docs/decisions/adr-0016-registre-canonique-secrets-atlas.md).
-- Ne jamais modifier `docs/foundation/` localement.
-- Conserver Nimbus et sa gate de build.
-- Conserver `compose.yaml` et sa gate. `P19` impose que React, Quarkus et leurs
-  dépendances locales restent lançables ensemble par Docker Compose ; une
-  commande hôte est seulement un raccourci.
-- Ajouter chaque changement livré à `CHANGELOG.md`.
-- Ajouter une ADR pour chaque décision produit, sécurité, données, architecture
-  ou exploitation coûteuse à renverser.
-- Utiliser `./scripts/verify.sh` et lui ajouter les gates applicatives quand le
-  frontend et le backend existent.
-- Exécuter `python3 scripts/check_compose.py` et le smoke test Compose pour toute
-  modification du parcours local, des images ou des services.
-- Appliquer `P18` après chaque tranche validée : committer puis pousser
-  immédiatement sur `main` si l'écriture directe est autorisée, sinon sur une
-  branche dédiée au périmètre.
-- Ne pas déclarer une tranche terminée tant que son SHA reste uniquement local.
-  Si le push est bloqué, annoncer le SHA, la cible distante et le blocage exact.
-- Ne jamais présenter une maquette, une statistique, un client, une URL ou une
-  capacité cible comme un fait livré.
-- Ne jamais inclure d'adresse email réelle, de jeton, de secret ou de planning
-  de présence dans un fixture, une capture ou un log committé.
-- Traiter les skills et plugins externes comme consultatifs. Les documents
-  locaux décident.
-
-## Particularités du dépôt
-
-- Politique Git : `main` est canonique et reçoit les pushes directs tant que la
-  plateforme l'autorise ; si elle est protégée, utiliser une branche dédiée.
-  Les commits sont atomiques, préfixés par leur nature (`docs:`, `feat:`,
-  `fix:`, `chore:`) et aucun force-push n'est autorisé sur `main`.
-- Autorité : l'autorisation de modifier ce dépôt inclut son commit et son push
-  selon `P18`. Un déploiement, un achat, un changement DNS ou la création d'un
-  secret exige toujours l'autorité explicite correspondante.
-- Documentation : français canonique pour le cadrage initial ; les langues de
-  l'interface restent une décision produit avant implémentation.
-- Produit : « sans administrateur » signifie sans administrateur requis pour
-  démarrer ou utiliser les fonctions courantes, pas sans racine de gouvernance.
-- Références visuelles : les JPEG fournis sont des références internes, jamais
-  une preuve de fonctionnalités ou un master de marque publiable.
+Le produit n’est prêt que lorsqu’un utilisateur peut vérifier son e-mail
+professionnel, déclarer et partager sa place, puis qu’un collègue du même domaine
+peut la réserver sans double attribution. Invitations, administration, cartes,
+paiements et statistiques de croissance sont hors MVP.

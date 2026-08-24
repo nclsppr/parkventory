@@ -1,6 +1,6 @@
 # ADR-0008 — Publier une release applicative immuable pour Atlas
 
-- Statut : accepté
+- Statut : remplacé par ADR-0017
 - Statut d'implémentation : premier candidat publié et attesté ; activation Compose désactivée
 - Date : 2026-08-17
 - Dernière vérification : workflow et contrat central vérifiés le 2026-08-18

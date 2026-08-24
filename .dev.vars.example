@@ -1,0 +1,5 @@
+# Copiez ce fichier vers .dev.vars sans le committer.
+# Les cles de test officielles Turnstile ne valident que le developpement local.
+TURNSTILE_SECRET_KEY="1x0000000000000000000000000000000AA"
+APP_SECRET="remplacer-par-une-valeur-locale-aleatoire"
+

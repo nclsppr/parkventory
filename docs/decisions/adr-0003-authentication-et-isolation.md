@@ -1,13 +1,13 @@
 # ADR-0003 : OIDC passwordless et isolation métier
 
-- Statut : accepté
+- Statut : remplacé par ADR-0017
 - Statut d'implémentation : RLS implémentée et candidat Auth0 préparé ; décision externe et activation absentes
 - Date : 2026-07-30
 - Dernière vérification : contrat Quarkus/Auth0 et tests de profils le 2026-08-18
 - Propriétaire : nclsppr
 - Domaine : sécurité et données
 - Remplace : aucune
-- Remplacé par : aucune
+- Remplacé par : [ADR-0017](adr-0017-cloudflare-native.md)
 - Proposition de précision : [ADR-0010](adr-0010-auth0-email-otp-production.md)
 
 ## Contexte

@@ -12,55 +12,17 @@ import {
   Trash2,
 } from "lucide-react";
 import { ApiError, declareSpot, shareSpot, withdrawAvailability } from "../api/client";
-import { isPublicDemo } from "../config";
 import { dateInputValue, formatInputDate } from "../lib/dates";
-import type { AvailabilityItem, DashboardData, ShareRequest } from "../types";
+import type { DashboardData } from "../types";
 
 interface SharePageProps {
   data: DashboardData;
-  onDemoMutation: (mutation: (current: DashboardData) => DashboardData) => void;
   onRefresh: (showLoading?: boolean) => Promise<void>;
   onSessionExpired: () => void;
 }
 
-export function addDemoShare(
-  current: DashboardData,
-  request: ShareRequest,
-  id: string = crypto.randomUUID(),
-): DashboardData {
-  const item: AvailabilityItem = {
-    id,
-    dateLabel: formatInputDate(request.date),
-    timeLabel: `${request.from} – ${request.to}`,
-    timeZone: current.user.assignedSiteTimeZone ?? "Fuseau non renseigné",
-    spot: request.spot,
-    level: current.user.assignedLevel ?? "Niveau non renseigné",
-    status: "UNAVAILABLE",
-    viewerRelation: "OFFERED",
-    reservationId: null,
-    canCancel: false,
-    canWithdraw: true,
-  };
-  const isInDiscoveryWindow = request.date >= dateInputValue()
-    && request.date <= dateInputValue(7);
-
-  return {
-    ...current,
-    organization: {
-      ...current.organization,
-      sharedTotal: current.organization.sharedTotal + 1,
-    },
-    stats: { ...current.stats, shares: current.stats.shares + 1 },
-    availability: isInDiscoveryWindow
-      ? [...current.availability, { ...item }]
-      : current.availability,
-    activeShares: [...current.activeShares, item],
-  };
-}
-
 export function SharePage({
   data,
-  onDemoMutation,
   onRefresh,
   onSessionExpired,
 }: SharePageProps) {
@@ -72,7 +34,7 @@ export function SharePage({
   const [spotForm, setSpotForm] = useState({ label: "", level: "" });
   const [shareForm, setShareForm] = useState({
     spot: data.user.assignedSpot ?? "",
-    date: dateInputValue(isPublicDemo ? 2 : 1),
+    date: dateInputValue(1),
     from: "08:00",
     to: "18:00",
   });
@@ -132,11 +94,7 @@ export function SharePage({
     setShareBusy(true);
     try {
       const response = await shareSpot(shareForm);
-      if (isPublicDemo) {
-        onDemoMutation((current) => addDemoShare(current, shareForm));
-      } else {
-        await onRefresh(false);
-      }
+      await onRefresh(false);
       const summary = `${response.message} ${formatInputDate(shareForm.date)}, de ${shareForm.from} à ${shareForm.to}.`;
       setSuccessMessage(summary);
     } catch (error) {
@@ -157,15 +115,7 @@ export function SharePage({
     setSuccessMessage(null);
     try {
       const response = await withdrawAvailability(availabilityId);
-      if (isPublicDemo) {
-        onDemoMutation((current) => ({
-          ...current,
-          availability: current.availability.filter((item) => item.id !== availabilityId),
-          activeShares: current.activeShares.filter((item) => item.id !== availabilityId),
-        }));
-      } else {
-        await onRefresh(false);
-      }
+      await onRefresh(false);
       setSuccessMessage(response.message);
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
@@ -177,7 +127,7 @@ export function SharePage({
           ? error.message
           : "La disponibilité n’a pas pu être retirée.",
       );
-      if (error instanceof ApiError && error.status === 409 && !isPublicDemo) {
+      if (error instanceof ApiError && error.status === 409) {
         await onRefresh(false);
       }
     } finally {
@@ -294,7 +244,6 @@ export function SharePage({
               {shareBusy ? <LoaderCircle className="spin" aria-hidden="true" /> : <Share2 aria-hidden="true" />}
               {shareBusy ? "Publication…" : "Partager ma place"}
             </button>
-            {isPublicDemo && <small className="demo-persistence-note">Cette action reste locale à la page de démonstration.</small>}
           </aside>
         </div>
       ) : (

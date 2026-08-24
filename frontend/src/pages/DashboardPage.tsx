@@ -1,80 +1,31 @@
-import { FormEvent, useMemo, useRef, useState } from "react";
+import { useMemo } from "react";
 import {
   ArrowRight,
   CalendarDays,
   CarFront,
-  Heart,
-  LoaderCircle,
   Search,
-  Send,
   Share2,
-  UserPlus,
   Users,
 } from "lucide-react";
-import { ApiError, inviteColleague } from "../api/client";
 import { AppLink } from "../components/AppLink";
-import type { NoticeTone } from "../components/AppShell";
-import { demoContext, findUrl, isOidcIdentity, isPublicDemo, shareUrl } from "../config";
+import { findUrl, shareUrl } from "../config";
 import type { AvailabilityItem, DashboardData } from "../types";
-
-const personalDomains = ["gmail.com", "outlook.com", "hotmail.com", "yahoo.com", "icloud.com"];
 
 function statusLabel(item: AvailabilityItem) {
   if (item.viewerRelation === "RESERVED") return "Votre réservation";
   if (item.viewerRelation === "OFFERED") return "Votre partage";
-  if (item.status === "AVAILABLE") return "Disponible";
-  if (item.status === "RESERVED") return "Réservée";
-  return "Votre partage";
+  return item.status === "AVAILABLE" ? "Disponible" : "Réservée";
 }
 
-interface DashboardPageProps {
+export function DashboardPage({ data }: {
   data: DashboardData;
-  onNotify: (message: string, tone?: NoticeTone) => void;
+  onNotify: (message: string, tone?: "success" | "error") => void;
   onSessionExpired: () => void;
-}
-
-export function DashboardPage({ data, onNotify, onSessionExpired }: DashboardPageProps) {
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteBusy, setInviteBusy] = useState(false);
-  const [inviteMessage, setInviteMessage] = useState<string | null>(null);
-  const inviteLock = useRef(false);
+}) {
   const availableItems = useMemo(
     () => data.availability.filter((item) => item.status === "AVAILABLE"),
     [data.availability],
   );
-
-  const handleInvite = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (inviteLock.current) return;
-    const normalized = inviteEmail.trim().toLowerCase();
-    const domain = normalized.split("@")[1];
-    if (!domain || personalDomains.includes(domain)) {
-      setInviteMessage("Saisissez une adresse professionnelle valide.");
-      return;
-    }
-
-    inviteLock.current = true;
-    setInviteBusy(true);
-    setInviteMessage(null);
-    try {
-      const response = await inviteColleague({ email: normalized });
-      setInviteMessage(isOidcIdentity
-        ? `L’invitation a été enregistrée pour ${normalized}.`
-        : response.message);
-      if (response.accepted) setInviteEmail("");
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
-        onSessionExpired();
-      } else {
-        const message = error instanceof Error ? error.message : "L’invitation n’a pas pu être envoyée.";
-        setInviteMessage(message);
-        onNotify(message, "error");
-      }
-    } finally {
-      inviteLock.current = false;
-      setInviteBusy(false);
-    }
-  };
 
   return (
     <div className="app-page dashboard-page">
@@ -82,14 +33,14 @@ export function DashboardPage({ data, onNotify, onSessionExpired }: DashboardPag
         <div>
           <p className="dashboard-eyebrow">Tableau de bord</p>
           <h1 tabIndex={-1}>Bonjour, {data.user.firstName}</h1>
-          <p>Choisissez votre prochaine action, puis gardez un œil sur la semaine.</p>
+          <p>Partagez votre place ou réservez celle d’un collègue pour les 7 prochains jours.</p>
         </div>
-        <span className="live-data-label"><i /> {isPublicDemo ? "Vue démo · 7 jours" : "PostgreSQL · 7 jours"}</span>
+        <span className="live-data-label"><i /> Cloudflare D1 · 7 jours</span>
       </header>
 
       <div className="community-banner">
         <span><Users aria-hidden="true" /></span>
-        <p>Chez <strong>{data.organization.name}</strong>, <em>{data.organization.sharedTotal.toLocaleString("fr-FR")}</em> partages ont déjà été publiés.</p>
+        <p>Chez <strong>{data.organization.name}</strong>, <em>{data.organization.sharedTotal.toLocaleString("fr-FR")}</em> partage{data.organization.sharedTotal > 1 ? "s" : ""} publié{data.organization.sharedTotal > 1 ? "s" : ""}.</p>
       </div>
 
       <section className="task-entry-grid" aria-labelledby="quick-actions-title">
@@ -109,7 +60,7 @@ export function DashboardPage({ data, onNotify, onSessionExpired }: DashboardPag
           <span className="task-entry-copy">
             <small>{availableItems.length} place{availableItems.length > 1 ? "s" : ""} disponible{availableItems.length > 1 ? "s" : ""}</small>
             <strong>Trouver une place</strong>
-            <span>Consultez les créneaux réels publiés pour les 7 prochains jours.</span>
+            <span>Consultez les créneaux publiés par votre entreprise.</span>
           </span>
           <span className="task-entry-cta">Voir les disponibilités <ArrowRight aria-hidden="true" /></span>
         </AppLink>
@@ -117,13 +68,9 @@ export function DashboardPage({ data, onNotify, onSessionExpired }: DashboardPag
 
       <section className="dashboard-overview" aria-labelledby="week-title">
         <div className="section-heading-compact">
-          <div>
-            <p className="section-kicker">Cette semaine</p>
-            <h2 id="week-title">Ce qui mérite votre attention</h2>
-          </div>
+          <div><p className="section-kicker">Cette semaine</p><h2 id="week-title">Partages et réservations</h2></div>
           <AppLink href={`${findUrl}#disponibilites`}>Tout voir <ArrowRight aria-hidden="true" /></AppLink>
         </div>
-
         <div className="dashboard-overview-layout">
           <ol className="availability-preview-list">
             {data.availability.length === 0 ? (
@@ -139,59 +86,11 @@ export function DashboardPage({ data, onNotify, onSessionExpired }: DashboardPag
               </li>
             ))}
           </ol>
-
           <dl className="stats-strip" aria-label="Activité de la semaine">
             <div><dt>Partages</dt><dd><Share2 aria-hidden="true" />{data.stats.shares}</dd></div>
             <div><dt>Réservations</dt><dd><CalendarDays aria-hidden="true" />{data.stats.reservations}</dd></div>
             <div><dt>Places disponibles</dt><dd><CarFront aria-hidden="true" />{data.stats.availableSpots}</dd></div>
           </dl>
-        </div>
-      </section>
-
-      <section className="dashboard-community-grid" aria-label="Vie de l’équipe">
-        <form className="invite-card-refined" id="invite-card" onSubmit={handleInvite} noValidate>
-          <div className="section-heading-compact">
-            <div>
-              <p className="section-kicker"><UserPlus aria-hidden="true" /> Équipe</p>
-              <h2>Inviter un collègue</h2>
-            </div>
-          </div>
-          <p>Une adresse professionnelle suffit. L’entreprise peut fonctionner sans administrateur au quotidien.</p>
-          <label htmlFor="invite-email">Adresse e-mail professionnelle</label>
-          <div className="invite-control">
-            <input
-              id="invite-email"
-              type="email"
-              placeholder="collegue@entreprise.com"
-              value={inviteEmail}
-              onChange={(event) => setInviteEmail(event.target.value)}
-              aria-describedby="invite-message"
-              required
-            />
-            <button className="button button-primary" type="submit" disabled={inviteBusy} aria-busy={inviteBusy}>
-              {inviteBusy ? "Envoi…" : "Envoyer"}
-              {inviteBusy ? <LoaderCircle className="spin" aria-hidden="true" /> : <Send aria-hidden="true" />}
-            </button>
-          </div>
-          <p id="invite-message" className="invite-message" role={inviteMessage ? "status" : undefined}>
-            {inviteMessage ?? (isPublicDemo
-              ? `Aucun e-mail réel n’est envoyé depuis la ${demoContext}.`
-              : isOidcIdentity
-                ? "L’invitation sera envoyée à cette adresse professionnelle."
-                : "L’invitation sera capturée dans Mailpit.")}
-          </p>
-        </form>
-
-        <div className="thanks-summary">
-          <p className="section-kicker"><Heart aria-hidden="true" /> Merci reçus</p>
-          {data.thanks.length > 0 ? (
-            <blockquote>
-              “{data.thanks[0].message}”
-              <cite>— {data.thanks[0].author} · {data.thanks[0].when}</cite>
-            </blockquote>
-          ) : (
-            <p className="thanks-summary-empty">Les messages apparaîtront ici après vos premiers partages.</p>
-          )}
         </div>
       </section>
     </div>

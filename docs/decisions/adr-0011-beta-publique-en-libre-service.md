@@ -1,6 +1,6 @@
 # ADR-0011 — Ouvrir une bêta publique en libre-service
 
-- Statut : accepté
+- Statut : remplacé par ADR-0017
 - Statut d'implémentation : préparation en cours ; production dynamique non activée
 - Date : 2026-08-23
 - Décideur : nclsppr

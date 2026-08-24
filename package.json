@@ -1,8 +1,9 @@
 {
   "name": "parkventory",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Partage de places de parking entre collègues.",
+  "description": "Partage de places de parking entre collègues, sur Cloudflare.",
+  "type": "module",
   "engines": {
     "node": ">=24 <25"
   },
@@ -10,26 +11,25 @@
     "frontend"
   ],
   "scripts": {
-    "dev": "./scripts/dev.sh",
-    "compose:up": "docker compose up --build -d --wait",
-    "compose:down": "docker compose down",
-    "compose:verify": "./scripts/verify_compose.sh",
+    "dev": "npm run build && wrangler dev",
     "dev:frontend": "npm run dev --workspace @parkventory/frontend",
-    "dev:backend": "cd backend && mise exec -- ./mvnw quarkus:dev",
-    "db:up": "docker compose up -d --wait postgres",
-    "db:down": "docker compose stop postgres",
-    "db:reset": "./scripts/reset_database.sh",
-    "postgres:verify": "./scripts/verify_postgres_compatibility.sh",
-    "brand:sync": "node scripts/sync_brand_assets.mjs",
-    "brand:check": "node scripts/sync_brand_assets.mjs --check",
-    "frontend:build": "npm run build --workspace @parkventory/frontend",
-    "frontend:test": "npm run test --workspace @parkventory/frontend",
-    "pages:build": "./scripts/build_pages.sh",
-    "atlas:build": "./scripts/build_atlas.sh",
-    "production:check": "python3 scripts/check-production-contract.py && python3 -m unittest discover -s tests -p 'test_*.py'",
-    "production:images:test": "./scripts/test-production-images.sh",
-    "backend:test": "cd backend && mise exec -- ./mvnw verify",
-    "docs:build": "npm run build --prefix docs-nimbus",
-    "verify": "./scripts/verify.sh"
+    "build": "npm run build --workspace @parkventory/frontend",
+    "test": "vitest run --config worker/vitest.config.ts && npm run test --workspace @parkventory/frontend",
+    "verify": "npm run test && npm run build && wrangler deploy --dry-run",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local",
+    "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
+    "deploy": "npm run build && wrangler deploy",
+    "cf:types": "wrangler types worker/worker-configuration.d.ts"
+  },
+  "dependencies": {
+    "hono": "4.13.4"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "0.22.0",
+    "@cloudflare/workers-types": "5.20260823.1",
+    "@types/node": "26.2.0",
+    "typescript": "7.0.2",
+    "vitest": "4.1.10",
+    "wrangler": "4.125.0"
   }
 }

@@ -1,6 +1,6 @@
 # ADR-0006 : publication filtrée de Nimbus sur GitHub Pages
 
-- Statut : accepté
+- Statut : remplacé par ADR-0017 pour le déploiement applicatif
 - Statut d'implémentation : implémenté et vérifié sur GitHub Pages
 - Date : 2026-08-11
 - Dernière vérification : runs Verify `31499873532` et Pages `31499873475`, puis probes HTTP le 2026-08-11

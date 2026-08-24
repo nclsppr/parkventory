@@ -4,7 +4,7 @@ import { loadEnv } from "vite";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, ".", "");
-  const apiProxyTarget = env.VITE_DEV_API_PROXY || "http://127.0.0.1:8080";
+  const apiProxyTarget = env.VITE_DEV_API_PROXY || "http://127.0.0.1:8787";
 
   return {
     base: env.VITE_BASE_PATH || "/",
@@ -12,7 +12,6 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         "/api": apiProxyTarget,
-        "/q": apiProxyTarget,
       },
     },
     test: {

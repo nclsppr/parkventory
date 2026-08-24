@@ -1,6 +1,6 @@
 # ADR-0015 — PostgreSQL 17 Atlas pour la bêta publique
 
-- Statut : accepté
+- Statut : remplacé par ADR-0017
 - Statut d'implémentation : sélection contractuelle ; base Atlas non créée
 - Date : 2026-08-23
 - Décideur : nclsppr

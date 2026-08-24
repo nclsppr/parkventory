@@ -1,14 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, loadDashboard } from "../api/client";
-import { isPublicDemo } from "../config";
-import { demoDashboard } from "../data/demo";
 import type { DashboardData } from "../types";
 
 export function useDashboardData(onSessionExpired: () => void) {
-  const [data, setData] = useState<DashboardData | null>(
-    isPublicDemo ? structuredClone(demoDashboard) : null,
-  );
-  const [loading, setLoading] = useState(!isPublicDemo);
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const refreshDashboard = useCallback(async (showLoading = true) => {
@@ -32,7 +28,7 @@ export function useDashboardData(onSessionExpired: () => void) {
   }, [onSessionExpired]);
 
   useEffect(() => {
-    if (!isPublicDemo) void refreshDashboard();
+    void refreshDashboard();
   }, [refreshDashboard]);
 
   return {

@@ -1,0 +1,40 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "parkventory",
+  "main": "worker/src/index.ts",
+  "compatibility_date": "2026-08-24",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": true,
+  "assets": {
+    "directory": "./frontend/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "parkventory-preview",
+      "database_id": "9623bf62-4144-48c5-aa32-343f393e926a",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    "APP_ENV": "preview",
+    "EMAIL_FROM": "Parkventory <noreply@parkventory.com>",
+    "PUBLIC_ORIGIN": ""
+  },
+  // Activer apres l’onboarding Email Service du domaine :
+  // "send_email": [{
+  //   "name": "EMAIL",
+  //   "allowed_sender_addresses": ["noreply@parkventory.com"]
+  // }],
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true
+    }
+  }
+}

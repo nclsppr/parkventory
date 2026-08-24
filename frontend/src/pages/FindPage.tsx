@@ -15,12 +15,11 @@ import {
 } from "lucide-react";
 import { ApiError, cancelReservation, reserveSpot } from "../api/client";
 import { AppLink } from "../components/AppLink";
-import { appUrl, isPublicDemo } from "../config";
+import { appUrl } from "../config";
 import type { AvailabilityItem, DashboardData } from "../types";
 
 interface FindPageProps {
   data: DashboardData;
-  onDemoMutation: (mutation: (current: DashboardData) => DashboardData) => void;
   onRefresh: (showLoading?: boolean) => Promise<void>;
   onSessionExpired: () => void;
 }
@@ -35,7 +34,6 @@ function statusLabel(item: AvailabilityItem) {
 
 export function FindPage({
   data,
-  onDemoMutation,
   onRefresh,
   onSessionExpired,
 }: FindPageProps) {
@@ -61,30 +59,7 @@ export function FindPage({
     reservationAttempt.current = attempt;
     try {
       await reserveSpot(selected.id, attempt.key);
-      if (isPublicDemo) {
-        onDemoMutation((current) => ({
-          ...current,
-          availability: current.availability.map((item) => (
-            item.id === selected.id
-              ? {
-                  ...item,
-                  status: "RESERVED" as const,
-                  viewerRelation: "RESERVED" as const,
-                  reservationId: `demo-reservation-${item.id}`,
-                  canCancel: true,
-                  canWithdraw: false,
-                }
-              : item
-          )),
-          stats: {
-            ...current.stats,
-            reservations: current.stats.reservations + 1,
-            availableSpots: Math.max(0, current.stats.availableSpots - 1),
-          },
-        }));
-      } else {
-        await onRefresh(false);
-      }
+      await onRefresh(false);
       const message = `${selected.spot} est réservée pour ${selected.dateLabel}, ${selected.timeLabel}.`;
       setResultTone("success");
       setResultMessage(message);
@@ -106,7 +81,7 @@ export function FindPage({
       if (conflict) {
         setSelectedId(null);
         reservationAttempt.current = null;
-        if (!isPublicDemo) await onRefresh(false);
+        await onRefresh(false);
       }
     } finally {
       reserveLock.current = false;
@@ -125,30 +100,7 @@ export function FindPage({
     setResultMessage(null);
     try {
       const response = await cancelReservation(item.reservationId);
-      if (isPublicDemo) {
-        onDemoMutation((current) => ({
-          ...current,
-          availability: current.availability.map((currentItem) => (
-            currentItem.id === item.id
-              ? {
-                  ...currentItem,
-                  status: "AVAILABLE" as const,
-                  viewerRelation: "NONE" as const,
-                  reservationId: null,
-                  canCancel: false,
-                  canWithdraw: false,
-                }
-              : currentItem
-          )),
-          stats: {
-            ...current.stats,
-            reservations: Math.max(0, current.stats.reservations - 1),
-            availableSpots: current.stats.availableSpots + 1,
-          },
-        }));
-      } else {
-        await onRefresh(false);
-      }
+      await onRefresh(false);
       setResultTone("success");
       setResultMessage(response.message);
     } catch (error) {
@@ -162,7 +114,7 @@ export function FindPage({
           ? error.message
           : "La réservation n’a pas pu être annulée.",
       );
-      if (error instanceof ApiError && error.status === 409 && !isPublicDemo) {
+      if (error instanceof ApiError && error.status === 409) {
         await onRefresh(false);
       }
     } finally {

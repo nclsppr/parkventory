@@ -1,13 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, loadSession } from "./api/client";
 import type { ApplicationRoute } from "./components/AppShell";
-import {
-  findUrl,
-  isOidcIdentity,
-  isPublicDemo,
-  relativePathname,
-  shareUrl,
-} from "./config";
+import { findUrl, relativePathname, shareUrl } from "./config";
 import { ApplicationPage } from "./pages/ApplicationPage";
 import { LandingPage } from "./pages/LandingPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
@@ -84,13 +78,12 @@ function AppContent() {
 
 function AuthenticatedApplication({ route }: { route: ApplicationRoute }) {
   const [state, setState] = useState<"checking" | "authenticated" | "anonymous">(
-    isPublicDemo ? "authenticated" : "checking",
+    "checking",
   );
   const [reason, setReason] = useState<string | undefined>();
   const handleSessionExpired = useCallback(() => setState("anonymous"), []);
 
   useEffect(() => {
-    if (isPublicDemo) return;
     let active = true;
     loadSession()
       .then(() => {
@@ -104,9 +97,7 @@ function AuthenticatedApplication({ route }: { route: ApplicationRoute }) {
             ? undefined
             : error instanceof Error
               ? error.message
-              : isOidcIdentity
-                ? "La session n’a pas pu être vérifiée."
-                : "La session locale n’a pas pu être vérifiée.",
+              : "La session n’a pas pu être vérifiée.",
         );
       });
     return () => {
@@ -120,7 +111,7 @@ function AuthenticatedApplication({ route }: { route: ApplicationRoute }) {
         <div className="auth-backdrop" aria-hidden="true" />
         <ThemeToggle className="auth-theme-toggle" />
         <p className="auth-loading" role="status">
-          {isOidcIdentity ? "Vérification de la session…" : "Vérification de la session locale…"}
+          Vérification de la session…
         </p>
       </main>
     );

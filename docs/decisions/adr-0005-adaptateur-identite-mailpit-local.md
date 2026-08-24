@@ -1,13 +1,13 @@
 # ADR-0005 : adaptateur d’identité et Mailpit pour le développement local
 
-- Statut : accepté
+- Statut : remplacé par ADR-0017
 - Statut d'implémentation : implémenté et vérifié en local
 - Date : 2026-07-30
 - Dernière vérification : Mailpit `v1.30.6` et Quarkus Mailer testés le 2026-07-30
 - Propriétaire : nclsppr
 - Domaine : développement, identité et notifications
 - Remplace : aucune
-- Remplacé par : aucune
+- Remplacé par : [ADR-0017](adr-0017-cloudflare-native.md)
 
 ## Contexte
 

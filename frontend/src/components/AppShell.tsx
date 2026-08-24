@@ -10,11 +10,9 @@ import {
 import { ApiError, logout } from "../api/client";
 import {
   appUrl,
-  demoLabel,
+  environmentLabel,
   findUrl,
   homeUrl,
-  isOidcIdentity,
-  isPublicDemo,
   shareUrl,
 } from "../config";
 import type { DashboardData } from "../types";
@@ -46,13 +44,9 @@ export function EnvironmentStatus({ loading }: { loading: boolean }) {
   return (
     <span
       className="demo-status"
-      title={isPublicDemo
-        ? "Les données sont fictives et non persistées."
-        : isOidcIdentity
-          ? "Les données de votre espace sont persistées."
-          : "Les données viennent de PostgreSQL local."}
+      title="Les données de votre espace sont persistées sur Cloudflare D1."
     >
-      <i /> {loading ? "Actualisation…" : demoLabel}
+      <i /> {loading ? "Actualisation…" : environmentLabel}
     </span>
   );
 }
@@ -114,7 +108,7 @@ export function AppShell({
   }, [sidebarOpen]);
 
   const handleLogout = async () => {
-    if (logoutBusy || isPublicDemo) return;
+    if (logoutBusy) return;
     setLogoutBusy(true);
     try {
       await logout();
@@ -163,11 +157,9 @@ export function AppShell({
             </AppLink>
           ))}
         </nav>
-        {!isPublicDemo && (
-          <button className="sidebar-logout" type="button" onClick={handleLogout} disabled={logoutBusy}>
-            <LogOut aria-hidden="true" /> {logoutBusy ? "Déconnexion…" : "Se déconnecter"}
-          </button>
-        )}
+        <button className="sidebar-logout" type="button" onClick={handleLogout} disabled={logoutBusy}>
+          <LogOut aria-hidden="true" /> {logoutBusy ? "Déconnexion…" : "Se déconnecter"}
+        </button>
         <div className="sidebar-profile">
           <span className="avatar">{data.user.initials}</span>
           <div><strong>{data.user.fullName}</strong><small>{data.organization.name}</small></div>
