@@ -32,3 +32,12 @@ jobs:
 
       - name: Verify Worker, D1 and React
         run: npm run verify
+
+  required-context-compatibility:
+    name: Validate application release
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Confirm the Cloudflare candidate gate
+        run: test "${{ needs.verify.result }}" = "success"

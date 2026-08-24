@@ -28,5 +28,9 @@ DNS, MX, SPF ou routage public n’a été modifié par cette réécriture.
 - test réel de délivrabilité, parcours authentifié complet et bascule DNS absents ;
 - base D1 de production et preuve de restauration absentes.
 
+La protection GitHub exige encore le contexte historique
+`Validate application release`. Le nouveau workflow émet temporairement ce nom
+après la gate Cloudflare ; le réglage de protection devra être nettoyé séparément.
+
 Ces limites interdisent de qualifier le produit de prêt ou de dynamique en
 production.
