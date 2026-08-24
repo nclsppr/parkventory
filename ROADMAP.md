@@ -6,9 +6,9 @@ Java/Cloudflare en plusieurs étapes. Les gates ci-dessous servent uniquement à
 
 | Ordre | Résultat | État | Critère de sortie |
 | --- | --- | --- | --- |
-| 1 | Candidat Cloudflare unique | `in_progress` | Worker, D1, React, docs et CI versionnés ; tests MVP verts |
-| 2 | Préversion exploitable | `planned` | D1 preview, Turnstile et e-mail réels ; parcours complet vérifié sans données fictives |
-| 3 | Bascule publique unique | `planned` | sauvegarde, secrets, DNS importé sans perte des records mail, probes et rollback prêts |
+| 1 | Candidat Cloudflare unique | `done` | Worker, D1, React, docs et CI versionnés ; tests MVP verts |
+| 2 | Préversion exploitable | `in_progress` | D1 preview, Turnstile et e-mail réels ; parcours complet vérifié sans données fictives |
+| 3 | Bascule publique unique | `in_progress` | Worker autoritatif actif ; propagation, restauration et rollback final à prouver |
 | 4 | Produit MVP prêt | `planned` | deux vrais membres se connectent, partagent et réservent ; exactement un gagnant concurrent |
 | 5 | Améliorations guidées par l’usage | `planned` | seulement après observation du MVP public |
 

@@ -600,7 +600,19 @@ app.delete("/api/v1/availability/:id", async (context) => {
   return accepted("La disponibilité est retirée.");
 });
 
-app.notFound(() => problem(404, "Cette route API n’existe pas."));
+app.all("*", async (context) => {
+  const url = new URL(context.req.url);
+  if (url.hostname === "www.parkventory.com") {
+    url.hostname = "parkventory.com";
+    return Response.redirect(url.toString(), 308);
+  }
+  if (url.pathname.startsWith("/api/")) {
+    return problem(404, "Cette route API n’existe pas.");
+  }
+  return context.env.ASSETS.fetch(context.req.raw);
+});
+
+app.notFound(() => problem(404, "Cette route n’existe pas."));
 
 app.onError((error, context) => {
   const incidentId = crypto.randomUUID();

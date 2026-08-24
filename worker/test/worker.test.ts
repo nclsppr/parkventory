@@ -79,6 +79,15 @@ function cookie(token: string) {
 }
 
 describe("contrat Cloudflare MVP", () => {
+  it("redirige www vers l’origine canonique sans perdre le chemin", async () => {
+    const response = await SELF.fetch("https://www.parkventory.com/app/partager?jour=demain", {
+      redirect: "manual",
+    });
+
+    expect(response.status).toBe(308);
+    expect(response.headers.get("Location")).toBe("https://parkventory.com/app/partager?jour=demain");
+  });
+
   it("convertit les heures de Paris et refuse l’heure inexistante du passage d’été", () => {
     expect(zonedDateTimeToEpoch("2026-08-25", "08:00")).toBeTypeOf("number");
     expect(zonedDateTimeToEpoch("2026-03-29", "02:30")).toBeNull();

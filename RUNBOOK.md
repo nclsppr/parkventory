@@ -31,6 +31,18 @@ Avant le déploiement, vérifier que `APP_SECRET` et `TURNSTILE_SECRET_KEY` sont
 des secrets Wrangler et que le binding `EMAIL` est activé. Ne jamais passer une
 valeur secrète en argument de commande ou dans Git.
 
+## Production
+
+```bash
+npm run db:migrate:production
+npm run deploy:production
+```
+
+La production utilise le Worker `parkventory-production`, la base D1
+`parkventory-production`, les domaines personnalisés de l’apex et de `www`, le
+binding `EMAIL` et les secrets `APP_SECRET` et `TURNSTILE_SECRET_KEY`. Générer
+les types avec `npm run cf:types` après toute modification de binding.
+
 ## Vérifications après déploiement
 
 1. `GET /api/v1/health` répond `200` avec `{"status":"ok"}`.
@@ -45,5 +57,7 @@ valeur secrète en argument de commande ou dans Git.
 
 La bascule publique est un changement DNS unique après export et contrôle de
 tous les records existants, notamment MX, SPF, DKIM et DMARC. Le rollback
-consiste à restaurer les enregistrements web précédents ; ne jamais supprimer
-les records mail lors d’un rollback.
+web consiste à retirer les deux domaines personnalisés du Worker puis à recréer
+les A de `parkventory.com` et `www.parkventory.com` vers `137.74.174.163`.
+Ne jamais modifier les MX, SPF, DKIM, DMARC ou records `cf-bounce` pendant ce
+rollback.
