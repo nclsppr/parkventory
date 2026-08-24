@@ -10,7 +10,7 @@
     "directory": "./frontend/dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": true
   },
   "d1_databases": [
     {
@@ -25,11 +25,51 @@
     "EMAIL_FROM": "Parkventory <noreply@parkventory.com>",
     "PUBLIC_ORIGIN": ""
   },
-  // Activer apres l’onboarding Email Service du domaine :
-  // "send_email": [{
-  //   "name": "EMAIL",
-  //   "allowed_sender_addresses": ["noreply@parkventory.com"]
-  // }],
+  "env": {
+    "production": {
+      "name": "parkventory-production",
+      "workers_dev": true,
+      "preview_urls": true,
+      "assets": {
+        "directory": "./frontend/dist",
+        "binding": "ASSETS",
+        "not_found_handling": "single-page-application",
+        "run_worker_first": true
+      },
+      "routes": [
+        {
+          "pattern": "parkventory.com",
+          "custom_domain": true
+        },
+        {
+          "pattern": "www.parkventory.com",
+          "custom_domain": true
+        }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "parkventory-production",
+          "database_id": "07118826-b935-4f87-9fca-a5d1e6a01218",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "vars": {
+        "APP_ENV": "production",
+        "EMAIL_FROM": "Parkventory <noreply@parkventory.com>",
+        "PUBLIC_ORIGIN": "https://parkventory.com"
+      },
+      "send_email": [
+        {
+          "name": "EMAIL",
+          "allowed_sender_addresses": ["noreply@parkventory.com"]
+        }
+      ],
+      "secrets": {
+        "required": ["APP_SECRET", "TURNSTILE_SECRET_KEY"]
+      }
+    }
+  },
   "observability": {
     "enabled": true,
     "logs": {

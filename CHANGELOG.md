@@ -5,6 +5,18 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ## Non publié
 
+### Activation Cloudflare
+
+- base D1 de production en juridiction UE, secrets Worker et widget Turnstile
+  de production créés sans versionner de valeur privée ;
+- Email Service activé pour `parkventory.com` avec return-path, SPF et DKIM
+  dédiés, sans modification des MX OVH, du SPF racine ou du DMARC existants ;
+- zone DNS Cloudflare activée et domaines personnalisés de l’apex et de `www`
+  liés au Worker, avec redirection canonique `www` en `308` ;
+- environnement Wrangler de production, types de bindings générés et commandes
+  de migration et de déploiement explicites ajoutés ;
+- tests et typecheck étendus au routage canonique avant la bascule publique.
+
 ### Réécriture Cloudflare-native
 
 - remplacement en une fois de Quarkus, PostgreSQL, Compose, Auth0, Resend et de

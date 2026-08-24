@@ -14,12 +14,15 @@
     "dev": "npm run build && wrangler dev",
     "dev:frontend": "npm run dev --workspace @parkventory/frontend",
     "build": "npm run build --workspace @parkventory/frontend",
+    "typecheck:worker": "tsc -p worker/tsconfig.json",
     "test": "vitest run --config worker/vitest.config.ts && npm run test --workspace @parkventory/frontend",
-    "verify": "npm run test && npm run build && wrangler deploy --dry-run",
+    "verify": "npm run test && npm run typecheck:worker && npm run build && wrangler deploy --env=\"\" --dry-run",
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
     "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
+    "db:migrate:production": "wrangler d1 migrations apply DB --env production --remote",
     "deploy": "npm run build && wrangler deploy",
-    "cf:types": "wrangler types worker/worker-configuration.d.ts --include-runtime false"
+    "deploy:production": "npm run build && wrangler deploy --env production",
+    "cf:types": "wrangler types --env production worker/worker-configuration.d.ts --include-runtime false"
   },
   "dependencies": {
     "hono": "4.13.4"

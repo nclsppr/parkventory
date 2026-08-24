@@ -1,7 +1,7 @@
 # ADR-0017 — Réécriture Cloudflare-native en une fois
 
 - Statut : accepté
-- Statut d’implémentation : candidat local et D1 preview ; activation publique absente
+- Statut d’implémentation : production Cloudflare autoritative active ; recette MVP réelle en attente
 - Date : 2026-08-24
 - Décideur : nclsppr
 - Portée : application, données, identité, e-mail et déploiement
