@@ -5,12 +5,12 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { displayName, organizationName, zonedDateTimeToEpoch } from "../src/domain";
 import { sha256 } from "../src/security";
 
-interface TestEnv extends Env {
+type TestEnv = Omit<Env, "APP_ENV"> & {
   APP_ENV: "development";
   TEST_MIGRATIONS: Parameters<typeof applyD1Migrations>[1];
-}
+};
 
-const testEnv = env as TestEnv;
+const testEnv = env as unknown as TestEnv;
 
 beforeEach(async () => {
   await applyD1Migrations(testEnv.DB, testEnv.TEST_MIGRATIONS);
