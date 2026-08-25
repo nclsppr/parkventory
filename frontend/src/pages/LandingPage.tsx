@@ -206,7 +206,7 @@ export function LandingPage() {
             </p>
           </div>
           <div className="teams-list">
-            <article data-reveal><span>01</span><h3>Sans déploiement</h3><p>Pas de projet IT préalable pour tester l’usage.</p></article>
+            <article data-reveal><span>01</span><h3>Simple à démarrer</h3><p>Une adresse professionnelle suffit pour commencer.</p></article>
             <article data-reveal><span>02</span><h3>Sans surveillance</h3><p>Chacun gère uniquement ses partages et réservations.</p></article>
             <article data-reveal><span>03</span><h3>Évolutif</h3><p>Sites, places personnalisées et plan arrivent quand ils deviennent utiles.</p></article>
           </div>
@@ -230,7 +230,7 @@ export function LandingPage() {
             <ul>
               <li><CheckCircle2 aria-hidden="true" /> Vérification de l’adresse avant toute adhésion</li>
               <li><CheckCircle2 aria-hidden="true" /> Données minimales, aucun motif d’absence collecté</li>
-              <li><CheckCircle2 aria-hidden="true" /> Administration optionnelle et auditée</li>
+              <li><CheckCircle2 aria-hidden="true" /> Chacun garde la main sur ses partages et réservations</li>
             </ul>
           </div>
         </section>

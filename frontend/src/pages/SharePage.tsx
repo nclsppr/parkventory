@@ -12,7 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { ApiError, declareSpot, shareSpot, withdrawAvailability } from "../api/client";
-import { dateInputValue, formatInputDate } from "../lib/dates";
+import { dateInputValue, formatInputDate, formatTimeZone } from "../lib/dates";
 import type { DashboardData } from "../types";
 
 interface SharePageProps {
@@ -176,7 +176,7 @@ export function SharePage({
           >
             <div className="workflow-section-heading">
               <span><CalendarCheck aria-hidden="true" /></span>
-              <div><h2>Créneau de disponibilité</h2><p>Les heures sont interprétées dans le fuseau affiché ci-dessous.</p></div>
+              <div><h2>Créneau de disponibilité</h2><p>Les heures suivent l’heure locale du parking.</p></div>
             </div>
 
             <div className="field-group">
@@ -220,7 +220,7 @@ export function SharePage({
               </label>
             </div>
 
-            <p className="timezone-note"><Clock3 aria-hidden="true" /> Fuseau : <strong>{timeZone ?? "Non renseigné"}</strong></p>
+            <p className="timezone-note"><Clock3 aria-hidden="true" /> Heure locale : <strong>{formatTimeZone(timeZone)}</strong></p>
             {timeOrderInvalid && <p className="field-error" id="share-time-error" role="alert">{timeOrderMessage}</p>}
           </form>
 
@@ -231,7 +231,7 @@ export function SharePage({
               <div><dt>Emplacement</dt><dd><MapPin aria-hidden="true" />{data.user.assignedLevel ?? "Niveau non renseigné"}</dd></div>
               <div><dt>Date</dt><dd>{formatInputDate(shareForm.date)}</dd></div>
               <div><dt>Horaire</dt><dd>{shareForm.from || "—"} – {shareForm.to || "—"}</dd></div>
-              <div><dt>Fuseau</dt><dd>{timeZone ?? "Non renseigné"}</dd></div>
+              <div><dt>Heure locale</dt><dd>{formatTimeZone(timeZone)}</dd></div>
             </dl>
             <p className="workflow-trust"><ShieldCheck aria-hidden="true" /> Votre absence et son motif ne sont jamais demandés.</p>
             <button
@@ -311,7 +311,7 @@ export function SharePage({
                     <CarFront aria-hidden="true" />
                     <p><strong>{item.spot}</strong><span>{item.level}</span></p>
                   </div>
-                  <p className="availability-agenda-time"><Clock3 aria-hidden="true" />{item.timeLabel} · {item.timeZone}</p>
+                  <p className="availability-agenda-time"><Clock3 aria-hidden="true" />{item.timeLabel} · {formatTimeZone(item.timeZone)}</p>
                   {item.canWithdraw ? (
                     <button
                       className="button button-danger button-small"

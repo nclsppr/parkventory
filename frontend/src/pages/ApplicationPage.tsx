@@ -44,7 +44,7 @@ export function ApplicationPage({ route, onSessionExpired }: ApplicationPageProp
         <Logo />
         {loadError ? <AlertTriangle aria-hidden="true" /> : <LoaderCircle className="spin" aria-hidden="true" />}
         <h1>{loadError ? "Le service ne répond pas." : "Chargement de votre espace…"}</h1>
-        <p role={loadError ? "alert" : "status"}>{loadError ?? "Lecture de votre session et de votre espace."}</p>
+        <p role={loadError ? "alert" : "status"}>{loadError ?? "Ouverture de votre espace Parkventory."}</p>
         {loadError && (
           <button className="button button-primary" type="button" onClick={() => void refreshDashboard()}>
             Réessayer

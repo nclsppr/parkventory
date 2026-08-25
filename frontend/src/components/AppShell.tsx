@@ -12,7 +12,6 @@ import {
   appUrl,
   environmentLabel,
   findUrl,
-  homeUrl,
   shareUrl,
 } from "../config";
 import type { DashboardData } from "../types";
@@ -44,7 +43,7 @@ export function EnvironmentStatus({ loading }: { loading: boolean }) {
   return (
     <span
       className="demo-status"
-      title="Les données de votre espace sont persistées sur Cloudflare D1."
+      title="Parkventory est en version bêta."
     >
       <i /> {loading ? "Actualisation…" : environmentLabel}
     </span>
@@ -133,7 +132,13 @@ export function AppShell({
         aria-label="Navigation de l’application"
       >
         <div className="sidebar-heading">
-          <a href={homeUrl} aria-label="Revenir au site Parkventory"><Logo /></a>
+          <AppLink
+            href={appUrl}
+            aria-label="Accueil de l’application Parkventory"
+            onNavigate={() => closeSidebar()}
+          >
+            <Logo />
+          </AppLink>
           <button
             ref={sidebarClose}
             type="button"
@@ -177,6 +182,17 @@ export function AppShell({
 
       <main className="app-main" id="dashboard-content">
         <div className="app-topbar">
+          <AppLink
+            className="mobile-app-logo"
+            href={appUrl}
+            aria-label="Accueil de l’application Parkventory"
+          >
+            <Logo compact />
+          </AppLink>
+          <div className="app-topbar-actions">
+            <ThemeToggle />
+            <EnvironmentStatus loading={loading} />
+          </div>
           <button
             ref={menuTrigger}
             className="mobile-sidebar-trigger"
@@ -187,11 +203,6 @@ export function AppShell({
           >
             <Menu aria-hidden="true" />
           </button>
-          <a className="mobile-app-logo" href={homeUrl} aria-label="Revenir au site Parkventory"><Logo compact /></a>
-          <div className="app-topbar-actions">
-            <ThemeToggle />
-            <EnvironmentStatus loading={loading} />
-          </div>
         </div>
 
         {loadError && (

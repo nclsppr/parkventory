@@ -97,7 +97,7 @@ function AuthenticatedApplication({ route }: { route: ApplicationRoute }) {
             ? undefined
             : error instanceof Error
               ? error.message
-              : "La session n’a pas pu être vérifiée.",
+              : "La connexion n’a pas pu être vérifiée.",
         );
       });
     return () => {
@@ -111,7 +111,7 @@ function AuthenticatedApplication({ route }: { route: ApplicationRoute }) {
         <div className="auth-backdrop" aria-hidden="true" />
         <ThemeToggle className="auth-theme-toggle" />
         <p className="auth-loading" role="status">
-          Vérification de la session…
+          Vérification de la connexion…
         </p>
       </main>
     );

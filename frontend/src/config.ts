@@ -6,7 +6,7 @@ export const findUrl = `${baseUrl}app/trouver`;
 export const authCallbackUrl = `${baseUrl}auth/callback`;
 export const privacyUrl = `${baseUrl}confidentialite`;
 export const legalUrl = `${baseUrl}mentions-legales`;
-export const environmentLabel = "Bêta Cloudflare";
+export const environmentLabel = "Version bêta";
 
 export function relativePathname(pathname: string, base = baseUrl) {
   const normalizedBase = base === "/" ? "" : base.replace(/\/+$/, "");

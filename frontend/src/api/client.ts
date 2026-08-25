@@ -46,9 +46,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const retryAfter = retryAfterHeader && /^\d+$/.test(retryAfterHeader)
       ? Number(retryAfterHeader)
       : undefined;
-    let message = serverDetail ?? `La requête a échoué (${response.status}).`;
+    let message = serverDetail ?? "Cette action n’a pas abouti. Réessayez.";
     if (response.status === 401 && !serverDetail) {
-      message = "Votre session a expiré. Reconnectez-vous pour continuer.";
+      message = "Votre connexion a expiré. Reconnectez-vous pour continuer.";
     } else if (response.status === 403 && !serverDetail) {
       message = "Vous n’avez pas l’autorisation d’effectuer cette action.";
     } else if (response.status === 409 && !serverDetail) {

@@ -91,9 +91,9 @@ export function PrivacyPage() {
       <section>
         <h2>Prestataires</h2>
         <p>
-          L’application, la base D1, la protection anti-abus Turnstile et l’envoi des liens de
-          connexion sont opérés par Cloudflare. Cloudflare reçoit les requêtes techniques et les
-          adresses nécessaires à l’envoi ; Parkventory limite les données à ce qui est utile au service.
+          Le prestataire d’hébergement fournit aussi la vérification de sécurité et l’envoi des
+          liens de connexion. Il traite les informations nécessaires à ces services ; Parkventory
+          limite les données à ce qui est utile au service.
         </p>
       </section>
 

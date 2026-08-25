@@ -68,7 +68,7 @@ export function Turnstile({ onToken }: { onToken: (token: string | null) => void
   }, [onToken, siteKey]);
 
   if (!siteKey) {
-    return <p className="field-error" role="alert">La protection anti-abus n’est pas configurée.</p>;
+    return <p className="field-error" role="alert">La vérification de sécurité est indisponible. Réessayez plus tard.</p>;
   }
   return <div className="turnstile-container" ref={container} />;
 }

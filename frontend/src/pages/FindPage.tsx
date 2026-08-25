@@ -16,6 +16,7 @@ import {
 import { ApiError, cancelReservation, reserveSpot } from "../api/client";
 import { AppLink } from "../components/AppLink";
 import { appUrl } from "../config";
+import { formatTimeZone } from "../lib/dates";
 import type { AvailabilityItem, DashboardData } from "../types";
 
 interface FindPageProps {
@@ -141,10 +142,10 @@ export function FindPage({
         </div>
         <dl>
           <div><dt>Sites</dt><dd><MapPin aria-hidden="true" /> Tous les parkings</dd></div>
-          <div><dt>Fuseaux</dt><dd><Clock3 aria-hidden="true" /> Par créneau</dd></div>
+          <div><dt>Horaires</dt><dd><Clock3 aria-hidden="true" /> Heure locale</dd></div>
           <div><dt>Disponibles</dt><dd className="scope-available"><CarFront aria-hidden="true" /> {availableCount}</dd></div>
         </dl>
-        <p><Info aria-hidden="true" /> Chaque créneau est affiché dans le fuseau de son parking.</p>
+        <p><Info aria-hidden="true" /> Chaque créneau suit l’heure locale de son parking.</p>
       </section>
 
       {resultMessage && (
@@ -184,7 +185,7 @@ export function FindPage({
                       <CarFront aria-hidden="true" />
                       <p><strong>{item.spot}</strong><span>{item.level}</span></p>
                     </div>
-                    <p className="availability-agenda-time"><Clock3 aria-hidden="true" />{item.timeLabel} · {item.timeZone}</p>
+                    <p className="availability-agenda-time"><Clock3 aria-hidden="true" />{item.timeLabel} · {formatTimeZone(item.timeZone)}</p>
                     {item.status === "AVAILABLE" ? (
                       <button
                         className="choose-spot-button"
@@ -249,7 +250,7 @@ export function FindPage({
                 <div><dt>Niveau</dt><dd>{selected.level}</dd></div>
                 <div><dt>Date</dt><dd>{selected.dateLabel}</dd></div>
                 <div><dt>Horaire</dt><dd>{selected.timeLabel}</dd></div>
-                <div><dt>Fuseau</dt><dd>{selected.timeZone}</dd></div>
+                <div><dt>Heure locale</dt><dd>{formatTimeZone(selected.timeZone)}</dd></div>
               </dl>
               <p><ShieldCheck aria-hidden="true" /> La confirmation attribuera ce créneau uniquement à votre compte.</p>
               <button className="button button-primary workflow-primary-action" type="button" onClick={() => void handleReserve()} disabled={reserveBusy} aria-busy={reserveBusy}>

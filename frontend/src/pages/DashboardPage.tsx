@@ -35,7 +35,7 @@ export function DashboardPage({ data }: {
           <h1 tabIndex={-1}>Bonjour, {data.user.firstName}</h1>
           <p>Partagez votre place ou réservez celle d’un collègue pour les 7 prochains jours.</p>
         </div>
-        <span className="live-data-label"><i /> Cloudflare D1 · 7 jours</span>
+        <span className="live-data-label"><i /> Disponibilités · 7 jours</span>
       </header>
 
       <div className="community-banner">
