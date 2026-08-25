@@ -10,13 +10,16 @@
   a été relevé sans exécuter de restauration.
 - Le Worker `parkventory-production` est déployé avec D1, les assets React,
   Email Service et les deux secrets requis. La version active est
-  `b97728dc-c8e5-4b13-bab7-c7b7b8dc320a`.
+  `34d054a0-fd64-4822-ba54-93bbec3c8070`.
 - Workers Builds suit `nclsppr/parkventory` sur `main`, avec cache de build et
-  déploiement `--env production`. Le merge de la PR #17 au SHA
-  `5b9aae8b8bcb5ee8d9476ca4ffdfdeade3b98d76` a déclenché le build
-  `31247434-ee39-47f6-800e-2ce6f56b9d3e`, terminé avec le résultat `success`,
+  déploiement `--env production`. Le merge de la PR #19 au SHA
+  `a59c990fdc948acb7fbb4fd5debe27be099d4f8b` a déclenché le build
+  `ad5426a3-bc75-4268-ad11-7fb5e2ac4035`, terminé avec le résultat `success`,
   puis publié cette version. Les changements limités aux Markdown sont exclus
   des builds.
+- La production sert les assets `index-DyVCfZHi.css` et `index-CsZhO9kn.js` :
+  le header public et sa zone sûre Safari sont opaques, le logo connecté reste
+  dans `/app` et les libellés produit n’exposent plus D1.
 - Turnstile est configuré en mode géré pour l’apex, `www` et l’adresse
   `workers.dev`. Sa clé publique est versionnée ; sa clé privée reste un secret
   Worker.
@@ -28,8 +31,8 @@
   réputation observable.
 - Les domaines personnalisés `parkventory.com` et `www.parkventory.com` pointent
   vers le Worker. `www` redirige vers l’apex en `308` en conservant le chemin.
-- 9 tests Worker/D1, 32 tests React, le typecheck Worker, le build et les deux
-  dry-runs Wrangler réussissent.
+- 9 tests Worker/D1, 36 tests React, le typecheck Worker, le build et le dry-run
+  Wrangler de la gate réussissent.
 
 ## Bascule DNS en propagation
 
