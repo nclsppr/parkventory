@@ -131,6 +131,8 @@ essentiel ne descend sous 14 px ; les champs restent à 16 px sur mobile.
   destination Réservations ne sera ajoutée qu'avec sa vraie route.
 - Sur mobile, les menus public et applicatif s’ouvrent depuis la droite ; le
   tiroir de l’application arrive du même côté.
+- Le header public prolonge un fond opaque dans la zone système supérieure de
+  Safari afin qu’aucun contenu ne défile derrière la Dynamic Island.
 - La navigation basse reste compacte, opaque et bordée, sans flou ni halo ; la
   zone sûre iPhone la décale sans agrandir ses commandes.
 - Les calendriers denses deviennent listes ou agendas sur petit écran.

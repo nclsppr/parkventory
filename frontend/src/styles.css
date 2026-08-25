@@ -341,6 +341,16 @@ svg {
   mix-blend-mode: soft-light;
 }
 
+.landing-page::after {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 90;
+  height: env(safe-area-inset-top, 0px);
+  pointer-events: none;
+  background: var(--bg);
+}
+
 .landing-header {
   position: sticky;
   top: 0;
@@ -353,6 +363,7 @@ svg {
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   padding-top: env(safe-area-inset-top, 0px);
+  background: var(--bg);
 }
 
 .landing-header::before {
@@ -363,8 +374,9 @@ svg {
   z-index: -1;
   width: 100vw;
   border-bottom: 1px solid rgba(255, 255, 255, 0.045);
-  background: rgba(3, 5, 4, 0.9);
-  backdrop-filter: blur(14px);
+  background: var(--bg);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
   transform: translateX(-50%);
 }
 
@@ -4485,7 +4497,6 @@ svg {
 
 :root[data-theme="light"] .landing-header::before {
   border-bottom-color: rgba(8, 10, 8, 0.09);
-  background: rgba(244, 246, 241, 0.94);
 }
 
 :root[data-theme="light"] .hero-parking-texture {

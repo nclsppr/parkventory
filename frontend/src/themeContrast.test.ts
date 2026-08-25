@@ -1,4 +1,5 @@
 import styles from "./styles.css?raw";
+import indexHtml from "../index.html?raw";
 import { describe, expect, it } from "vitest";
 
 type Rgb = readonly [number, number, number];
@@ -59,5 +60,21 @@ describe("contrastes du thème clair", () => {
     expect(styles).toMatch(/\.field-group input::placeholder[\s\S]*?color: var\(--muted-2\);\s*opacity: 1;/);
     expect(styles).toMatch(/:root\[data-theme="light"\] \.button-primary \{\s*border-color: var\(--green\);/);
     expect(styles).toMatch(/:root\[data-theme="light"\] \.choose-spot-button,[\s\S]*?border-color: var\(--cyan\);/);
+  });
+});
+
+describe("zone système Safari du header public", () => {
+  it("garde un fond opaque jusque derrière la Dynamic Island", () => {
+    const header = styles.match(/\.landing-header\s*\{(?<rules>[^}]+)\}/)?.groups?.rules;
+    const backdrop = styles.match(/\.landing-header::before\s*\{(?<rules>[^}]+)\}/)?.groups?.rules;
+    const safeArea = styles.match(/\.landing-page::after\s*\{(?<rules>[^}]+)\}/)?.groups?.rules;
+
+    expect(indexHtml).toContain("viewport-fit=cover");
+    expect(header).toContain("background: var(--bg);");
+    expect(backdrop).toContain("background: var(--bg);");
+    expect(backdrop).toContain("-webkit-backdrop-filter: none;");
+    expect(backdrop).toContain("backdrop-filter: none;");
+    expect(safeArea).toContain("height: env(safe-area-inset-top, 0px);");
+    expect(safeArea).toContain("background: var(--bg);");
   });
 });
