@@ -10,12 +10,13 @@
   a été relevé sans exécuter de restauration.
 - Le Worker `parkventory-production` est déployé avec D1, les assets React,
   Email Service et les deux secrets requis. La version active est
-  `ff307a0c-57ce-42a3-ac50-e05805cf4de2`.
+  `b97728dc-c8e5-4b13-bab7-c7b7b8dc320a`.
 - Workers Builds suit `nclsppr/parkventory` sur `main`, avec cache de build et
-  déploiement `--env production`. Le push du SHA
-  `ea02cd50aeaeaa005fd7c55a434bef79885bcbe3` a déclenché automatiquement un
-  build réussi et publié cette version. Les changements limités aux Markdown
-  sont exclus des builds.
+  déploiement `--env production`. Le merge de la PR #17 au SHA
+  `5b9aae8b8bcb5ee8d9476ca4ffdfdeade3b98d76` a déclenché le build
+  `31247434-ee39-47f6-800e-2ce6f56b9d3e`, terminé avec le résultat `success`,
+  puis publié cette version. Les changements limités aux Markdown sont exclus
+  des builds.
 - Turnstile est configuré en mode géré pour l’apex, `www` et l’adresse
   `workers.dev`. Sa clé publique est versionnée ; sa clé privée reste un secret
   Worker.
@@ -27,7 +28,7 @@
   réputation observable.
 - Les domaines personnalisés `parkventory.com` et `www.parkventory.com` pointent
   vers le Worker. `www` redirige vers l’apex en `308` en conservant le chemin.
-- 6 tests Worker/D1, 32 tests React, le typecheck Worker, le build et les deux
+- 9 tests Worker/D1, 32 tests React, le typecheck Worker, le build et les deux
   dry-runs Wrangler réussissent.
 
 ## Bascule DNS en propagation
