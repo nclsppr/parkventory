@@ -10,16 +10,20 @@
   a été relevé sans exécuter de restauration.
 - Le Worker `parkventory-production` est déployé avec D1, les assets React,
   Email Service et les deux secrets requis. La version active est
-  `34d054a0-fd64-4822-ba54-93bbec3c8070`.
+  `425e381e-3bd7-4d32-9a8b-1a050a3becda`.
 - Workers Builds suit `nclsppr/parkventory` sur `main`, avec cache de build et
   déploiement `--env production`. Le merge de la PR #19 au SHA
   `a59c990fdc948acb7fbb4fd5debe27be099d4f8b` a déclenché le build
-  `ad5426a3-bc75-4268-ad11-7fb5e2ac4035`, terminé avec le résultat `success`,
-  puis publié cette version. Les changements limités aux Markdown sont exclus
-  des builds.
-- La production sert les assets `index-DyVCfZHi.css` et `index-CsZhO9kn.js` :
-  le header public et sa zone sûre Safari sont opaques, le logo connecté reste
-  dans `/app` et les libellés produit n’exposent plus D1.
+  `ad5426a3-bc75-4268-ad11-7fb5e2ac4035`, terminé avec le résultat `success`.
+  Le merge de la PR #21 au SHA `6b9c38ec867d5a83afd437817da02f148bf2d84b`
+  a ensuite déclenché le build `e89d4cee-738d-4984-bbea-aba2212520de`, lui
+  aussi terminé avec le résultat `success`, puis publié la version 11. Les
+  changements limités aux Markdown sont exclus des builds.
+- La production sert les assets `index-DUDX8gDm.css` et `index-coAmKrjR.js` :
+  le header public réel est `sticky`, opaque et plein écran, le logo connecté
+  reste dans `/app` et les libellés produit n’exposent plus D1. La structure et
+  le scroll sont vérifiés à 390 px sur la production ; le rendu de la zone
+  système propre à Safari 26 reste à confirmer sur un iPhone réel.
 - Turnstile est configuré en mode géré pour l’apex, `www` et l’adresse
   `workers.dev`. Sa clé publique est versionnée ; sa clé privée reste un secret
   Worker.
