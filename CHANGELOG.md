@@ -5,6 +5,15 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ## Non publié
 
+### E-mails de connexion
+
+- remplacement du message minimal par un e-mail Parkventory responsive, sans
+  image ni ressource externe, avec pré-en-tête, appel à l’action accessible,
+  lien de secours, durée de validité et consignes de sécurité cohérentes dans
+  les versions HTML et texte ;
+- vérifications ciblées contre l’injection HTML et l’ajout involontaire de
+  pixels, scripts, polices ou images distantes dans l’e-mail d’authentification.
+
 ### Activation Cloudflare
 
 - base D1 de production en juridiction UE, secrets Worker et widget Turnstile

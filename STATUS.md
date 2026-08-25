@@ -1,4 +1,4 @@
-# État vérifié — 24 août 2026
+# État vérifié — 25 août 2026
 
 ## Production Cloudflare active
 
@@ -21,6 +21,10 @@
   Worker.
 - Email Service est actif pour `parkventory.com`, avec un quota observé de
   200 messages par jour. Son return-path, son SPF et son DKIM dédiés sont prêts.
+  Un premier magic link a été livré dans les indésirables le 25 août : il n’y a
+  ni suppression ni plainte Cloudflare, mais les en-têtes d’authentification du
+  message reçu restent à contrôler et le domaine d’envoi est encore sans
+  réputation observable.
 - Les domaines personnalisés `parkventory.com` et `www.parkventory.com` pointent
   vers le Worker. `www` redirige vers l’apex en `308` en conservant le chemin.
 - 6 tests Worker/D1, 32 tests React, le typecheck Worker, le build et les deux
@@ -43,7 +47,8 @@
 
 ## Gates produit encore ouvertes
 
-- réception réelle d’un magic link et consommation unique non vérifiées ;
+- sortie réelle d’un magic link vérifiée, mais classement en boîte principale
+  et consommation unique non vérifiés ;
 - parcours authentifié à deux membres, partage puis réservation non vérifié ;
 - exercice réel de restauration D1 et réactivation DNSSEC Cloudflare non
   prouvés.
