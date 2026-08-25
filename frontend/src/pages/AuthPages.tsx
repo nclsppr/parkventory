@@ -48,7 +48,7 @@ export function SignInPage({ reason }: { reason?: string }) {
     }
     if (!turnstileToken) {
       setSent(false);
-      setMessage("Terminez la vérification anti-abus avant de continuer.");
+      setMessage("Terminez la vérification de sécurité avant de continuer.");
       return;
     }
 
@@ -127,7 +127,7 @@ export function AuthCallbackPage() {
     let redirectTimer: number | undefined;
     if (!token) {
       setState("error");
-      setMessage("Ce lien ne contient pas de jeton de connexion.");
+      setMessage("Ce lien de connexion est incomplet.");
       return () => undefined;
     }
 
@@ -165,7 +165,7 @@ export function AuthCallbackPage() {
               ? <CheckCircle2 aria-hidden="true" />
               : <Mail aria-hidden="true" />}
         </div>
-        <p className="section-index">Lien magique</p>
+        <p className="section-index">Lien de connexion</p>
         <h1 id="callback-title">
           {state === "verifying" ? "Un instant." : state === "success" ? "Vous êtes connecté." : "Lien non valide."}
         </h1>

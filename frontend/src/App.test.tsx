@@ -1,5 +1,5 @@
 import { StrictMode } from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { relativePathname } from "./config";
@@ -72,8 +72,22 @@ describe("Parkventory", () => {
   it("présente la promesse et les deux actions cœur", () => {
     render(<App />);
     expect(screen.getByRole("heading", { name: /Partagez votre place/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Parkventory, accueil" })).toHaveAttribute("href", "/");
     expect(screen.getByRole("link", { name: /Partager ma place/i })).toHaveAttribute("href", "/app/partager");
     expect(screen.getByRole("link", { name: /Voir les disponibilités/i })).toHaveAttribute("href", "/app/trouver");
+  });
+
+  it("ouvre et ferme le menu mobile public", () => {
+    render(<App />);
+    const trigger = screen.getByRole("button", { name: "Ouvrir le menu" });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(trigger);
+    expect(screen.getByRole("button", { name: "Fermer le menu" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("navigation", { name: "Navigation mobile" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Fermer le menu" }));
+    expect(screen.queryByRole("navigation", { name: "Navigation mobile" })).not.toBeInTheDocument();
   });
 
   it("affiche la connexion lorsqu’aucune session n’existe", async () => {
@@ -92,12 +106,36 @@ describe("Parkventory", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("charge les données D1 du membre authentifié", async () => {
+  it("charge les disponibilités du membre sans exposer l’infrastructure", async () => {
     stubAuthenticatedApi();
     window.history.replaceState({}, "", "/app");
     render(<App />);
     expect(await screen.findByRole("heading", { name: "Bonjour, Alex" })).toBeInTheDocument();
-    expect(screen.getByText("Cloudflare D1 · 7 jours")).toBeInTheDocument();
+    expect(screen.getByText("Disponibilités · 7 jours")).toBeInTheDocument();
+    expect(screen.getByText("Version bêta")).toBeInTheDocument();
+    expect(screen.queryByText(/Cloudflare|D1/i)).not.toBeInTheDocument();
+  });
+
+  it("garde les logos du shell connecté dans l’application", async () => {
+    stubAuthenticatedApi();
+    window.history.replaceState({}, "", "/app/trouver");
+    render(<App />);
+
+    const logos = await screen.findAllByRole("link", { name: "Accueil de l’application Parkventory" });
+    expect(logos).toHaveLength(2);
+    logos.forEach((logo) => expect(logo).toHaveAttribute("href", "/app"));
+
+    const menuTrigger = screen.getByRole("button", { name: "Ouvrir la navigation" });
+    expect(menuTrigger).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(menuTrigger);
+    expect(menuTrigger).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(screen.getAllByRole("button", { name: "Fermer la navigation" })[0]);
+    expect(menuTrigger).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(logos[0]);
+    expect(window.location.pathname).toBe("/app");
+    expect(await screen.findByRole("heading", { name: "Bonjour, Alex" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /Partagez votre place/i })).not.toBeInTheDocument();
   });
 
   it("rend une vraie page 404 sans appeler l’API", () => {

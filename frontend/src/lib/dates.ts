@@ -17,5 +17,11 @@ export function formatInputDate(value: string) {
 }
 
 export function browserTimeZone() {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone || "Fuseau local";
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || "Heure locale";
+}
+
+export function formatTimeZone(timeZone?: string | null) {
+  if (!timeZone) return "Non renseignée";
+  const location = timeZone.split("/").at(-1)?.replaceAll("_", " ").trim();
+  return location ? `Heure de ${location}` : "Heure locale";
 }

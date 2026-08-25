@@ -5,6 +5,17 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ## Non publié
 
+### Navigation et langage produit
+
+- les logos du shell connecté ramènent directement au tableau de bord au lieu
+  de quitter l’application pour la page publique ;
+- les menus mobiles public et connecté utilisent désormais le même côté, avec
+  un tiroir applicatif qui s’ouvre depuis la droite ;
+- la navigation basse est plus compacte sur iPhone et remplace le grand halo
+  et le flou par une ombre courte qui ne brouille plus le contenu sous-jacent ;
+- les références à l’infrastructure, les erreurs techniques et les fuseaux
+  bruts ont été remplacés par des libellés centrés sur l’usage.
+
 ### E-mails de connexion
 
 - remplacement du message minimal par un e-mail Parkventory responsive, sans

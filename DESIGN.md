@@ -35,6 +35,7 @@ financier. Elle reste humaine, rapide et utile avant d'être spectaculaire.
 - faux terminal, carte interactive factice ou 3D décorative ;
 - vert utilisé partout au point de perdre la hiérarchie ;
 - disponibilité communiquée uniquement par une couleur ;
+- jargon d’infrastructure ou nom de fournisseur dans les parcours produit ;
 - texte fonctionnel intégré dans une image.
 
 ## Principes
@@ -128,6 +129,10 @@ essentiel ne descend sous 14 px ; les champs restent à 16 px sur mobile.
   réservations et disponibilités.
 - Mobile livré : navigation compacte vers Accueil, Partager et Trouver. La
   destination Réservations ne sera ajoutée qu'avec sa vraie route.
+- Sur mobile, les menus public et applicatif s’ouvrent depuis la droite ; le
+  tiroir de l’application arrive du même côté.
+- La navigation basse reste compacte, opaque et bordée, sans flou ni halo ; la
+  zone sûre iPhone la décale sans agrandir ses commandes.
 - Les calendriers denses deviennent listes ou agendas sur petit écran.
 - L'aperçu produit mobile se recompose à sa largeur réelle ; il n'est jamais
   réduit par transformation au point de rendre ses libellés illisibles.

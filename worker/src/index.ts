@@ -76,7 +76,7 @@ app.use("/api/*", async (context, next) => {
 const requireMember: MiddlewareHandler<AppEnvironment> = async (context, next) => {
   const cookieName = sessionCookieName(context.env.APP_ENV);
   const token = cookieValue(context.req.header("Cookie"), cookieName);
-  if (!token) return problem(401, "Votre session a expiré. Reconnectez-vous pour continuer.");
+  if (!token) return problem(401, "Votre connexion a expiré. Reconnectez-vous pour continuer.");
 
   const tokenHash = await sha256(token);
   const member = await context.env.DB.prepare(`
@@ -109,7 +109,7 @@ const requireMember: MiddlewareHandler<AppEnvironment> = async (context, next) =
 
   if (!member) {
     context.header("Set-Cookie", expiredSessionCookie(context.env.APP_ENV));
-    return problem(401, "Votre session a expiré. Reconnectez-vous pour continuer.");
+    return problem(401, "Votre connexion a expiré. Reconnectez-vous pour continuer.");
   }
 
   context.set("member", {
@@ -150,7 +150,7 @@ app.post("/api/v1/auth/requests", async (context) => {
     body.turnstileToken,
     remoteIp === "unknown" ? undefined : remoteIp,
   ).catch(() => false);
-  if (!challengePassed) return problem(400, "La vérification anti-abus a échoué. Réessayez.");
+  if (!challengePassed) return problem(400, "La vérification de sécurité a échoué. Réessayez.");
 
   const parsed = parseProfessionalEmail(body.email);
   if (!parsed) return Response.json({ accepted: true, message: genericMagicLinkMessage }, { status: 202 });
@@ -510,7 +510,7 @@ app.post("/api/v1/availability/:id/reservations", async (context) => {
   const offerId = context.req.param("id");
   const idempotencyKey = context.req.header("Idempotency-Key")?.trim() ?? "";
   if (!/^[\w-]{16,100}$/.test(idempotencyKey)) {
-    return problem(400, "La clé d’idempotence est absente ou invalide.");
+    return problem(400, "La réservation n’a pas pu être confirmée. Réessayez.");
   }
 
   const existing = await context.env.DB.prepare(`
