@@ -1,9 +1,9 @@
 import { Hono } from "hono";
 import type { MiddlewareHandler } from "hono";
 import { addDays, displayName, frenchDate, initials, organizationName, parisDate, zonedDateTimeToEpoch } from "./domain";
+import { magicLinkEmail } from "./email";
 import {
   cookieValue,
-  escapeHtml,
   expiredSessionCookie,
   isSameOrigin,
   parseProfessionalEmail,
@@ -201,14 +201,12 @@ app.post("/api/v1/auth/requests", async (context) => {
   ).run();
 
   const link = `${publicOrigin(context.req.raw, context.env.PUBLIC_ORIGIN)}/auth/callback?token=${encodeURIComponent(token)}`;
-  const safeLink = escapeHtml(link);
+  const email = magicLinkEmail(link);
   try {
     await context.env.EMAIL.send({
       to: parsed.email,
       from: context.env.EMAIL_FROM,
-      subject: "Votre lien de connexion Parkventory",
-      text: `Ouvrez ce lien dans les 15 minutes pour rejoindre Parkventory : ${link}`,
-      html: `<p>Ouvrez ce lien dans les 15 minutes pour rejoindre Parkventory.</p><p><a href="${safeLink}">Se connecter à Parkventory</a></p><p>Si vous n’êtes pas à l’origine de cette demande, ignorez cet e-mail.</p>`,
+      ...email,
     });
   } catch (error) {
     await context.env.DB.prepare("DELETE FROM magic_link_request WHERE id = ?1").bind(requestId).run();
