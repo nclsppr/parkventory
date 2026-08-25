@@ -64,17 +64,14 @@ describe("contrastes du thème clair", () => {
 });
 
 describe("zone système Safari du header public", () => {
-  it("garde un fond opaque jusque derrière la Dynamic Island", () => {
+  it("expose un vrai header sticky plein écran à Safari 26", () => {
     const header = styles.match(/\.landing-header\s*\{(?<rules>[^}]+)\}/)?.groups?.rules;
-    const backdrop = styles.match(/\.landing-header::before\s*\{(?<rules>[^}]+)\}/)?.groups?.rules;
-    const safeArea = styles.match(/\.landing-page::after\s*\{(?<rules>[^}]+)\}/)?.groups?.rules;
 
     expect(indexHtml).toContain("viewport-fit=cover");
-    expect(header).toContain("background: var(--bg);");
-    expect(backdrop).toContain("background: var(--bg);");
-    expect(backdrop).toContain("-webkit-backdrop-filter: none;");
-    expect(backdrop).toContain("backdrop-filter: none;");
-    expect(safeArea).toContain("height: env(safe-area-inset-top, 0px);");
-    expect(safeArea).toContain("background: var(--bg);");
+    expect(styles).toMatch(/html\s*\{[\s\S]*?background: var\(--bg\);/);
+    expect(styles).toMatch(/body\s*\{[\s\S]*?background: var\(--bg\);/);
+    expect(header).toContain("position: sticky;");
+    expect(header).toContain("width: 100%;");
+    expect(header).toContain("background-color: var(--bg);");
   });
 });

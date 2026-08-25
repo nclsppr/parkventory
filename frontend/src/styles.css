@@ -341,43 +341,20 @@ svg {
   mix-blend-mode: soft-light;
 }
 
-.landing-page::after {
-  content: "";
-  position: fixed;
-  inset: 0 0 auto;
-  z-index: 90;
-  height: env(safe-area-inset-top, 0px);
-  pointer-events: none;
-  background: var(--bg);
-}
-
 .landing-header {
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: 110;
   isolation: isolate;
-  width: var(--page);
+  width: 100%;
   min-height: calc(88px + env(safe-area-inset-top, 0px));
-  margin: 0 auto;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
+  padding-inline: calc((100vw - var(--page)) / 2);
   padding-top: env(safe-area-inset-top, 0px);
-  background: var(--bg);
-}
-
-.landing-header::before {
-  content: "";
-  position: absolute;
-  inset-block: 0;
-  left: 50%;
-  z-index: -1;
-  width: 100vw;
   border-bottom: 1px solid rgba(255, 255, 255, 0.045);
-  background: var(--bg);
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-  transform: translateX(-50%);
+  background-color: var(--bg);
 }
 
 .landing-progress {
@@ -4495,7 +4472,7 @@ svg {
   mix-blend-mode: multiply;
 }
 
-:root[data-theme="light"] .landing-header::before {
+:root[data-theme="light"] .landing-header {
   border-bottom-color: rgba(8, 10, 8, 0.09);
 }
 

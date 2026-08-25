@@ -11,8 +11,9 @@ la source du diff technique et les ADR expliquent les décisions importantes.
   de quitter l’application pour la page publique ;
 - les menus mobiles public et connecté utilisent désormais le même côté, avec
   un tiroir applicatif qui s’ouvre depuis la droite ;
-- le header public couvre désormais la zone système supérieure de Safari avec
-  un fond opaque, sans laisser défiler le hero derrière la Dynamic Island ;
+- le header public est désormais une vraie surface `sticky` pleine largeur,
+  reconnue par Safari 26 pour prolonger son fond opaque dans la zone système au
+  lieu de dépendre d'un pseudo-élément dont la zone sûre pouvait rester nulle ;
 - la navigation basse est plus compacte sur iPhone et remplace le grand halo
   et le flou par une ombre courte qui ne brouille plus le contenu sous-jacent ;
 - les références à l’infrastructure, les erreurs techniques et les fuseaux
