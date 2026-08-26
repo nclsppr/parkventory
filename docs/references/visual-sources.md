@@ -90,7 +90,7 @@ La provenance juridique externe du SVG n'a pas été auditée indépendamment ;
 l'autorisation d'intégration vient de l'instruction explicite du propriétaire
 du projet dans cette livraison.
 
-## Co-marque Victor Buck Services — candidat non publié
+## Co-marque Victor Buck Services
 
 Le site officiel Victor Buck Services déclare le fichier suivant comme logo
 d'organisation dans ses métadonnées structurées :
@@ -109,13 +109,12 @@ officielle `https://www.victorbuckservices.com/wp-content/themes/vbs/css/build/a
 Le bleu du logo est rendu sur une plaque blanche afin de rester lisible sur les
 deux thèmes, sans recoloration.
 
-Le disclaimer public de Victor Buck Services n'accorde aucune licence de
-réutilisation et interdit la reproduction hors du site. L'instruction produit
-autorise la préparation technique de cette co-marque, mais le dépôt ne porte pas
-de preuve indépendante d'autorisation par Victor Buck Services. La fusion et la
-publication de cet asset restent donc conditionnées à une confirmation VBS ou à
-la fourniture d'un master autorisé. Le hotlink n'est pas une alternative : il
-garderait la même contrainte et ajouterait une dépendance externe.
+Le disclaimer public de Victor Buck Services n'accorde aucune licence générale
+de réutilisation. Avant la publication du 2026-08-26, le demandeur a confirmé
+explicitement disposer de l'autorisation VBS pour cet usage. Aucune pièce
+juridique ni aucun master privé n'est versionné dans le dépôt ; la copie reste
+traçable vers la source officielle et inchangée. Le hotlink n'est pas retenu :
+il conserverait une dépendance externe sans améliorer cette traçabilité.
 
 ## Procédure avant publication
 

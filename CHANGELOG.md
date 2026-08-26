@@ -18,9 +18,9 @@ la source du diff technique et les ADR expliquent les décisions importantes.
   superposé et repli Parkventory si la configuration ou l’image est invalide ;
 - jetons d’action et de disponibilité débarrassés des halos codés en dur afin
   que les états, focus, boutons et sélections suivent réellement la co-marque ;
-- migration D1 `0002` à appliquer avant le Worker : le déploiement automatique
-  ne crée pas la table de configuration et ne constitue pas une preuve
-  d’activation de la co-marque.
+- migration D1 `0002` appliquée et vérifiée sur les bases de préversion et de
+  production avant le Worker, puis activation publique de la version et de
+  l'asset VBS contrôlée séparément.
 
 ### Navigation et langage produit
 
