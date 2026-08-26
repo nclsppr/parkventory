@@ -203,6 +203,7 @@ app.post("/api/v1/auth/requests", async (context) => {
     }), { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "3600" } });
   }
 
+  const branding = await loadOrganizationBranding(context.env.DB, parsed.domain);
   const token = randomToken();
   const tokenHash = await sha256(token);
   const requestId = crypto.randomUUID();
@@ -222,7 +223,7 @@ app.post("/api/v1/auth/requests", async (context) => {
   ).run();
 
   const link = `${publicOrigin(context.req.raw, context.env.PUBLIC_ORIGIN)}/auth/callback?token=${encodeURIComponent(token)}`;
-  const email = magicLinkEmail(link);
+  const email = magicLinkEmail(link, branding?.colors);
   try {
     await context.env.EMAIL.send({
       to: parsed.email,

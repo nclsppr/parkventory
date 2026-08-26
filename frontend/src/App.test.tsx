@@ -1,5 +1,5 @@
 import { StrictMode } from "react";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { relativePathname } from "./config";
@@ -134,15 +134,20 @@ describe("Parkventory", () => {
     expect(await screen.findByRole("heading", { name: /Connectez-vous sans mot de passe/i })).toBeInTheDocument();
   });
 
-  it("ne consomme un lien magique qu’une fois sous StrictMode", async () => {
+  it("ne consomme un lien magique qu’une fois et conserve le succès sous StrictMode", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(victorBuckSession));
     vi.stubGlobal("fetch", fetchMock);
     window.history.replaceState({}, "", `/auth/callback?token=${"a".repeat(43)}`);
     const { container } = render(<StrictMode><App /></StrictMode>);
     expect(await screen.findByRole("heading", { name: "Vous êtes connecté." })).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(window.location.search).toBe("");
     expect(container.querySelector(".organization-brand-scope")).not.toBeInTheDocument();
     expect(container.querySelector(".organization-logo")).not.toBeInTheDocument();
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+    });
+    expect(screen.getByRole("heading", { name: "Vous êtes connecté." })).toBeInTheDocument();
   });
 
   it("charge les disponibilités du membre sans exposer l’infrastructure", async () => {

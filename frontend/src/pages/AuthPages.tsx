@@ -118,7 +118,7 @@ export function SignInPage({ reason }: { reason?: string }) {
 }
 
 export function AuthCallbackPage() {
-  const token = new URLSearchParams(window.location.search).get("token");
+  const [token] = useState(() => new URLSearchParams(window.location.search).get("token"));
   const [state, setState] = useState<"verifying" | "success" | "error">("verifying");
   const [message, setMessage] = useState("Validation de votre lien sécurisé…");
 
