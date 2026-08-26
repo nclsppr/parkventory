@@ -1,4 +1,5 @@
 import { escapeHtml } from "./security";
+import type { OrganizationBranding } from "./types";
 
 export interface MagicLinkEmail {
   subject: string;
@@ -7,9 +8,49 @@ export interface MagicLinkEmail {
 }
 
 const MAGIC_LINK_LIFETIME_MINUTES = 15;
+const DEFAULT_EMAIL_COLORS = {
+  actionFill: "#c8f913",
+  onAction: "#080a08",
+  availableFill: "#15c9d5",
+} as const;
+const hexColorPattern = /^#[0-9a-f]{6}$/i;
 
-export function magicLinkEmail(link: string): MagicLinkEmail {
+type MagicLinkEmailColors = Pick<
+  OrganizationBranding["colors"],
+  "actionFill" | "onAction" | "availableFill"
+>;
+
+function relativeLuminance(color: string): number {
+  const channels = [1, 3, 5].map((offset) => {
+    const value = Number.parseInt(color.slice(offset, offset + 2), 16) / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+}
+
+function contrastRatio(foreground: string, background: string): number {
+  const [lighter, darker] = [relativeLuminance(foreground), relativeLuminance(background)]
+    .sort((first, second) => second - first);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function safeEmailColors(colors?: MagicLinkEmailColors | null): MagicLinkEmailColors {
+  if (
+    !colors
+    || !hexColorPattern.test(colors.actionFill)
+    || !hexColorPattern.test(colors.onAction)
+    || !hexColorPattern.test(colors.availableFill)
+    || contrastRatio(colors.onAction, colors.actionFill) < 4.5
+  ) return DEFAULT_EMAIL_COLORS;
+  return colors;
+}
+
+export function magicLinkEmail(
+  link: string,
+  brandColors?: MagicLinkEmailColors | null,
+): MagicLinkEmail {
   const safeLink = escapeHtml(link);
+  const colors = safeEmailColors(brandColors);
   const subject = "Votre accès sécurisé à Parkventory";
   const text = [
     "PARKVENTORY",
@@ -46,7 +87,7 @@ export function magicLinkEmail(link: string): MagicLinkEmail {
               <td style="padding:0 4px 20px;">
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;">
                   <tr>
-                    <td width="8" style="width:8px; height:30px; background:#15c9d5; font-size:0; line-height:0;">&nbsp;</td>
+                    <td width="8" bgcolor="${colors.availableFill}" style="width:8px; height:30px; background-color:${colors.availableFill}; font-size:0; line-height:0;">&nbsp;</td>
                     <td style="padding-left:12px; color:#f5f7f2; font-size:20px; font-weight:700; letter-spacing:0.02em;">Parkventory</td>
                   </tr>
                 </table>
@@ -56,7 +97,7 @@ export function magicLinkEmail(link: string): MagicLinkEmail {
               <td style="background:#f4f6f1; border:1px solid #252b26; border-radius:18px; overflow:hidden;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%; border-collapse:collapse;">
                   <tr>
-                    <td style="height:8px; background:#c8f913; font-size:0; line-height:0;">&nbsp;</td>
+                    <td bgcolor="${colors.actionFill}" style="height:8px; background-color:${colors.actionFill}; font-size:0; line-height:0;">&nbsp;</td>
                   </tr>
                   <tr>
                     <td style="padding:40px 40px 18px;">
@@ -69,8 +110,8 @@ export function magicLinkEmail(link: string): MagicLinkEmail {
                     <td style="padding:12px 40px 28px;">
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="border-collapse:separate;">
                         <tr>
-                          <td bgcolor="#c8f913" style="border-radius:8px;">
-                            <a href="${safeLink}" style="display:inline-block; padding:15px 24px; color:#080a08; font-size:16px; font-weight:700; line-height:1.2; text-decoration:none; border:1px solid #080a08; border-radius:8px;">Ouvrir Parkventory&nbsp;→</a>
+                          <td bgcolor="${colors.actionFill}" style="background-color:${colors.actionFill}; border-radius:8px;">
+                            <a href="${safeLink}" style="display:inline-block; padding:15px 24px; background-color:${colors.actionFill}; color:${colors.onAction}; font-size:16px; font-weight:700; line-height:1.2; text-decoration:none; border:1px solid ${colors.onAction}; border-radius:8px;">Ouvrir Parkventory&nbsp;→</a>
                           </td>
                         </tr>
                       </table>
@@ -78,7 +119,7 @@ export function magicLinkEmail(link: string): MagicLinkEmail {
                   </tr>
                   <tr>
                     <td style="padding:0 40px 32px;">
-                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%; background:#e9eee7; border-collapse:separate; border-left:4px solid #15c9d5; border-radius:8px;">
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%; background:#e9eee7; border-collapse:separate; border-left:4px solid ${colors.availableFill}; border-radius:8px;">
                         <tr>
                           <td style="padding:18px 20px;">
                             <p style="margin:0 0 8px; color:#080a08; font-size:14px; font-weight:700; line-height:1.45;">Un lien personnel et à usage unique</p>

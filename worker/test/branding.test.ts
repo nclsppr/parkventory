@@ -2,6 +2,8 @@
 
 import { applyD1Migrations, env, SELF } from "cloudflare:test";
 import { beforeEach, describe, expect, it } from "vitest";
+import { loadOrganizationBranding } from "../src/branding";
+import { magicLinkEmail } from "../src/email";
 import type { OrganizationBranding } from "../src/types";
 import { sha256 } from "../src/security";
 
@@ -80,6 +82,18 @@ async function verifyMember(domain: string) {
 }
 
 describe("branding d’organisation", () => {
+  it("compose l’e-mail avec la palette exacte du domaine", async () => {
+    const branding = await loadOrganizationBranding(env.DB, "victorbuckservices.com");
+    const email = magicLinkEmail(
+      "https://parkventory.test/auth/callback?token=test-token",
+      branding?.colors,
+    );
+
+    expect(email.html).toContain('bgcolor="#003595"');
+    expect(email.html).toContain("color:#FFFFFF");
+    expect(email.html).toContain('bgcolor="#01E1FF"');
+  });
+
   it("active automatiquement Victor Buck Services à la première connexion", async () => {
     const verified = await verifyMember("victorbuckservices.com");
     expect(verified.response.status).toBe(200);

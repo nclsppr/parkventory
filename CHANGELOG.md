@@ -5,6 +5,11 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ## Non publié
 
+### Indexation publique
+
+- ajout d’un sitemap canonique limité à l’accueil, la confidentialité et les
+  mentions légales, annoncé dans le `robots.txt` sans exposer les routes privées.
+
 ### Identité d’entreprise
 
 - configuration de co-marque par domaine professionnel dans D1, avec activation
@@ -42,6 +47,12 @@ la source du diff technique et les ADR expliquent les décisions importantes.
   image ni ressource externe, avec pré-en-tête, appel à l’action accessible,
   lien de secours, durée de validité et consignes de sécurité cohérentes dans
   les versions HTML et texte ;
+- reprise automatique des couleurs d’action et de disponibilité du domaine
+  professionnel lorsqu’une co-marque valide est active, avec contrôle de
+  contraste et repli sûr sur la palette Parkventory ;
+- conservation de l’état de succès après consommation du magic link, même une
+  fois le jeton retiré de l’URL, afin de ne plus afficher un faux lien incomplet
+  alors que la session est déjà créée ;
 - vérifications ciblées contre l’injection HTML et l’ajout involontaire de
   pixels, scripts, polices ou images distantes dans l’e-mail d’authentification.
 
