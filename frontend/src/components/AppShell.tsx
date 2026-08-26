@@ -16,7 +16,7 @@ import {
 } from "../config";
 import type { DashboardData } from "../types";
 import { AppLink } from "./AppLink";
-import { Logo } from "./Logo";
+import { ApplicationBrand, useOrganizationBranding } from "./OrganizationBranding";
 import { ThemeToggle } from "./Theme";
 
 export type ApplicationRoute = "dashboard" | "share" | "find";
@@ -62,6 +62,7 @@ export function AppShell({
 }: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [logoutBusy, setLogoutBusy] = useState(false);
+  const branding = useOrganizationBranding();
   const sidebar = useRef<HTMLElement>(null);
   const sidebarClose = useRef<HTMLButtonElement>(null);
   const menuTrigger = useRef<HTMLButtonElement>(null);
@@ -123,6 +124,10 @@ export function AppShell({
     }
   };
 
+  const applicationHomeLabel = branding
+    ? `Accueil de l’application ${branding.companyName} sur Parkventory`
+    : "Accueil de l’application Parkventory";
+
   return (
     <div className="app-shell">
       <a className="skip-link" href="#dashboard-content">Aller au contenu</a>
@@ -134,10 +139,10 @@ export function AppShell({
         <div className="sidebar-heading">
           <AppLink
             href={appUrl}
-            aria-label="Accueil de l’application Parkventory"
+            aria-label={applicationHomeLabel}
             onNavigate={() => closeSidebar()}
           >
-            <Logo />
+            <ApplicationBrand />
           </AppLink>
           <button
             ref={sidebarClose}
@@ -183,11 +188,11 @@ export function AppShell({
       <main className="app-main" id="dashboard-content">
         <div className="app-topbar">
           <AppLink
-            className="mobile-app-logo"
+            className={`mobile-app-logo ${branding ? "mobile-organization-logo" : ""}`.trim()}
             href={appUrl}
-            aria-label="Accueil de l’application Parkventory"
+            aria-label={applicationHomeLabel}
           >
-            <Logo compact />
+            <ApplicationBrand compact />
           </AppLink>
           <div className="app-topbar-actions">
             <ThemeToggle />

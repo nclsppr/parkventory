@@ -21,6 +21,27 @@ export interface DashboardStats {
   availableSpots: number;
 }
 
+export interface OrganizationBranding {
+  enabled: true;
+  companyName: string;
+  logoUrl: string;
+  colors: {
+    actionFill: string;
+    onAction: string;
+    availableFill: string;
+    onAvailable: string;
+    highlight: string;
+    dark: {
+      actionInk: string;
+      availableInk: string;
+    };
+    light: {
+      actionInk: string;
+      availableInk: string;
+    };
+  };
+}
+
 export interface DashboardData {
   user: {
     firstName: string;
@@ -34,6 +55,7 @@ export interface DashboardData {
     name: string;
     sharedTotal: number;
   };
+  branding: OrganizationBranding | null;
   stats: DashboardStats;
   availability: AvailabilityItem[];
   activeShares: AvailabilityItem[];
@@ -62,4 +84,5 @@ export interface SessionData {
   email: string;
   organizationName: string;
   role: "MEMBER" | "ADMIN";
+  branding: OrganizationBranding | null;
 }

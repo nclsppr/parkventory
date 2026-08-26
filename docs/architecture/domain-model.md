@@ -1,6 +1,6 @@
 # Modèle de données D1
 
-Le schéma opérationnel est la migration `migrations/0001_cloudflare_mvp.sql`.
+Le schéma opérationnel est versionné par les migrations D1 sous `migrations/`.
 
 | Table | Rôle |
 | --- | --- |
@@ -12,9 +12,15 @@ Le schéma opérationnel est la migration `migrations/0001_cloudflare_mvp.sql`.
 | `parking_spot` | place assignée, une par membre |
 | `availability_offer` | créneau entier publié ou retiré |
 | `reservation` | réservation confirmée ou annulée |
+| `organization_branding` | co-marque optionnelle par domaine, modifiable et désactivable sans changer l'identité des membres |
 
 L’index partiel `one_active_reservation_per_offer` garantit une seule
 réservation confirmée par offre. Le trigger `availability_no_overlap_insert`
 refuse les créneaux qui se chevauchent pour une même place. Le trigger
 `reservation_same_tenant_insert` refuse une réservation inter-tenant ou par le
 propriétaire de la place.
+
+Le branding est résolu par égalité exacte sur le domaine normalisé. Son absence,
+son opt-out ou une valeur invalide produit `null` et conserve l'identité
+Parkventory. Les réponses authentifiées n'ont pas besoin d'exposer le domaine
+pour transmettre le nom, le logo de même origine et les jetons sémantiques.

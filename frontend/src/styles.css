@@ -26,6 +26,7 @@
   --available-fill: #15c9d5;
   --on-action: #071000;
   --on-available: #031214;
+  --company-highlight: var(--green);
   --radius: 12px;
   --radius-small: 8px;
   --space-1: 4px;
@@ -63,6 +64,29 @@
   --available-fill: #a8e5ff;
   --on-action: #080a08;
   --on-available: #080a08;
+}
+
+.organization-brand-scope {
+  min-height: 100vh;
+  min-height: 100dvh;
+  --action-fill: var(--organization-action-fill);
+  --action-fill-hover: color-mix(in srgb, var(--organization-action-fill) 84%, white);
+  --on-action: var(--organization-on-action);
+  --available-fill: var(--organization-available-fill);
+  --on-available: var(--organization-on-available);
+  --company-highlight: var(--organization-highlight);
+  --green: var(--organization-dark-action-ink);
+  --green-hover: color-mix(in srgb, var(--organization-dark-action-ink) 84%, white);
+  --green-deep: color-mix(in srgb, var(--organization-action-fill) 14%, var(--surface));
+  --cyan: var(--organization-dark-available-ink);
+  --cyan-deep: color-mix(in srgb, var(--organization-available-fill) 12%, var(--surface));
+}
+
+:root[data-theme="light"] .organization-brand-scope {
+  --action-fill-hover: color-mix(in srgb, var(--organization-action-fill) 88%, black);
+  --green: var(--organization-light-action-ink);
+  --green-hover: color-mix(in srgb, var(--organization-light-action-ink) 84%, black);
+  --cyan: var(--organization-light-available-ink);
 }
 
 * {
@@ -175,6 +199,78 @@ svg {
   letter-spacing: -0.03em;
 }
 
+.organization-brand-lockup {
+  position: relative;
+  width: 148px;
+  height: 64px;
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+}
+
+.organization-logo-plate {
+  width: 140px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  padding: 6px 8px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--action-fill) 22%, transparent);
+  border-radius: var(--radius-small);
+  background: #ffffff;
+}
+
+.organization-logo {
+  display: block;
+  width: 120px;
+  height: auto;
+  max-height: 48px;
+  object-fit: contain;
+}
+
+.organization-parkventory-badge {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border: 2px solid var(--company-highlight);
+  border-radius: 50%;
+  background: #101510;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.32);
+}
+
+.organization-parkventory-badge img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.organization-brand-lockup-compact {
+  width: 108px;
+  height: 48px;
+}
+
+.organization-brand-lockup-compact .organization-logo-plate {
+  width: 102px;
+  height: 42px;
+  padding: 4px 6px;
+}
+
+.organization-brand-lockup-compact .organization-logo {
+  width: 90px;
+  max-height: 36px;
+}
+
+.organization-brand-lockup-compact .organization-parkventory-badge {
+  width: 22px;
+  height: 22px;
+  padding: 3px;
+}
+
 .theme-toggle {
   display: inline-grid;
   grid-template-columns: repeat(2, 44px);
@@ -278,7 +374,7 @@ svg {
 .button-primary {
   background: var(--action-fill);
   color: var(--on-action);
-  box-shadow: 0 0 28px rgba(200, 249, 19, 0.12);
+  box-shadow: 0 0 28px color-mix(in srgb, var(--action-fill) 12%, transparent);
 }
 
 .button-primary:hover {
@@ -326,7 +422,7 @@ svg {
 .landing-page {
   min-height: 100vh;
   background:
-    radial-gradient(circle at 77% 15%, rgba(200, 249, 19, 0.045), transparent 23%),
+    radial-gradient(circle at 77% 15%, color-mix(in srgb, var(--action-fill) 4.5%, transparent), transparent 23%),
     var(--bg);
 }
 
@@ -561,7 +657,7 @@ svg {
   opacity: 0;
   background: radial-gradient(
     420px circle at var(--preview-pointer-x) var(--preview-pointer-y),
-    rgba(21, 201, 213, 0.09),
+    color-mix(in srgb, var(--available-fill) 9%, transparent),
     transparent 54%
   );
   transition: opacity 180ms ease;
@@ -777,7 +873,7 @@ svg {
 .parking-bay-available {
   border-color: var(--green);
   background: var(--action-fill);
-  box-shadow: 0 0 14px rgba(200, 249, 19, 0.18);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--action-fill) 18%, transparent);
 }
 
 .parking-bay-selected {
@@ -829,7 +925,7 @@ svg {
 
 @media (hover: hover) and (pointer: fine) {
   .benefit-strip article:hover {
-    background: rgba(200, 249, 19, 0.035);
+    background: color-mix(in srgb, var(--action-fill) 3.5%, transparent);
   }
 
   .benefit-strip article:hover::after {
@@ -864,7 +960,7 @@ svg {
 .landing-signal {
   width: 100%;
   overflow: hidden;
-  border-block: 1px solid rgba(200, 249, 19, 0.7);
+  border-block: 1px solid color-mix(in srgb, var(--action-fill) 70%, transparent);
   background: var(--action-fill);
   color: var(--on-action);
 }
@@ -1047,7 +1143,7 @@ svg {
 
 @media (hover: hover) and (pointer: fine) {
   .process-steps li:hover {
-    background: rgba(200, 249, 19, 0.035);
+    background: color-mix(in srgb, var(--action-fill) 3.5%, transparent);
   }
 
   .process-steps li:hover .step-number {
@@ -1221,7 +1317,7 @@ svg {
   height: 150px;
   color: var(--green);
   stroke-width: 0.8;
-  filter: drop-shadow(0 0 35px rgba(200, 249, 19, 0.17));
+  filter: drop-shadow(0 0 35px color-mix(in srgb, var(--action-fill) 17%, transparent));
 }
 
 .security-line {
@@ -1298,8 +1394,8 @@ svg {
 }
 
 .registration-form:focus-within {
-  border-color: rgba(21, 201, 213, 0.72);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(21, 201, 213, 0.12);
+  border-color: color-mix(in srgb, var(--cyan) 72%, transparent);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35), 0 0 0 1px color-mix(in srgb, var(--cyan) 12%, transparent);
   transform: translateY(-2px);
 }
 
@@ -1568,7 +1664,7 @@ svg {
   inset: 0;
   opacity: 0.48;
   background:
-    radial-gradient(circle at 66% 30%, rgba(200, 249, 19, 0.12), transparent 23%),
+    radial-gradient(circle at 66% 30%, color-mix(in srgb, var(--action-fill) 12%, transparent), transparent 23%),
     linear-gradient(90deg, rgba(3, 5, 4, 0.92), rgba(3, 5, 4, 0.55)),
     url("/images/parking-halftone.webp") center / cover;
   mask-image: linear-gradient(to bottom, black, rgba(0, 0, 0, 0.3));
@@ -1608,9 +1704,9 @@ svg {
   display: grid;
   place-items: center;
   margin-bottom: 28px;
-  border: 1px solid rgba(200, 249, 19, 0.45);
+  border: 1px solid color-mix(in srgb, var(--green) 45%, transparent);
   border-radius: 50%;
-  background: rgba(200, 249, 19, 0.08);
+  background: color-mix(in srgb, var(--action-fill) 8%, transparent);
   color: var(--green);
 }
 
@@ -1621,7 +1717,7 @@ svg {
 }
 
 .auth-icon-success {
-  box-shadow: 0 0 32px rgba(200, 249, 19, 0.13);
+  box-shadow: 0 0 32px color-mix(in srgb, var(--action-fill) 13%, transparent);
 }
 
 .auth-icon-error {
@@ -1671,7 +1767,7 @@ svg {
 
 .auth-panel input:focus {
   border-color: var(--cyan);
-  box-shadow: 0 0 0 3px rgba(21, 201, 213, 0.09);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cyan) 9%, transparent);
 }
 
 .auth-panel form .button {
@@ -1706,7 +1802,7 @@ svg {
 }
 
 .auth-message-success {
-  border-color: rgba(200, 249, 19, 0.28);
+  border-color: color-mix(in srgb, var(--green) 28%, transparent);
   color: var(--text);
 }
 
@@ -1817,6 +1913,10 @@ svg {
   flex-direction: column;
   border-right: 1px solid var(--border);
   background: var(--bg-raised);
+}
+
+.organization-brand-scope .app-sidebar {
+  box-shadow: inset 0 3px var(--company-highlight);
 }
 
 .sidebar-heading {
@@ -2044,7 +2144,7 @@ svg {
   height: 6px;
   border-radius: 50%;
   background: var(--action-fill);
-  box-shadow: 0 0 9px rgba(200, 249, 19, 0.7);
+  box-shadow: 0 0 9px color-mix(in srgb, var(--action-fill) 70%, transparent);
 }
 
 .live-data-label {
@@ -2052,9 +2152,9 @@ svg {
   align-items: center;
   gap: 8px;
   padding: 8px 11px;
-  border: 1px solid rgba(21, 201, 213, 0.25);
+  border: 1px solid color-mix(in srgb, var(--cyan) 25%, transparent);
   border-radius: 999px;
-  background: rgba(21, 201, 213, 0.055);
+  background: color-mix(in srgb, var(--available-fill) 5.5%, transparent);
   color: var(--cyan);
   font-size: 10px;
   font-weight: 650;
@@ -2065,7 +2165,7 @@ svg {
   height: 6px;
   border-radius: 50%;
   background: var(--available-fill);
-  box-shadow: 0 0 10px rgba(21, 201, 213, 0.65);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--available-fill) 65%, transparent);
 }
 
 .dashboard-error {
@@ -2107,7 +2207,7 @@ svg {
   align-items: center;
   gap: 11px;
   padding: 12px 14px;
-  border: 1px solid rgba(200, 249, 19, 0.42);
+  border: 1px solid color-mix(in srgb, var(--green) 42%, transparent);
   border-radius: 8px;
   background: var(--surface-2);
   box-shadow: 0 20px 70px rgba(0, 0, 0, 0.48);
@@ -2772,7 +2872,7 @@ svg {
 
 .app-sidebar nav a.active,
 .app-sidebar nav a[aria-current="page"] {
-  background: rgba(200, 249, 19, 0.08);
+  background: color-mix(in srgb, var(--action-fill) 8%, transparent);
   color: var(--text);
   font-weight: 700;
 }
@@ -2981,11 +3081,11 @@ svg {
 }
 
 .task-entry-share:hover {
-  border-color: rgba(200, 249, 19, 0.55);
+  border-color: color-mix(in srgb, var(--green) 55%, transparent);
 }
 
 .task-entry-find:hover {
-  border-color: rgba(21, 201, 213, 0.55);
+  border-color: color-mix(in srgb, var(--cyan) 55%, transparent);
 }
 
 .task-entry-icon {
@@ -2993,13 +3093,13 @@ svg {
   height: 48px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(200, 249, 19, 0.45);
+  border: 1px solid color-mix(in srgb, var(--green) 45%, transparent);
   border-radius: 50%;
   color: var(--green);
 }
 
 .task-entry-find .task-entry-icon {
-  border-color: rgba(21, 201, 213, 0.45);
+  border-color: color-mix(in srgb, var(--cyan) 45%, transparent);
   color: var(--cyan);
 }
 
@@ -3252,7 +3352,7 @@ svg {
 
 .invite-control input:focus {
   border-color: var(--cyan);
-  box-shadow: 0 0 0 3px rgba(21, 201, 213, 0.09);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cyan) 9%, transparent);
 }
 
 .invite-control .button {
@@ -3399,13 +3499,13 @@ svg {
   display: grid;
   place-items: center;
   flex: 0 0 auto;
-  border: 1px solid rgba(200, 249, 19, 0.4);
+  border: 1px solid color-mix(in srgb, var(--green) 40%, transparent);
   border-radius: 50%;
   color: var(--green);
 }
 
 .workflow-section-heading-cyan > span {
-  border-color: rgba(21, 201, 213, 0.4);
+  border-color: color-mix(in srgb, var(--cyan) 40%, transparent);
   color: var(--cyan);
 }
 
@@ -3455,7 +3555,7 @@ svg {
 
 .field-group input:focus {
   border-color: var(--cyan);
-  box-shadow: 0 0 0 3px rgba(21, 201, 213, 0.09);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cyan) 9%, transparent);
 }
 
 .assigned-spot-field {
@@ -3689,7 +3789,7 @@ svg {
 .availability-agenda > li.selected {
   margin-inline: calc(var(--space-3) * -1);
   padding-inline: var(--space-3);
-  background: rgba(21, 201, 213, 0.055);
+  background: color-mix(in srgb, var(--available-fill) 5.5%, transparent);
 }
 
 .availability-agenda-status,
@@ -3745,7 +3845,7 @@ svg {
   justify-content: center;
   gap: var(--space-2);
   padding: 0 var(--space-3);
-  border: 1px solid rgba(21, 201, 213, 0.42);
+  border: 1px solid color-mix(in srgb, var(--cyan) 42%, transparent);
   border-radius: var(--radius-small);
   background: transparent;
   color: var(--cyan);
@@ -3796,7 +3896,7 @@ svg {
 }
 
 .reservation-summary-active {
-  border-color: rgba(21, 201, 213, 0.42);
+  border-color: color-mix(in srgb, var(--cyan) 42%, transparent);
 }
 
 .reservation-summary-close {
@@ -3919,7 +4019,7 @@ svg {
 
 .status-available i {
   background: var(--available-fill);
-  box-shadow: 0 0 10px rgba(21, 201, 213, 0.48);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--available-fill) 48%, transparent);
 }
 
 .status-reserved {
@@ -3939,7 +4039,7 @@ svg {
 
 .status-unavailable i {
   background: var(--action-fill);
-  box-shadow: 0 0 10px rgba(200, 249, 19, 0.4);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--action-fill) 40%, transparent);
 }
 
 .toast {
@@ -3972,7 +4072,7 @@ svg {
   place-content: center;
   justify-items: start;
   padding: var(--space-6);
-  background: radial-gradient(circle at 50% 20%, rgba(200, 249, 19, 0.06), transparent 32%), var(--bg);
+  background: radial-gradient(circle at 50% 20%, color-mix(in srgb, var(--action-fill) 6%, transparent), transparent 32%), var(--bg);
 }
 
 .not-found-theme-toggle {
@@ -4111,6 +4211,7 @@ svg {
   }
 
   .app-topbar {
+    display: grid;
     height: auto;
     min-height: 68px;
     min-height: calc(68px + env(safe-area-inset-top, 0px));
@@ -4146,6 +4247,11 @@ svg {
     display: grid;
     place-items: center;
     border-radius: var(--radius-small);
+  }
+
+  .mobile-organization-logo {
+    width: 108px;
+    height: 48px;
   }
 
   .mobile-app-logo .brand-mark {

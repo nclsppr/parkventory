@@ -8,6 +8,7 @@ import { NotFoundPage } from "./pages/NotFoundPage";
 import { AuthCallbackPage, SignInPage } from "./pages/AuthPages";
 import { LegalNoticePage, PrivacyPage } from "./pages/LegalPages";
 import { ThemeProvider, ThemeToggle } from "./components/Theme";
+import type { SessionData } from "./types";
 
 const applicationRoutes: Record<string, ApplicationRoute> = {
   "/app": "dashboard",
@@ -80,17 +81,24 @@ function AuthenticatedApplication({ route }: { route: ApplicationRoute }) {
   const [state, setState] = useState<"checking" | "authenticated" | "anonymous">(
     "checking",
   );
+  const [session, setSession] = useState<SessionData | null>(null);
   const [reason, setReason] = useState<string | undefined>();
-  const handleSessionExpired = useCallback(() => setState("anonymous"), []);
+  const handleSessionExpired = useCallback(() => {
+    setSession(null);
+    setState("anonymous");
+  }, []);
 
   useEffect(() => {
     let active = true;
     loadSession()
-      .then(() => {
-        if (active) setState("authenticated");
+      .then((loadedSession) => {
+        if (!active) return;
+        setSession(loadedSession);
+        setState("authenticated");
       })
       .catch((error) => {
         if (!active) return;
+        setSession(null);
         setState("anonymous");
         setReason(
           error instanceof ApiError && error.status === 401
@@ -117,5 +125,11 @@ function AuthenticatedApplication({ route }: { route: ApplicationRoute }) {
     );
   }
   if (state === "anonymous") return <SignInPage reason={reason} />;
-  return <ApplicationPage route={route} onSessionExpired={handleSessionExpired} />;
+  return (
+    <ApplicationPage
+      route={route}
+      initialBranding={session?.branding ?? null}
+      onSessionExpired={handleSessionExpired}
+    />
+  );
 }

@@ -51,6 +51,10 @@ jamais être copié dans Git ou dans un ticket. Les fichiers `*.md` et `docs/**`
 sont exclus du déclenchement ; une modification de code ou d’image reste
 déployée normalement.
 
+Workers Builds n'applique pas les migrations D1. Toute migration créant une
+table utilisée par le Worker doit donc être appliquée et vérifiée dans
+l'environnement ciblé avant la fusion sur `main`, qui déclenche le déploiement.
+
 ## Vérifications après déploiement
 
 1. `GET /api/v1/health` répond `200` avec `{"status":"ok"}`.
