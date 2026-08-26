@@ -13,7 +13,7 @@
   sans exécuter de restauration.
 - Le Worker `parkventory-production` est déployé avec D1, les assets React,
   Email Service et les deux secrets requis. La version active est
-  `b1b0925c-170f-49fb-86f7-ed62add62cdb`, à 100 % du trafic.
+  `be066191-cc08-4bd3-ac0f-e9b7ff59b08a`, à 100 % du trafic.
 - Workers Builds suit `nclsppr/parkventory` sur `main`, avec cache de build et
   déploiement `--env production`. Le merge de la PR #19 au SHA
   `a59c990fdc948acb7fbb4fd5debe27be099d4f8b` a déclenché le build
@@ -25,14 +25,22 @@
   ensuite passé la gate post-merge. Le build Workers Builds
   `6c365414-e7ad-490e-98a8-f7633c9f7b2c` s'est terminé avec le résultat
   `success` et a publié automatiquement la version 12. Les changements limités
-  aux Markdown sont exclus des builds.
-- La production sert les assets `index-F71pvGtu.css` et `index-C3WQHbMA.js`,
-  byte-identiques au build vérifié. Le logo Victor Buck Services répond en
+  aux Markdown sont exclus des builds. La PR #25, fusionnée au SHA
+  `5e5fa96c69b9bf8a54157c89019f331ac1f0a427`, a passé la gate post-merge ; le
+  build Workers Builds `821fcbe9-c4c9-49a7-886a-5267d4fec98e` a déployé la
+  version 13 automatiquement.
+- La production sert les assets `index-F71pvGtu.css` et `index-CkISoqqV.js` ;
+  le JavaScript est byte-identique au build vérifié, avec le SHA-256
+  `8ae8173be9d482732ccbc3089a9fd168549336920294e0a5f1eb087d2880253f`.
+  Le logo Victor Buck Services répond en
   `image/svg+xml`, sur 12 978 octets, avec le SHA-256
   `396e6f894adc6eac6a6b9318a42ad13b216536b51320f94d88c7f7736b1dfc89`.
   Le thème d'organisation et son opt-out sont actifs par égalité exacte sur
-  `victorbuckservices.com`; le rendu connecté a été contrôlé localement à 1440,
-  390 et 320 px, mais pas encore au moyen d'une session VBS réelle en production.
+  `victorbuckservices.com`. Les mêmes couleurs sont appliquées à l'e-mail de
+  connexion quand leur contraste est sûr, avec retour atomique à la palette
+  Parkventory sinon. Le rendu connecté a été contrôlé localement à 1440, 390 et
+  320 px et l'e-mail à 1280 et 390 px, mais pas encore au moyen d'une session VBS
+  réelle en production.
 - Turnstile est configuré en mode géré pour l’apex, `www` et l’adresse
   `workers.dev`. Sa clé publique est versionnée ; sa clé privée reste un secret
   Worker.
@@ -43,9 +51,16 @@
   message reçu restent à contrôler et le domaine d’envoi est encore sans
   réputation observable.
 - Les domaines personnalisés `parkventory.com` et `www.parkventory.com` pointent
-  vers le Worker. `www` redirige vers l’apex en `308` en conservant le chemin.
-- 16 tests Worker/D1, 45 tests React, le typecheck Worker, le build et le dry-run
-  Wrangler de la gate réussissent.
+  vers le Worker. `www` redirige vers l’apex en `308` en conservant le chemin et
+  la requête.
+- Le sitemap public répond en `application/xml` et ne contient que `/`,
+  `/confidentialite` et `/mentions-legales`. Le `robots.txt` servi par
+  Cloudflare conserve ses règles gérées et annonce
+  `https://parkventory.com/sitemap.xml`.
+- 20 tests Worker/D1, 47 tests React, le typecheck Worker, le build et le dry-run
+  Wrangler de la gate réussissent. Le test de régression du callback vérifie que
+  l'API de vérification n'est appelée qu'une fois, que le token disparaît de
+  l'URL et que l'écran de succès ne rebascule pas vers « lien incomplet ».
 
 ## Bascule DNS en propagation
 
@@ -64,8 +79,9 @@
 
 ## Gates produit encore ouvertes
 
-- sortie réelle d’un magic link vérifiée, mais classement en boîte principale
-  et consommation unique non vérifiés ;
+- sortie réelle d’un magic link vérifiée, mais classement en boîte principale,
+  consommation unique et rendu co-marqué de l'e-mail non revérifiés en
+  production après la PR #25 ;
 - parcours authentifié à deux membres, partage puis réservation non vérifié ;
 - rendu co-marqué vérifié sur le candidat exact et les assets publics, mais pas
   encore observé dans une session VBS réelle en production ;
