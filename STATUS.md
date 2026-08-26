@@ -22,8 +22,10 @@
   a ensuite déclenché le build `e89d4cee-738d-4984-bbea-aba2212520de`, lui
   aussi terminé avec le résultat `success`, puis publié la version 11. La PR
   #23, fusionnée au SHA `5cf5594b68595f7252eb1a4cdc0ced71d2ed3a4f`, a
-  ensuite passé la gate post-merge et publié automatiquement la version 12.
-  Les changements limités aux Markdown sont exclus des builds.
+  ensuite passé la gate post-merge. Le build Workers Builds
+  `6c365414-e7ad-490e-98a8-f7633c9f7b2c` s'est terminé avec le résultat
+  `success` et a publié automatiquement la version 12. Les changements limités
+  aux Markdown sont exclus des builds.
 - La production sert les assets `index-F71pvGtu.css` et `index-C3WQHbMA.js`,
   byte-identiques au build vérifié. Le logo Victor Buck Services répond en
   `image/svg+xml`, sur 12 978 octets, avec le SHA-256
