@@ -3,6 +3,27 @@ export type Bindings = Omit<Env, "APP_ENV" | "EMAIL"> & {
   EMAIL?: Env["EMAIL"];
 };
 
+export interface OrganizationBranding {
+  enabled: true;
+  companyName: string;
+  logoUrl: string;
+  colors: {
+    actionFill: string;
+    onAction: string;
+    availableFill: string;
+    onAvailable: string;
+    highlight: string;
+    dark: {
+      actionInk: string;
+      availableInk: string;
+    };
+    light: {
+      actionInk: string;
+      availableInk: string;
+    };
+  };
+}
+
 export interface AuthenticatedMember {
   sessionId: string;
   membershipId: string;
@@ -12,6 +33,7 @@ export interface AuthenticatedMember {
   email: string;
   displayName: string;
   role: "MEMBER" | "ADMIN";
+  branding: OrganizationBranding | null;
 }
 
 export interface Variables {

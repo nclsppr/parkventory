@@ -1,5 +1,10 @@
 import { Hono } from "hono";
 import type { MiddlewareHandler } from "hono";
+import {
+  loadOrganizationBranding,
+  organizationBrandingFromRow,
+} from "./branding";
+import type { OrganizationBrandingRow } from "./branding";
 import { addDays, displayName, frenchDate, initials, organizationName, parisDate, zonedDateTimeToEpoch } from "./domain";
 import { magicLinkEmail } from "./email";
 import {
@@ -88,11 +93,25 @@ const requireMember: MiddlewareHandler<AppEnvironment> = async (context, next) =
       user_account.id AS user_id,
       user_account.normalized_email AS email,
       user_account.display_name,
-      membership.role
+      membership.role,
+      branding.enabled AS branding_enabled,
+      branding.company_name AS branding_company_name,
+      branding.logo_url AS branding_logo_url,
+      branding.action_fill AS branding_action_fill,
+      branding.on_action AS branding_on_action,
+      branding.available_fill AS branding_available_fill,
+      branding.on_available AS branding_on_available,
+      branding.highlight AS branding_highlight,
+      branding.dark_action_ink AS branding_dark_action_ink,
+      branding.dark_available_ink AS branding_dark_available_ink,
+      branding.light_action_ink AS branding_light_action_ink,
+      branding.light_available_ink AS branding_light_available_ink
     FROM app_session session
     JOIN membership ON membership.id = session.membership_id
     JOIN organization ON organization.id = membership.organization_id
     JOIN user_account ON user_account.id = membership.user_id
+    LEFT JOIN organization_branding branding
+      ON branding.normalized_domain = organization.normalized_domain
     WHERE session.token_hash = ?1
       AND session.revoked_at IS NULL
       AND session.expires_at > ?2
@@ -105,22 +124,24 @@ const requireMember: MiddlewareHandler<AppEnvironment> = async (context, next) =
     email: string;
     display_name: string;
     role: "MEMBER" | "ADMIN";
-  }>();
+  } & OrganizationBrandingRow>();
 
   if (!member) {
     context.header("Set-Cookie", expiredSessionCookie(context.env.APP_ENV));
     return problem(401, "Votre connexion a expiré. Reconnectez-vous pour continuer.");
   }
 
+  const branding = organizationBrandingFromRow(member);
   context.set("member", {
     sessionId: member.session_id,
     membershipId: member.membership_id,
     organizationId: member.organization_id,
-    organizationName: member.organization_name,
+    organizationName: branding?.companyName ?? member.organization_name,
     userId: member.user_id,
     email: member.email,
     displayName: member.display_name,
     role: member.role,
+    branding,
   });
   await next();
 };
@@ -281,12 +302,14 @@ app.post("/api/v1/auth/verify", async (context) => {
   }
 
   context.header("Set-Cookie", sessionCookie(sessionToken, context.env.APP_ENV));
+  const branding = await loadOrganizationBranding(context.env.DB, link.normalized_domain);
   return context.json({
     authenticated: true,
     displayName: name,
     email: link.normalized_email,
-    organizationName: organizationName(link.normalized_domain),
+    organizationName: branding?.companyName ?? organizationName(link.normalized_domain),
     role: "MEMBER" as const,
+    branding,
   });
 });
 
@@ -298,6 +321,7 @@ app.get("/api/v1/auth/session", (context) => {
     email: member.email,
     organizationName: member.organizationName,
     role: member.role,
+    branding: member.branding,
   });
 });
 
@@ -424,6 +448,7 @@ app.get("/api/v1/dashboard", async (context) => {
       name: member.organizationName,
       sharedTotal: Number(stats.shared_total ?? 0),
     },
+    branding: member.branding,
     stats: {
       shares: Number(stats.shares ?? 0),
       reservations: Number(stats.reservations ?? 0),

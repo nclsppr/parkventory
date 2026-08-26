@@ -18,4 +18,8 @@ la bêta. Il n’utilise jamais un accès global pour un usage courant.
 
 L’administration d’organisation n’a pas de surface dans le MVP. La colonne de
 rôle reste réservée à une évolution ultérieure sans rendre un administrateur
-nécessaire au démarrage.
+nécessaire au démarrage. La configuration de co-marque est déjà isolée par
+domaine dans D1 : une future route réservée au rôle `ADMIN` pourra modifier ses
+jetons, son logo et son champ `enabled` sans changer le contrat de session ni
+ouvrir l’accès aux configurations des autres organisations. Aucun endpoint ou
+contrôle d’administration n’est livré à ce stade.

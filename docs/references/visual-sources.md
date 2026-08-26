@@ -90,6 +90,33 @@ La provenance juridique externe du SVG n'a pas été auditée indépendamment ;
 l'autorisation d'intégration vient de l'instruction explicite du propriétaire
 du projet dans cette livraison.
 
+## Co-marque Victor Buck Services — candidat non publié
+
+Le site officiel Victor Buck Services déclare le fichier suivant comme logo
+d'organisation dans ses métadonnées structurées :
+
+| Copie candidate | Source officielle | Dimensions | Octets | SHA-256 |
+| --- | --- | ---: | ---: | --- |
+| `frontend/public/brands/victor-buck-services/logo.svg` | `https://www.victorbuckservices.com/wp-content/uploads/2022/12/logo_vbs_blue_valid.svg` | 150 × 59 | 12 978 | `396e6f894adc6eac6a6b9318a42ad13b216536b51320f94d88c7f7736b1dfc89` |
+
+La copie du 2026-08-26 est byte-identique à la réponse officielle. Elle ne
+contient que des chemins, un rectangle, un groupe et un `clipPath` : aucun
+script, handler, lien ou chargement externe. Elle reste intacte ; le symbole
+Parkventory est superposé par le composant React et ne modifie pas le SVG.
+
+Les couleurs du thème (`#003595`, `#E31C79`, `#01E1FF`) proviennent de la CSS
+officielle `https://www.victorbuckservices.com/wp-content/themes/vbs/css/build/app.css?ver=1.1`.
+Le bleu du logo est rendu sur une plaque blanche afin de rester lisible sur les
+deux thèmes, sans recoloration.
+
+Le disclaimer public de Victor Buck Services n'accorde aucune licence de
+réutilisation et interdit la reproduction hors du site. L'instruction produit
+autorise la préparation technique de cette co-marque, mais le dépôt ne porte pas
+de preuve indépendante d'autorisation par Victor Buck Services. La fusion et la
+publication de cet asset restent donc conditionnées à une confirmation VBS ou à
+la fourniture d'un master autorisé. Le hotlink n'est pas une alternative : il
+garderait la même contrainte et ajouterait une dépendance externe.
+
 ## Procédure avant publication
 
 1. Confirmer auteur, droits et usages autorisés.

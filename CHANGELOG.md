@@ -5,6 +5,23 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ## Non publié
 
+### Identité d’entreprise
+
+- configuration de co-marque par domaine professionnel dans D1, avec activation
+  réversible, logo de même origine et couleurs sémantiques distinctes pour les
+  thèmes clair et sombre ;
+- activation initiale de Victor Buck Services pour les membres du domaine
+  `victorbuckservices.com`, sans correspondance par suffixe ni exposition du
+  domaine dans le payload de branding ;
+- application du thème uniquement dans le shell authentifié, sans persistance
+  locale, avec logo entreprise intact sur plaque claire, symbole Parkventory
+  superposé et repli Parkventory si la configuration ou l’image est invalide ;
+- jetons d’action et de disponibilité débarrassés des halos codés en dur afin
+  que les états, focus, boutons et sélections suivent réellement la co-marque ;
+- migration D1 `0002` à appliquer avant le Worker : le déploiement automatique
+  ne crée pas la table de configuration et ne constitue pas une preuve
+  d’activation de la co-marque.
+
 ### Navigation et langage produit
 
 - les logos du shell connecté ramènent directement au tableau de bord au lieu

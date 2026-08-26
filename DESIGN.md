@@ -83,6 +83,16 @@ publiques, l'authentification et l'application. Le choix est appliqué avant le
 premier rendu, mémorisé localement et réutilisé sur les routes suivantes. La
 préférence système ne change jamais le thème silencieusement.
 
+Après authentification, une organisation peut substituer aux accents
+Parkventory ses propres jetons sémantiques d'action et de disponibilité. Les
+neutres, les états d'erreur et la signification métier restent Parkventory. Le
+branding d'organisation est fourni par la session, actualisé par le dashboard,
+scopé au shell applicatif et jamais conservé dans `localStorage` : une
+déconnexion, un opt-out ou une configuration invalide rétablit immédiatement
+l'identité par défaut. Les variantes clair et sombre portent des encres
+distinctes afin qu'une couleur de marque prévue pour un aplat ne soit jamais
+réutilisée comme petit texte sans contraste mesuré.
+
 En clair, les aplats acide et glacier restent réservés aux remplissages avec
 texte sombre. Les libellés, icônes, focus et frontières fonctionnelles emploient
 leurs encres foncées. Le symbole SVG original n'est ni recoloré ni redessiné :
@@ -238,6 +248,14 @@ associe ce symbole exact au mot `Parkventory` rendu en texte ; le fichier ne
 contient pas de wordmark vectoriel ni de variante monochrome. Les copies
 publiques et le dérivé raster Open Graph sont produits par
 `npm run brand:sync` puis contrôlés par `npm run brand:check`.
+
+Dans un espace co-marqué, le logo de l'entreprise reste un asset autonome et
+inchangé. Il est posé sur une plaque qui garantit sa lisibilité dans les deux
+thèmes ; le symbole Parkventory canonique est superposé dans une petite pastille
+HTML séparée. Ni les deux SVG ni leurs géométries ne sont fusionnés. Le logo
+entreprise n'apparaît pas sur la landing, l'authentification, les pages légales,
+la 404 ou les aperçus publics. Une erreur de chargement revient au lockup
+Parkventory et des dimensions fixes réservent l'espace pour éviter le CLS.
 
 L'asset servi par le prototype est `frontend/public/images/parking-halftone.webp`.
 Il s'agit d'une création originale générée pour le projet, non d'une
