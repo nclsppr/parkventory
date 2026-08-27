@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1200" height="630" viewBox="0 0 1200 630"
+     role="img" aria-labelledby="title desc">
+  <title id="title">Parkventory, le parking partagé, simplement</title>
+  <desc id="desc">Carte sociale Parkventory avec le symbole canonique et un parcours entre une place partagée et une place sélectionnée.</desc>
+
+  <style>
+    @font-face {
+      font-family: "Parkventory Inter";
+      font-style: normal;
+      font-weight: 700;
+      src: url("__PARKVENTORY_FONT_BASE64__") format("truetype");
+    }
+
+    .brand-text,
+    .tagline {
+      font-family: "Parkventory Inter", Inter, Arial, sans-serif;
+      font-weight: 700;
+    }
+  </style>
+
+  <rect width="1200" height="630" fill="#030504"/>
+  <rect x="24.5" y="24.5" width="1151" height="581" rx="16"
+        fill="none" stroke="#252B26"/>
+
+  <g opacity="0.72" stroke="#121512">
+    <path d="M40 126H1160M40 252H1160M40 378H1160M40 504H1160"/>
+    <path d="M150 40V590M300 40V590M450 40V590M600 40V590M750 40V590M900 40V590M1050 40V590"/>
+  </g>
+
+  <g id="brand-lockup">
+    <image id="canonical-logo" x="72" y="62" width="72" height="73"
+           href="__PARKVENTORY_LOGO_BASE64__"/>
+    <text id="brand-wordmark" class="brand-text" x="172" y="116" fill="#F5F7F2"
+          font-size="48" letter-spacing="-2.4">Parkventory</text>
+    <path d="M172 136H390" stroke="#3B443C"/>
+    <path d="M172 136H312" stroke="#C8F814" stroke-width="3"/>
+    <circle cx="390" cy="136" r="4.5" fill="#14C9D3"/>
+  </g>
+
+  <g id="tagline" fill="#F5F7F2">
+    <text id="tagline-line-one" class="tagline" x="72" y="300" fill="#F5F7F2"
+          font-size="67" letter-spacing="-3.6">
+      Le parking partagé,
+    </text>
+    <text id="tagline-line-two" class="tagline" x="72" y="377" fill="#F5F7F2"
+          font-size="67" letter-spacing="-3.6">
+      simplement.
+    </text>
+  </g>
+
+  <g id="availability-signal">
+    <rect x="760.5" y="62.5" width="367" height="505" rx="13"
+          fill="#0D100E" stroke="#3B443C"/>
+
+    <g opacity="0.8" stroke="#252B26" stroke-dasharray="8 8">
+      <path d="M789 164H1099"/>
+      <path d="M789 315H1099"/>
+      <path d="M789 466H1099"/>
+      <path d="M944 87V543"/>
+    </g>
+
+    <g id="parking-bays" stroke-width="1.5">
+      <g fill="#121512" stroke="#3B443C">
+        <rect x="799" y="94" width="78" height="109" rx="7"/>
+        <rect x="896" y="94" width="78" height="109" rx="7"/>
+        <rect x="993" y="94" width="78" height="109" rx="7"/>
+        <rect x="799" y="254" width="78" height="109" rx="7"/>
+        <rect x="993" y="254" width="78" height="109" rx="7"/>
+        <rect x="896" y="414" width="78" height="109" rx="7"/>
+        <rect x="993" y="414" width="78" height="109" rx="7"/>
+      </g>
+
+      <rect x="896" y="254" width="78" height="109" rx="7"
+            fill="#C8F814" stroke="#C8F814"/>
+      <rect x="799" y="414" width="78" height="109" rx="7"
+            fill="#14C9D3" stroke="#14C9D3"/>
+    </g>
+
+    <g id="parked-cars" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <g stroke="#6A746C" opacity="0.7">
+        <path d="M818 139h40l7 13v23h-54v-23l7-13Zm1 14h38M820 175v8M856 175v8"/>
+        <path d="M1012 139h40l7 13v23h-54v-23l7-13Zm1 14h38M1014 175v8M1050 175v8"/>
+        <path d="M1012 459h40l7 13v23h-54v-23l7-13Zm1 14h38M1014 495v8M1050 495v8"/>
+      </g>
+
+      <g stroke="#071000" stroke-width="2">
+        <path d="M915 299h40l7 13v23h-54v-23l7-13Zm1 14h38M917 335v8M953 335v8"/>
+      </g>
+
+      <g stroke="#031214" stroke-width="2">
+        <path d="M818 459h40l7 13v23h-54v-23l7-13Zm1 14h38M820 495v8M856 495v8"/>
+      </g>
+    </g>
+
+    <g id="route" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M935 308C935 380 838 367 838 468" stroke="#C8F814" stroke-width="5"/>
+      <path d="M935 308C935 242 1091 243 1091 178C1091 133 1041 131 1032 149"
+            stroke="#F5F7F2" stroke-width="3"/>
+      <path d="M1032 149l-11-6m11 6 5-12" stroke="#14C9D3" stroke-width="3"/>
+    </g>
+
+    <g id="route-nodes">
+      <circle cx="935" cy="308" r="9" fill="#071000" stroke="#C8F814" stroke-width="4"/>
+      <circle cx="1091" cy="178" r="7" fill="#0D100E" stroke="#F5F7F2" stroke-width="3"/>
+      <circle cx="838" cy="468" r="9" fill="#031214" stroke="#14C9D3" stroke-width="4"/>
+    </g>
+  </g>
+
+  <g id="footer-signal">
+    <rect x="72" y="532" width="154" height="8" rx="4" fill="#C8F814"/>
+    <rect x="234" y="532" width="58" height="8" rx="4" fill="#14C9D3"/>
+    <path d="M308 536H686" stroke="#252B26"/>
+    <circle cx="686" cy="536" r="4" fill="#F5F7F2"/>
+  </g>
+</svg>
