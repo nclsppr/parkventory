@@ -8,7 +8,12 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 ### Indexation publique
 
 - ajout d’un sitemap canonique limité à l’accueil, la confidentialité et les
-  mentions légales, annoncé dans le `robots.txt` sans exposer les routes privées.
+  mentions légales, annoncé dans le `robots.txt` sans exposer les routes privées ;
+- ajout sur l’accueil de l’URL canonique, des métadonnées Open Graph et Twitter,
+  ainsi que d’un JSON-LD `WebApplication` limité aux faits produit publics ;
+- publication à l’URL stable `/parkventory-social-card.png` d’une carte sociale
+  produit 1 200 × 630 issue d’un SVG code-native éditable, sans métrique,
+  client ni validation d’usage inventés.
 
 ### Identité d’entreprise
 

@@ -228,6 +228,7 @@ essentiel ne descend sous 14 px ; les champs restent à 16 px sur mobile.
 | --- | --- | --- | --- | --- |
 | Parking aérien | Narration et identité | Noir, ivoire, trame, accents acide/glacier | AVIF/WebP avec fallback | Référence JPEG fournie |
 | Logo | Identité | `P` et grille de quatre places, une place glacier | SVG canonique transparent | SVG fourni par le propriétaire du projet |
+| Carte sociale produit | Partage de l’accueil | Symbole exact, grille de places et parcours disponibilité/sélection | SVG code-native et PNG 1 200 × 630 | Composition originale du dépôt |
 | Icônes | Information | Trait simple, géométrie cohérente | SVG code-native | Bibliothèque à décider |
 | Portraits | Information optionnelle | Réels ou avatars non trompeurs | AVIF/WebP | Consentement et droits requis |
 
@@ -246,8 +247,19 @@ vert `#C8F814`, glacier `#14C9D3` et SHA-256
 Il est utilisé sans altération de géométrie ni recoloration. Le lockup produit
 associe ce symbole exact au mot `Parkventory` rendu en texte ; le fichier ne
 contient pas de wordmark vectoriel ni de variante monochrome. Les copies
-publiques et le dérivé raster Open Graph sont produits par
+publiques et les dérivés raster sont produits par
 `npm run brand:sync` puis contrôlés par `npm run brand:check`.
+
+La carte sociale produit a pour source compacte et éditable
+`assets/brand/parkventory-social-card.svg` et pour dérivé public
+`frontend/public/parkventory-social-card.png`. La génération injecte en mémoire,
+sans le redessiner, le master du symbole et la police Inter verrouillée dans une
+composition de grille inspirée des vraies primitives de disponibilité et de
+sélection du produit. Son seul message visible associe « Parkventory » à
+« Le parking partagé, simplement. » : elle ne porte ni métrique, ni client, ni
+état de validation. Le PNG mesure `1 200 × 630`, pèse `51 695` octets et porte
+le SHA-256
+`fd2ccf37d786492a13379920712b9c6400858216abe0110139edd5cd8db061bf`.
 
 Dans un espace co-marqué, le logo de l'entreprise reste un asset autonome et
 inchangé. Il est posé sur une plaque qui garantit sa lisibilité dans les deux

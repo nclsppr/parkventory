@@ -90,6 +90,34 @@ La provenance juridique externe du SVG n'a pas été auditée indépendamment ;
 l'autorisation d'intégration vient de l'instruction explicite du propriétaire
 du projet dans cette livraison.
 
+## Carte sociale produit
+
+La carte de l'accueil est une composition originale code-native. Elle reprend
+le fond sombre, la grille de places, le vert d'action et le bleu de sélection
+déjà définis dans `DESIGN.md` et `frontend/src/styles.css`. Elle n'utilise aucun
+des cinq JPEG de référence dont les droits restent non établis.
+
+| Artefact | Dimensions | Octets | SHA-256 | Statut |
+| --- | ---: | ---: | --- | --- |
+| `assets/brand/parkventory-social-card.svg` | 1 200 × 630 | 4 644 | `b0d50f4dbb354e5e176ad63b0156a8c45b61b31e6a936915711ddd79a67debe1` | Source éditable avec ancres logo et police |
+| `frontend/public/parkventory-social-card.png` | 1 200 × 630 | 51 695 | `fd2ccf37d786492a13379920712b9c6400858216abe0110139edd5cd8db061bf` | Raster optimisé servi publiquement |
+
+`npm run brand:sync` injecte uniquement en mémoire les octets exacts du symbole
+canonique et de la police Inter verrouillée. `opentype.js` `2.0.0` vectorise les
+trois nœuds texte avant que Sharp `0.35.3` produise un PNG truecolor, sans
+dépendre des polices système ni d'une palette variable selon la plateforme.
+`npm run brand:check`, appelé par `npm run verify`, compare ensuite chaque ancre
+et dérivé aux octets attendus. Le test Node refuse tout nœud `<text>` transmis
+au rasteriseur. Un checkout neuf n'a besoin que du `npm ci` racine pour exécuter
+ces commandes ; macOS arm64 et Linux x64 produisent le même SHA-256 public.
+
+Le raster est consommé par les métadonnées Open Graph, Twitter et JSON-LD de
+`frontend/index.html` à l'URL stable
+`https://parkventory.com/parkventory-social-card.png`. La carte ne contient que
+le nom Parkventory et la promesse existante « Le parking partagé, simplement. ».
+Elle ne présente ni métrique, ni logo client, ni témoignage, ni assertion que
+le parcours de validation à deux membres est terminé.
+
 ## Co-marque Victor Buck Services
 
 Le site officiel Victor Buck Services déclare le fichier suivant comme logo
