@@ -1,11 +1,16 @@
 import { AlertTriangle, Inbox, LoaderCircle, RotateCcw } from "lucide-react";
 import type { ReactNode } from "react";
+import { useI18n } from "../../i18n/I18n";
+import { adminMessages } from "../../i18n/admin";
+import { commonMessages } from "../../i18n/common";
 
-export function AdminLoading({ label = "Chargement des données…" }: { label?: string }) {
+export function AdminLoading({ label }: { label?: string }) {
+  const { locale } = useI18n();
+  const resolvedLabel = label ?? adminMessages[locale].common.loadingData;
   return (
     <div className="admin-state admin-state-loading" role="status">
       <LoaderCircle className="spin" aria-hidden="true" />
-      <span>{label}</span>
+      <span>{resolvedLabel}</span>
       <span className="admin-loading-line" aria-hidden="true" />
       <span className="admin-loading-line admin-loading-line-short" aria-hidden="true" />
     </div>
@@ -15,21 +20,24 @@ export function AdminLoading({ label = "Chargement des données…" }: { label?:
 export function AdminError({
   error,
   onRetry,
-  title = "Les données ne répondent pas.",
+  title,
 }: {
   error: Error;
   onRetry: () => void;
   title?: string;
 }) {
+  const { locale } = useI18n();
+  const copy = adminMessages[locale].common;
+  const commonCopy = commonMessages[locale];
   return (
     <div className="admin-state admin-state-error" role="alert">
       <AlertTriangle aria-hidden="true" />
       <div>
-        <strong>{title}</strong>
+        <strong>{title ?? copy.unavailableTitle}</strong>
         <p>{error.message}</p>
       </div>
       <button className="button button-secondary button-small" type="button" onClick={onRetry}>
-        <RotateCcw aria-hidden="true" /> Réessayer
+        <RotateCcw aria-hidden="true" /> {commonCopy.retry}
       </button>
     </div>
   );

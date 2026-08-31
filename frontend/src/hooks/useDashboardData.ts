@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, loadDashboard } from "../api/client";
+import { applicationMessages } from "../i18n/application";
+import { useI18n } from "../i18n/I18n";
 import type { DashboardData } from "../types";
 
 export function useDashboardData(onSessionExpired: () => void) {
+  const { locale } = useI18n();
+  const copy = applicationMessages[locale].state;
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -20,12 +24,12 @@ export function useDashboardData(onSessionExpired: () => void) {
       setLoadError(
         error instanceof Error
           ? error.message
-          : "Les données du parking n’ont pas pu être chargées.",
+          : copy.dashboardLoadFailed,
       );
     } finally {
       setLoading(false);
     }
-  }, [onSessionExpired]);
+  }, [copy.dashboardLoadFailed, onSessionExpired]);
 
   useEffect(() => {
     void refreshDashboard();

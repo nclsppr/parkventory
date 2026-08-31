@@ -31,3 +31,5 @@
 | TAD-006 | Une future connexion vérifiée avec l’adresse effacée réactive le même identifiant utilisateur et la même adhésion. |
 | PRV-001 | Aucun motif d’absence, plaque, calendrier ou géolocalisation n’est collecté. |
 | PRV-002 | Les tokens, cookies et adresses sont absents des logs applicatifs. |
+| LNG-001 | Une préférence de profil accepte uniquement `fr`, `en`, `de` ou `lb` et l’identité du compte vient de la session. |
+| LNG-002 | Le sélecteur reste disponible avant connexion sur toute surface publique ; dès qu’une session est reconnue, il disparaît de ces surfaces, apparaît uniquement dans le profil et la base est mise à jour avant la route. |

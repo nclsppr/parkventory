@@ -1,10 +1,16 @@
 import { useEffect, useRef } from "react";
+import type { Locale } from "../../../shared/i18n";
+import { commonMessages } from "../i18n/common";
+import { useI18n } from "../i18n/I18n";
+
+type TurnstileLanguage = "fr" | "en" | "de";
 
 interface TurnstileApi {
   render(element: HTMLElement, options: {
     sitekey: string;
     theme: "auto";
     size: "flexible";
+    language: TurnstileLanguage;
     callback: (token: string) => void;
     "expired-callback": () => void;
     "error-callback": () => void;
@@ -20,8 +26,18 @@ declare global {
 
 const scriptId = "cloudflare-turnstile-script";
 const developmentSiteKey = "1x00000000000000000000AA";
+const turnstileLanguages = {
+  fr: "fr",
+  en: "en",
+  de: "de",
+  // Luxembourgish is not in Turnstile's supported-language list; use French explicitly.
+  lb: "fr",
+} as const satisfies Record<Locale, TurnstileLanguage>;
 
 export function Turnstile({ onToken }: { onToken: (token: string | null) => void }) {
+  const { locale } = useI18n();
+  const copy = commonMessages[locale];
+  const language = turnstileLanguages[locale];
   const container = useRef<HTMLDivElement>(null);
   const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY
     || (import.meta.env.DEV ? developmentSiteKey : "");
@@ -40,6 +56,7 @@ export function Turnstile({ onToken }: { onToken: (token: string | null) => void
         sitekey: siteKey,
         theme: "auto",
         size: "flexible",
+        language,
         callback: (token) => onToken(token),
         "expired-callback": () => onToken(null),
         "error-callback": () => onToken(null),
@@ -65,10 +82,10 @@ export function Turnstile({ onToken }: { onToken: (token: string | null) => void
       if (widgetId && window.turnstile) window.turnstile.remove(widgetId);
       onToken(null);
     };
-  }, [onToken, siteKey]);
+  }, [language, onToken, siteKey]);
 
   if (!siteKey) {
-    return <p className="field-error" role="alert">La vérification de sécurité est indisponible. Réessayez plus tard.</p>;
+    return <p className="field-error" role="alert">{copy.securityUnavailable}</p>;
   }
   return <div className="turnstile-container" ref={container} />;
 }

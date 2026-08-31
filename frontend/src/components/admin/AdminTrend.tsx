@@ -1,4 +1,6 @@
 import type { AdminOverviewData } from "../../types";
+import { useI18n } from "../../i18n/I18n";
+import { adminMessages } from "../../i18n/admin";
 import { formatNumber, formatSeriesDate } from "./adminFormat";
 
 const width = 720;
@@ -16,6 +18,8 @@ function points(values: number[], maximum: number) {
 }
 
 export function AdminTrend({ series }: { series: AdminOverviewData["series"] }) {
+  const { locale, intlLocale } = useI18n();
+  const copy = adminMessages[locale].trend;
   const maximum = Math.max(1, ...series.flatMap((item) => [
     item.newTenants,
     item.newUsers,
@@ -24,22 +28,22 @@ export function AdminTrend({ series }: { series: AdminOverviewData["series"] }) 
     item.incidents,
   ]));
   const description = series.length
-    ? `${series.length} jours. Maximum observé : ${formatNumber(maximum)} événement${maximum === 1 ? "" : "s"} par jour.`
-    : "Aucune mesure disponible sur la période.";
+    ? copy.description(series.length, formatNumber(series.length, intlLocale), maximum, formatNumber(maximum, intlLocale))
+    : copy.noMeasurements;
 
   return (
     <figure className="admin-trend" aria-labelledby="admin-trend-title">
       <figcaption>
         <div>
-          <h2 id="admin-trend-title">Évolution du réseau</h2>
-          <p>Acquisition, usage et incidents · 30 jours</p>
+          <h2 id="admin-trend-title">{copy.title}</h2>
+          <p>{copy.subtitle}</p>
         </div>
-        <ul className="admin-trend-legend" aria-label="Séries affichées">
-          <li><i className="admin-key-new-tenant" aria-hidden="true" /> Nouveaux tenants</li>
-          <li><i className="admin-key-new-user" aria-hidden="true" /> Nouveaux utilisateurs</li>
-          <li><i className="admin-key-share" aria-hidden="true" /> Partages</li>
-          <li><i className="admin-key-reservation" aria-hidden="true" /> Réservations</li>
-          <li><i className="admin-key-incident" aria-hidden="true" /> Incidents</li>
+        <ul className="admin-trend-legend" aria-label={copy.legendLabel}>
+          <li><i className="admin-key-new-tenant" aria-hidden="true" /> {copy.newOrganizations}</li>
+          <li><i className="admin-key-new-user" aria-hidden="true" /> {copy.newUsers}</li>
+          <li><i className="admin-key-share" aria-hidden="true" /> {copy.shares}</li>
+          <li><i className="admin-key-reservation" aria-hidden="true" /> {copy.bookings}</li>
+          <li><i className="admin-key-incident" aria-hidden="true" /> {copy.incidents}</li>
         </ul>
       </figcaption>
       <p className="sr-only" id="admin-trend-description">{description}</p>
@@ -53,19 +57,19 @@ export function AdminTrend({ series }: { series: AdminOverviewData["series"] }) 
           <polyline className="admin-trend-reservation" points={points(series.map((item) => item.reservations), maximum)} />
           <polyline className="admin-trend-incident" points={points(series.map((item) => item.incidents), maximum)} />
         </svg>
-      ) : <div className="admin-trend-no-data">Aucune donnée</div>}
+      ) : <div className="admin-trend-no-data">{copy.noData}</div>}
       {series.length > 0 && (
         <div className="admin-trend-axis" aria-hidden="true">
-          <span>{formatSeriesDate(series[0].date)}</span>
-          <span>{formatSeriesDate(series[series.length - 1].date)}</span>
+          <span>{formatSeriesDate(series[0].date, intlLocale)}</span>
+          <span>{formatSeriesDate(series[series.length - 1].date, intlLocale)}</span>
         </div>
       )}
       <table className="sr-only">
-        <caption>Données quotidiennes du graphique</caption>
-        <thead><tr><th>Date</th><th>Nouveaux tenants</th><th>Nouveaux utilisateurs</th><th>Partages</th><th>Réservations</th><th>Incidents</th></tr></thead>
+        <caption>{copy.tableCaption}</caption>
+        <thead><tr><th>{copy.date}</th><th>{copy.newOrganizations}</th><th>{copy.newUsers}</th><th>{copy.shares}</th><th>{copy.bookings}</th><th>{copy.incidents}</th></tr></thead>
         <tbody>{series.map((item) => (
           <tr key={item.date}>
-            <th>{formatSeriesDate(item.date)}</th>
+            <th>{formatSeriesDate(item.date, intlLocale)}</th>
             <td>{item.newTenants}</td><td>{item.newUsers}</td><td>{item.shares}</td><td>{item.reservations}</td><td>{item.incidents}</td>
           </tr>
         ))}</tbody>

@@ -5,6 +5,31 @@ const LOGO_PLACEHOLDER = "__PARKVENTORY_LOGO_BASE64__";
 const FONT_PLACEHOLDER = "__PARKVENTORY_FONT_BASE64__";
 const TEXT_NODE_IDS = ["brand-wordmark", "tagline-line-one", "tagline-line-two"];
 
+function escapeXml(value) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
+function localizedSource(sourceText, copy) {
+  if (!copy) return sourceText;
+
+  const replacements = [
+    [/(<title\s+id="title">)[\s\S]*?(<\/title>)/u, copy.title],
+    [/(<desc\s+id="desc">)[\s\S]*?(<\/desc>)/u, copy.description],
+    [/(<text\s+[^>]*\bid="tagline-line-one"[^>]*>)[\s\S]*?(<\/text>)/u, copy.lineOne],
+    [/(<text\s+[^>]*\bid="tagline-line-two"[^>]*>)[\s\S]*?(<\/text>)/u, copy.lineTwo],
+  ];
+
+  return replacements.reduce((svg, [pattern, value]) => {
+    if (!pattern.test(svg)) {
+      throw new Error("La source de la carte sociale ne contient plus un texte localisable.");
+    }
+    return svg.replace(pattern, `$1${escapeXml(value)}$2`);
+  }, sourceText);
+}
+
 function dataUrl(mediaType, bytes) {
   return `data:${mediaType};base64,${bytes.toString("base64")}`;
 }
@@ -69,13 +94,13 @@ function outlineTextNode(svg, font, id) {
   );
 }
 
-export function buildRasterSvg({ sourceText, logoBytes, fontBytes }) {
+export function buildRasterSvg({ sourceText, logoBytes, fontBytes, copy }) {
   if (!sourceText.includes(LOGO_PLACEHOLDER) || !sourceText.includes(FONT_PLACEHOLDER)) {
     throw new Error("La source de la carte sociale ne contient plus ses deux placeholders.");
   }
 
   const font = parseFont(fontBytes);
-  let rasterSvg = sourceText
+  let rasterSvg = localizedSource(sourceText, copy)
     .replace(LOGO_PLACEHOLDER, dataUrl("image/svg+xml", logoBytes))
     .replace(FONT_PLACEHOLDER, dataUrl("font/ttf", fontBytes));
 

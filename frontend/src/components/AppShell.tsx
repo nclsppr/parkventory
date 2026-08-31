@@ -9,15 +9,14 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { ApiError, logout } from "../api/client";
-import {
-  appUrl,
-  environmentLabel,
-  findUrl,
-  shareUrl,
-  tenantAdminUrl,
-} from "../config";
+import type { Locale } from "../../../shared/i18n";
+import { ApiError, logout, updateProfileLocale } from "../api/client";
+import { localizedUrls } from "../config";
+import { applicationMessages } from "../i18n/application";
+import { commonMessages } from "../i18n/common";
+import { useI18n } from "../i18n/I18n";
 import { AppLink } from "./AppLink";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 import { ApplicationBrand, useOrganizationBranding } from "./OrganizationBranding";
 import { ThemeToggle } from "./Theme";
 
@@ -44,6 +43,7 @@ interface AppShellProps {
   profile: ShellProfile;
   loading: boolean;
   loadError: string | null;
+  onLocalePersisted: (locale: Locale) => void;
   navigationItems?: readonly ShellNavigationItem[];
   homeHref?: string;
   homeLabel?: string;
@@ -57,24 +57,39 @@ interface AppShellProps {
   onSessionExpired: () => void;
 }
 
-export const applicationNavigation: readonly ShellNavigationItem[] = [
-  { route: "dashboard", label: "Accueil", mobileLabel: "Accueil", href: appUrl, icon: Home },
-  { route: "share", label: "Partager ma place", mobileLabel: "Partager", href: shareUrl, icon: CalendarDays },
-  { route: "find", label: "Trouver une place", mobileLabel: "Trouver", href: findUrl, icon: Search },
-];
+export function applicationNavigation(locale: Locale): readonly ShellNavigationItem[] {
+  const navigation = applicationMessages[locale].shell.navigation;
+  const urls = localizedUrls(locale);
+  return [
+    { route: "dashboard", label: navigation.dashboard, mobileLabel: navigation.dashboardShort, href: urls.appUrl, icon: Home },
+    { route: "share", label: navigation.share, mobileLabel: navigation.shareShort, href: urls.shareUrl, icon: CalendarDays },
+    { route: "find", label: navigation.find, mobileLabel: navigation.findShort, href: urls.findUrl, icon: Search },
+  ];
+}
 
-export const tenantAdminNavigation: readonly ShellNavigationItem[] = [
-  ...applicationNavigation,
-  { route: "tenantAdmin", label: "Administration du tenant", mobileLabel: "Admin", href: tenantAdminUrl, icon: ShieldCheck },
-];
+export function tenantAdminNavigation(locale: Locale): readonly ShellNavigationItem[] {
+  const navigation = applicationMessages[locale].shell.navigation;
+  return [
+    ...applicationNavigation(locale),
+    {
+      route: "tenantAdmin",
+      label: navigation.tenantAdmin,
+      mobileLabel: navigation.tenantAdminShort,
+      href: localizedUrls(locale).tenantAdminUrl,
+      icon: ShieldCheck,
+    },
+  ];
+}
 
 export function EnvironmentStatus({ loading }: { loading: boolean }) {
+  const { locale } = useI18n();
+  const copy = applicationMessages[locale].shell;
   return (
     <span
       className="demo-status"
-      title="Parkventory est en version bêta."
+      title={copy.betaTitle}
     >
-      <i /> {loading ? "Actualisation…" : environmentLabel}
+      <i /> {loading ? copy.refreshing : copy.betaLabel}
     </span>
   );
 }
@@ -85,20 +100,27 @@ export function AppShell({
   profile,
   loading,
   loadError,
-  navigationItems = applicationNavigation,
-  homeHref = appUrl,
+  onLocalePersisted,
+  navigationItems,
+  homeHref,
   homeLabel,
-  sidebarLabel = "Navigation de l’application",
-  navigationLabel = "Navigation principale de l’application",
-  quickNavigationLabel = "Navigation rapide",
+  sidebarLabel,
+  navigationLabel,
+  quickNavigationLabel,
   contentId = "dashboard-content",
   shellClassName = "",
   onNotify,
   onRetry,
   onSessionExpired,
 }: AppShellProps) {
+  const { locale } = useI18n();
+  const copy = applicationMessages[locale].shell;
+  const commonCopy = commonMessages[locale];
+  const urls = localizedUrls(locale);
+  const resolvedNavigationItems = navigationItems ?? applicationNavigation(locale);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [logoutBusy, setLogoutBusy] = useState(false);
+  const [languageBusy, setLanguageBusy] = useState(false);
   const branding = useOrganizationBranding();
   const sidebar = useRef<HTMLElement>(null);
   const sidebarClose = useRef<HTMLButtonElement>(null);
@@ -110,7 +132,23 @@ export function AppShell({
   };
 
   useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const desktopLayout = window.matchMedia("(min-width: 821px)");
+    const closeInDesktopLayout = () => {
+      if (desktopLayout.matches) setSidebarOpen(false);
+    };
+
+    closeInDesktopLayout();
+    desktopLayout.addEventListener("change", closeInDesktopLayout);
+    return () => desktopLayout.removeEventListener("change", closeInDesktopLayout);
+  }, []);
+
+  useEffect(() => {
     if (!sidebarOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const previousOverscrollBehavior = document.body.style.overscrollBehavior;
+    document.body.style.overflow = "hidden";
+    document.body.style.overscrollBehavior = "none";
     sidebarClose.current?.focus();
     let focusFrame = window.requestAnimationFrame(() => {
       focusFrame = window.requestAnimationFrame(() => sidebarClose.current?.focus());
@@ -124,7 +162,9 @@ export function AppShell({
       }
       if (event.key === "Tab") {
         const focusable = Array.from(
-          sidebar.current?.querySelectorAll<HTMLElement>("a[href], button:not([disabled])") ?? [],
+          sidebar.current?.querySelectorAll<HTMLElement>(
+            "a[href], button:not([disabled]), select:not([disabled])",
+          ) ?? [],
         ).filter((element) => element.offsetParent !== null || element === document.activeElement);
         const first = focusable[0];
         const last = focusable[focusable.length - 1];
@@ -141,6 +181,8 @@ export function AppShell({
     return () => {
       window.cancelAnimationFrame(focusFrame);
       window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      document.body.style.overscrollBehavior = previousOverscrollBehavior;
     };
   }, [sidebarOpen]);
 
@@ -154,29 +196,53 @@ export function AppShell({
       if (error instanceof ApiError && error.status === 401) {
         onSessionExpired();
       } else {
-        onNotify(error instanceof Error ? error.message : "La déconnexion a échoué.", "error");
+        onNotify(error instanceof Error ? error.message : copy.logoutFailed, "error");
       }
     } finally {
       setLogoutBusy(false);
     }
   };
 
+  const handleProfileLocaleChange = async (nextLocale: Locale) => {
+    if (languageBusy || nextLocale === locale) return;
+    setLanguageBusy(true);
+    try {
+      await updateProfileLocale(nextLocale);
+      onLocalePersisted(nextLocale);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        onSessionExpired();
+      } else {
+        onNotify(error instanceof Error ? error.message : copy.languageUpdateFailed, "error");
+      }
+    } finally {
+      setLanguageBusy(false);
+    }
+  };
+
   const applicationHomeLabel = branding
-    ? `Accueil de l’application ${branding.companyName} sur Parkventory`
-    : "Accueil de l’application Parkventory";
+    ? copy.organizationAppHome(branding.companyName)
+    : copy.appHome;
+  const resolvedHomeHref = homeHref ?? urls.appUrl;
   const resolvedHomeLabel = homeLabel ?? applicationHomeLabel;
+  const resolvedSidebarLabel = sidebarLabel ?? copy.appNavigation;
+  const resolvedNavigationLabel = navigationLabel ?? copy.mainNavigation;
+  const resolvedQuickNavigationLabel = quickNavigationLabel ?? copy.quickNavigation;
 
   return (
     <div className={`app-shell ${shellClassName}`.trim()}>
-      <a className="skip-link" href={`#${contentId}`}>Aller au contenu</a>
+      <a className="skip-link" href={`#${contentId}`}>{commonCopy.skipToContent}</a>
       <aside
         ref={sidebar}
+        id="application-sidebar"
         className={`app-sidebar ${sidebarOpen ? "app-sidebar-open" : ""}`}
-        aria-label={sidebarLabel}
+        aria-label={resolvedSidebarLabel}
+        aria-modal={sidebarOpen ? "true" : undefined}
+        role={sidebarOpen ? "dialog" : undefined}
       >
         <div className="sidebar-heading">
           <AppLink
-            href={homeHref}
+            href={resolvedHomeHref}
             aria-label={resolvedHomeLabel}
             onNavigate={() => closeSidebar()}
           >
@@ -187,13 +253,13 @@ export function AppShell({
             type="button"
             className="sidebar-close"
             onClick={() => closeSidebar(true)}
-            aria-label="Fermer la navigation"
+            aria-label={copy.closeNavigation}
           >
             <X aria-hidden="true" />
           </button>
         </div>
-        <nav aria-label={navigationLabel}>
-          {navigationItems.map(({ route, label, href, icon: Icon }) => (
+        <nav aria-label={resolvedNavigationLabel}>
+          {resolvedNavigationItems.map(({ route, label, href, icon: Icon }) => (
             <AppLink
               className={activeRoute === route ? "active" : undefined}
               aria-current={activeRoute === route ? "page" : undefined}
@@ -206,28 +272,37 @@ export function AppShell({
           ))}
         </nav>
         <button className="sidebar-logout" type="button" onClick={handleLogout} disabled={logoutBusy}>
-          <LogOut aria-hidden="true" /> {logoutBusy ? "Déconnexion…" : "Se déconnecter"}
+          <LogOut aria-hidden="true" /> {logoutBusy ? copy.signingOut : copy.signOut}
         </button>
-        <div className="sidebar-profile">
-          <span className="avatar">{profile.initials}</span>
-          <div><strong>{profile.primary}</strong><small>{profile.secondary}</small></div>
-        </div>
+        <section className="sidebar-profile" aria-label={copy.profile}>
+          <div className="sidebar-profile-identity">
+            <span className="avatar">{profile.initials}</span>
+            <div><strong>{profile.primary}</strong><small>{profile.secondary}</small></div>
+          </div>
+          <div className="sidebar-profile-preference">
+            <span>{commonCopy.language}</span>
+            <LanguageSwitcher
+              className="sidebar-profile-language"
+              disabled={languageBusy}
+              onLocaleChange={handleProfileLocaleChange}
+            />
+          </div>
+        </section>
       </aside>
 
       {sidebarOpen && (
-        <button
+        <div
           className="sidebar-backdrop"
-          type="button"
-          aria-label="Fermer la navigation"
+          aria-hidden="true"
           onClick={() => closeSidebar(true)}
         />
       )}
 
-      <main className="app-main" id={contentId}>
+      <main className="app-main" id={contentId} inert={sidebarOpen ? true : undefined}>
         <div className="app-topbar">
           <AppLink
             className={`mobile-app-logo ${branding ? "mobile-organization-logo" : ""}`.trim()}
-            href={homeHref}
+            href={resolvedHomeHref}
             aria-label={resolvedHomeLabel}
           >
             <ApplicationBrand compact />
@@ -241,7 +316,8 @@ export function AppShell({
             className="mobile-sidebar-trigger"
             type="button"
             onClick={() => setSidebarOpen(true)}
-            aria-label="Ouvrir la navigation"
+            aria-label={copy.openNavigation}
+            aria-controls="application-sidebar"
             aria-expanded={sidebarOpen}
           >
             <Menu aria-hidden="true" />
@@ -251,15 +327,19 @@ export function AppShell({
         {loadError && (
           <div className="dashboard-error" role="alert">
             <span>{loadError}</span>
-            <button type="button" onClick={onRetry}>Réessayer</button>
+            <button type="button" onClick={onRetry}>{commonCopy.retry}</button>
           </div>
         )}
 
         {children}
       </main>
 
-      <nav className="mobile-app-nav" aria-label={quickNavigationLabel}>
-        {navigationItems.map(({ route, mobileLabel, href, icon: Icon }) => (
+      <nav
+        className="mobile-app-nav"
+        aria-label={resolvedQuickNavigationLabel}
+        inert={sidebarOpen ? true : undefined}
+      >
+        {resolvedNavigationItems.map(({ route, mobileLabel, href, icon: Icon }) => (
           <AppLink
             aria-current={activeRoute === route ? "page" : undefined}
             href={href}

@@ -1,4 +1,4 @@
-import { PointerEvent as ReactPointerEvent, useRef, useState } from "react";
+import { PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -13,23 +13,52 @@ import {
   X,
 } from "lucide-react";
 import { DashboardPreview } from "../components/DashboardPreview";
+import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { Logo } from "../components/Logo";
 import { ThemeToggle } from "../components/Theme";
-import {
-  appUrl,
-  findUrl,
-  homeUrl,
-  legalUrl,
-  privacyUrl,
-  shareUrl,
-} from "../config";
+import { localizedUrls } from "../config";
 import { useLandingMotion } from "../hooks/useLandingMotion";
+import { commonMessages } from "../i18n/common";
+import { useI18n } from "../i18n/I18n";
+import { landingMessages } from "../i18n/landing";
 
-export function LandingPage() {
+export function LandingPage({
+  showLanguageSwitcher = true,
+}: {
+  showLanguageSwitcher?: boolean;
+}) {
   const landingRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const { locale } = useI18n();
+  const commonCopy = commonMessages[locale];
+  const copy = landingMessages[locale];
+  const { appUrl, findUrl, homeUrl, legalUrl, privacyUrl, shareUrl } = localizedUrls(locale);
 
   useLandingMotion(landingRef);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setMenuOpen(false);
+      window.requestAnimationFrame(() => menuButtonRef.current?.focus());
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [menuOpen]);
+
+  const closeMenuAtSection = (id: string) => {
+    setMenuOpen(false);
+    window.requestAnimationFrame(() => {
+      const section = document.getElementById(id);
+      const labelledBy = section?.getAttribute("aria-labelledby");
+      const focusTarget = (labelledBy ? document.getElementById(labelledBy) : null) ?? section;
+      if (!focusTarget) return;
+      if (!focusTarget.hasAttribute("tabindex")) focusTarget.setAttribute("tabindex", "-1");
+      focusTarget.focus({ preventScroll: true });
+    });
+  };
 
   const handlePreviewPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
@@ -51,43 +80,51 @@ export function LandingPage() {
 
   return (
     <div className="landing-page" ref={landingRef}>
-      <a className="skip-link" href="#contenu">Aller au contenu</a>
+      <a className="skip-link" href="#contenu">{commonCopy.skipToContent}</a>
       <header className="landing-header">
-        <a className="landing-brand" href={homeUrl} aria-label="Parkventory, accueil">
+        <a className="landing-brand" href={homeUrl} aria-label={copy.header.brandLabel}>
           <Logo />
         </a>
-        <nav className="landing-nav" aria-label="Navigation principale">
-          <a href="#fonctionnement">Comment ça marche</a>
-          <a href="#equipes">Pour les équipes</a>
-          <a href="#securite">Sécurité</a>
+        <nav className="landing-nav" aria-label={copy.header.mainNavigationLabel}>
+          <a href="#fonctionnement">{copy.header.howItWorks}</a>
+          <a href="#equipes">{copy.header.teams}</a>
+          <a href="#securite">{copy.header.security}</a>
         </nav>
         <div className="landing-actions">
+          {showLanguageSwitcher && <LanguageSwitcher />}
           <ThemeToggle />
-          <a className="text-link" href={appUrl}>Se connecter</a>
+          <a className="text-link" href={appUrl}>{copy.header.signIn}</a>
           <a className="button button-primary button-small" href="#commencer">
-            Commencer <ArrowUpRight aria-hidden="true" />
+            {copy.header.getStarted} <ArrowUpRight aria-hidden="true" />
           </a>
         </div>
         <button
+          ref={menuButtonRef}
           className="mobile-menu-button"
           type="button"
           aria-expanded={menuOpen}
           aria-controls="mobile-navigation"
-          aria-label={menuOpen ? "Fermer le menu" : "Ouvrir le menu"}
+          aria-label={menuOpen ? copy.header.closeMenu : copy.header.openMenu}
           onClick={() => setMenuOpen((open) => !open)}
         >
           {menuOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
         </button>
         {menuOpen && (
-          <nav id="mobile-navigation" className="mobile-navigation" aria-label="Navigation mobile">
-            <a href="#fonctionnement" onClick={() => setMenuOpen(false)}>Comment ça marche</a>
-            <a href="#equipes" onClick={() => setMenuOpen(false)}>Pour les équipes</a>
-            <a href="#securite" onClick={() => setMenuOpen(false)}>Sécurité</a>
+          <nav id="mobile-navigation" className="mobile-navigation" aria-label={copy.header.mobileNavigationLabel}>
+            <a href="#fonctionnement" onClick={() => closeMenuAtSection("fonctionnement")}>{copy.header.howItWorks}</a>
+            <a href="#equipes" onClick={() => closeMenuAtSection("equipes")}>{copy.header.teams}</a>
+            <a href="#securite" onClick={() => closeMenuAtSection("securite")}>{copy.header.security}</a>
+            {showLanguageSwitcher && (
+              <div className="mobile-theme-choice">
+                <span>{commonCopy.language}</span>
+                <LanguageSwitcher />
+              </div>
+            )}
             <div className="mobile-theme-choice">
-              <span>Apparence</span>
+              <span>{commonCopy.appearance}</span>
               <ThemeToggle />
             </div>
-            <a href={appUrl}>Ouvrir l’application</a>
+            <a href={appUrl}>{copy.header.openApp}</a>
           </nav>
         )}
         <span className="landing-progress" aria-hidden="true">
@@ -99,25 +136,22 @@ export function LandingPage() {
         <section className="hero-section" aria-labelledby="hero-title">
           <div className="hero-parking-texture" aria-hidden="true" />
           <div className="hero-copy" data-reveal>
-            <p className="eyebrow">Le parking partagé, simplement.</p>
+            <p className="eyebrow">{copy.hero.eyebrow}</p>
             <h1 id="hero-title">
-              Partagez votre place.<br />
-              <span>Gagnez du temps.</span>
+              {copy.hero.title}<br />
+              <span>{copy.hero.titleAccent}</span>
             </h1>
-            <p className="hero-summary">
-              Quand vous êtes absent, rendez votre place disponible à vos collègues.
-              Quand vous en avez besoin, réservez en quelques secondes.
-            </p>
+            <p className="hero-summary">{copy.hero.summary}</p>
             <div className="hero-actions">
               <a className="button button-primary" href={shareUrl}>
-                <CalendarCheck aria-hidden="true" /> Partager ma place
+                <CalendarCheck aria-hidden="true" /> {copy.hero.shareSpace}
               </a>
               <a className="button button-secondary" href={findUrl}>
-                <Search aria-hidden="true" /> Voir les disponibilités
+                <Search aria-hidden="true" /> {copy.hero.viewAvailability}
               </a>
             </div>
             <p className="hero-note">
-              <CheckCircle2 aria-hidden="true" /> Aucun administrateur requis pour démarrer
+              <CheckCircle2 aria-hidden="true" /> {copy.hero.note}
             </p>
           </div>
           <div
@@ -132,18 +166,18 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section className="benefit-strip" aria-label="Bénéfices principaux">
+        <section className="benefit-strip" aria-label={copy.benefits.label}>
           <article data-reveal>
             <CalendarCheck aria-hidden="true" />
-            <div><h2>Simple à partager</h2><p>Indiquez votre absence, votre place fait le reste.</p></div>
+            <div><h2>{copy.benefits.items[0].title}</h2><p>{copy.benefits.items[0].body}</p></div>
           </article>
           <article data-reveal>
             <ShieldCheck aria-hidden="true" />
-            <div><h2>Fiable à réserver</h2><p>Une disponibilité, une réservation, aucun doublon.</p></div>
+            <div><h2>{copy.benefits.items[1].title}</h2><p>{copy.benefits.items[1].body}</p></div>
           </article>
           <article data-reveal>
             <Users aria-hidden="true" />
-            <div><h2>Pensé pour les équipes</h2><p>Moins de recherche, plus de fluidité au quotidien.</p></div>
+            <div><h2>{copy.benefits.items[2].title}</h2><p>{copy.benefits.items[2].body}</p></div>
           </article>
         </section>
 
@@ -151,10 +185,10 @@ export function LandingPage() {
           <div className="landing-signal-track">
             {[0, 1].map((group) => (
               <div className="landing-signal-group" key={group}>
-                <span>Partager</span><i />
-                <span>Rendre disponible</span><i />
-                <span>Réserver</span><i />
-                <span>Recommencer</span><i />
+                <span>{copy.signal[0]}</span><i />
+                <span>{copy.signal[1]}</span><i />
+                <span>{copy.signal[2]}</span><i />
+                <span>{copy.signal[3]}</span><i />
               </div>
             ))}
           </div>
@@ -163,52 +197,49 @@ export function LandingPage() {
         <section className="process-section" id="fonctionnement" aria-labelledby="process-title">
           <div className="section-heading process-heading" data-reveal>
             <div>
-              <p className="section-index">01 / Comment ça marche</p>
-              <h2 id="process-title">Une place libre.<br />Un collègue dépanné.</h2>
-              <p>Parkventory transforme une absence en opportunité, sans ajouter de gestion au quotidien.</p>
+              <p className="section-index">{copy.process.index}</p>
+              <h2 id="process-title">{copy.process.title}<br />{copy.process.titleSecondLine}</h2>
+              <p>{copy.process.introduction}</p>
             </div>
             <a className="special-link" href={appUrl}>
-              Découvrir l’application <ArrowRight aria-hidden="true" />
+              {copy.process.discoverApp} <ArrowRight aria-hidden="true" />
             </a>
           </div>
           <ol className="process-steps" data-reveal>
             <li>
               <span className="step-number">01</span>
               <CalendarCheck aria-hidden="true" />
-              <div><h3>Indiquez votre absence</h3><p>Choisissez une journée ou une plage horaire.</p></div>
+              <div><h3>{copy.process.steps[0].title}</h3><p>{copy.process.steps[0].body}</p></div>
             </li>
             <li>
               <span className="step-number">02</span>
               <CarFront aria-hidden="true" />
-              <div><h3>La place devient disponible</h3><p>Elle apparaît uniquement aux collègues de votre espace.</p></div>
+              <div><h3>{copy.process.steps[1].title}</h3><p>{copy.process.steps[1].body}</p></div>
             </li>
             <li>
               <span className="step-number">03</span>
               <Users aria-hidden="true" />
-              <div><h3>Un collègue la réserve</h3><p>Vous êtes informé, sans échange manuel à organiser.</p></div>
+              <div><h3>{copy.process.steps[2].title}</h3><p>{copy.process.steps[2].body}</p></div>
             </li>
           </ol>
-          <div className="process-visual" data-reveal="scale" role="img" aria-label="Parking vu du ciel avec une place disponible en vert et une place sélectionnée en bleu">
+          <div className="process-visual" data-reveal="scale" role="img" aria-label={copy.process.visualLabel}>
             <div className="process-visual-callout">
               <Sparkles aria-hidden="true" />
-              <span><strong>Libre</strong> devient visible à l’équipe</span>
+              <span><strong>{copy.process.visualCalloutStrong}</strong> {copy.process.visualCalloutRest}</span>
             </div>
           </div>
         </section>
 
         <section className="teams-section" id="equipes" aria-labelledby="teams-title">
-          <div className="teams-kicker" data-reveal><Users aria-hidden="true" /> Communauté d’abord</div>
+          <div className="teams-kicker" data-reveal><Users aria-hidden="true" /> {copy.teams.kicker}</div>
           <div className="teams-copy" data-reveal>
-            <h2 id="teams-title">Commencez entre collègues.<br />Structurez quand vous en avez besoin.</h2>
-            <p>
-              Une adresse professionnelle vérifiée suffit pour rejoindre votre espace.
-              Les administrateurs restent optionnels et peuvent être nommés plus tard.
-            </p>
+            <h2 id="teams-title">{copy.teams.title}<br />{copy.teams.titleSecondLine}</h2>
+            <p>{copy.teams.introduction}</p>
           </div>
           <div className="teams-list">
-            <article data-reveal><span>01</span><h3>Simple à démarrer</h3><p>Une adresse professionnelle suffit pour commencer.</p></article>
-            <article data-reveal><span>02</span><h3>Sans surveillance</h3><p>Chacun gère uniquement ses partages et réservations.</p></article>
-            <article data-reveal><span>03</span><h3>Évolutif</h3><p>Sites, places personnalisées et plan arrivent quand ils deviennent utiles.</p></article>
+            <article data-reveal><span>01</span><h3>{copy.teams.items[0].title}</h3><p>{copy.teams.items[0].body}</p></article>
+            <article data-reveal><span>02</span><h3>{copy.teams.items[1].title}</h3><p>{copy.teams.items[1].body}</p></article>
+            <article data-reveal><span>03</span><h3>{copy.teams.items[2].title}</h3><p>{copy.teams.items[2].body}</p></article>
           </div>
         </section>
 
@@ -221,41 +252,38 @@ export function LandingPage() {
             <span className="security-dot security-dot-two" />
           </div>
           <div className="security-copy" data-reveal>
-            <p className="section-index">02 / Confiance</p>
-            <h2 id="security-title">Votre entreprise reste votre frontière.</h2>
-            <p>
-              L’adresse professionnelle sert à rejoindre le bon espace. Les disponibilités,
-              membres et réservations ne traversent jamais les organisations.
-            </p>
+            <p className="section-index">{copy.security.index}</p>
+            <h2 id="security-title">{copy.security.title}</h2>
+            <p>{copy.security.introduction}</p>
             <ul>
-              <li><CheckCircle2 aria-hidden="true" /> Vérification de l’adresse avant toute adhésion</li>
-              <li><CheckCircle2 aria-hidden="true" /> Données minimales, aucun motif d’absence collecté</li>
-              <li><CheckCircle2 aria-hidden="true" /> Chacun garde la main sur ses partages et réservations</li>
+              <li><CheckCircle2 aria-hidden="true" /> {copy.security.points[0]}</li>
+              <li><CheckCircle2 aria-hidden="true" /> {copy.security.points[1]}</li>
+              <li><CheckCircle2 aria-hidden="true" /> {copy.security.points[2]}</li>
             </ul>
           </div>
         </section>
 
         <section className="start-section" id="commencer" aria-labelledby="start-title">
           <div data-reveal>
-            <p className="section-index">Prêt à partager ?</p>
-            <h2 id="start-title">Votre prochaine place libre peut déjà aider quelqu’un.</h2>
+            <p className="section-index">{copy.start.kicker}</p>
+            <h2 id="start-title">{copy.start.title}</h2>
           </div>
           <div className="registration-form" data-reveal>
             <a className="button button-primary" href={appUrl}>
-              Continuer par e-mail <ArrowUpRight aria-hidden="true" />
+              {copy.start.continueByEmail} <ArrowUpRight aria-hidden="true" />
             </a>
-            <p>Votre adresse professionnelle sera vérifiée avant l’accès.</p>
+            <p>{copy.start.note}</p>
           </div>
         </section>
       </main>
 
       <footer className="landing-footer">
         <Logo />
-        <p>Le parking partagé, simplement.</p>
+        <p>{copy.footer.tagline}</p>
         <div>
-          <a href={appUrl}>Application</a>
-          <a href={privacyUrl}>Confidentialité</a>
-          <a href={legalUrl}>Mentions légales</a>
+          <a href={appUrl}>{copy.footer.app}</a>
+          <a href={privacyUrl}>{copy.footer.privacy}</a>
+          <a href={legalUrl}>{copy.footer.legal}</a>
           <span>© 2026</span>
         </div>
       </footer>

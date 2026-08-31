@@ -6,8 +6,10 @@ import { AdminActivityList } from "../../components/admin/AdminActivityList";
 import { AdminEmpty, AdminError, AdminLoading } from "../../components/admin/AdminState";
 import { AdminMetricBand, AdminPageHeader } from "../../components/admin/AdminPageHeader";
 import { formatDateTime, formatNumber, formatRole } from "../../components/admin/adminFormat";
-import { adminOperationsUrl, adminTenantsUrl, adminUsersUrl } from "../../config";
+import { localizedUrls } from "../../config";
 import { useAdminResource } from "../../hooks/useAdminResource";
+import { useI18n } from "../../i18n/I18n";
+import { adminMessages } from "../../i18n/admin";
 
 function filteredUrl(path: string, key: string, value: string) {
   const query = new URLSearchParams({ [key]: value });
@@ -23,10 +25,13 @@ export function AdminTenantPage({
   onSessionExpired: () => void;
   onForbidden: () => void;
 }) {
+  const { locale, intlLocale } = useI18n();
+  const copy = adminMessages[locale];
+  const urls = localizedUrls(locale);
   const loader = useCallback(() => loadAdminTenant(tenantId), [tenantId]);
   const resource = useAdminResource(loader, [loader], onSessionExpired, onForbidden);
-  const usersUrl = filteredUrl(adminUsersUrl, "tenantId", tenantId);
-  const activityUrl = filteredUrl(adminOperationsUrl, "tenantId", tenantId);
+  const usersUrl = filteredUrl(urls.adminUsersUrl, "tenantId", tenantId);
+  const activityUrl = filteredUrl(urls.adminOperationsUrl, "tenantId", tenantId);
   const [roleTarget, setRoleTarget] = useState<{ membershipId: string; role: "MEMBER" | "ADMIN" } | null>(null);
   const [roleBusy, setRoleBusy] = useState(false);
   const [roleError, setRoleError] = useState<string | null>(null);
@@ -42,7 +47,7 @@ export function AdminTenantPage({
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) onSessionExpired();
       else if (error instanceof ApiError && error.status === 403) onForbidden();
-      else setRoleError(error instanceof Error ? error.message : "Le rôle n’a pas pu être modifié.");
+      else setRoleError(error instanceof Error ? error.message : copy.organization.roleUpdateFailed);
     } finally {
       setRoleBusy(false);
     }
@@ -57,72 +62,72 @@ export function AdminTenantPage({
 
   return (
     <section className="admin-page">
-      <AppLink className="admin-back-link" href={adminTenantsUrl}><ArrowLeft aria-hidden="true" /> Tous les tenants</AppLink>
-      {resource.loading && <AdminLoading label="Chargement du tenant…" />}
+      <AppLink className="admin-back-link" href={urls.adminTenantsUrl}><ArrowLeft aria-hidden="true" /> {copy.organization.back}</AppLink>
+      {resource.loading && <AdminLoading label={copy.organization.loading} />}
       {!resource.data && resource.error && (
         resource.error instanceof ApiError && resource.error.status === 404
-          ? <AdminEmpty title="Tenant introuvable.">Il a peut-être été supprimé ou le lien est incomplet.</AdminEmpty>
+          ? <AdminEmpty title={copy.organization.notFound}>{copy.organization.notFoundBody}</AdminEmpty>
           : <AdminError error={resource.error} onRetry={() => void resource.reload()} />
       )}
       {resource.data && (
         <>
           <AdminPageHeader
             title={resource.data.tenant.name}
-            description={`${resource.data.tenant.domain} · créé le ${formatDateTime(resource.data.tenant.createdAt)}`}
-            actions={<AppLink className="button button-secondary button-small" href={activityUrl}>Voir l’activité <ExternalLink aria-hidden="true" /></AppLink>}
+            description={copy.organization.created(resource.data.tenant.domain, formatDateTime(resource.data.tenant.createdAt, intlLocale, copy.common.never))}
+            actions={<AppLink className="button button-secondary button-small" href={activityUrl}>{copy.organization.viewActivity} <ExternalLink aria-hidden="true" /></AppLink>}
           />
-          {resource.error && <AdminError error={resource.error} onRetry={() => void resource.reload()} title="L’actualisation a échoué." />}
+          {resource.error && <AdminError error={resource.error} onRetry={() => void resource.reload()} title={copy.common.refreshFailed} />}
           <AdminMetricBand
-            label={`Indicateurs de ${resource.data.tenant.name}`}
+            label={copy.organization.metricsLabel(resource.data.tenant.name)}
             items={[
-              { label: "Utilisateurs", value: formatNumber(resource.data.stats.users), href: usersUrl, detail: "Ouvrir la liste filtrée" },
-              { label: "Places", value: formatNumber(resource.data.stats.parkingSpots) },
-              { label: "Partages", value: formatNumber(resource.data.stats.shares), href: activityUrl, detail: "Voir les faits du tenant" },
-              { label: "Réservations", value: formatNumber(resource.data.stats.reservations), href: activityUrl, detail: "Voir les faits du tenant" },
-              { label: "Sessions actives", value: formatNumber(resource.data.stats.activeSessions), href: usersUrl },
+              { label: copy.organization.users, value: formatNumber(resource.data.stats.users, intlLocale), href: usersUrl, detail: copy.organization.openFilteredUsers },
+              { label: copy.organization.parkingSpaces, value: formatNumber(resource.data.stats.parkingSpots, intlLocale) },
+              { label: copy.organization.shares, value: formatNumber(resource.data.stats.shares, intlLocale), href: activityUrl, detail: copy.organization.viewOrganizationEvents },
+              { label: copy.organization.bookings, value: formatNumber(resource.data.stats.reservations, intlLocale), href: activityUrl, detail: copy.organization.viewOrganizationEvents },
+              { label: copy.organization.activeSessions, value: formatNumber(resource.data.stats.activeSessions, intlLocale), href: usersUrl },
             ]}
           />
           <div className="admin-tenant-grid">
             <section className="admin-panel admin-tenant-identity" aria-labelledby="tenant-identity-title">
-              <header><div><h2 id="tenant-identity-title">Configuration</h2><p>Identité et présentation du tenant</p></div></header>
+              <header><div><h2 id="tenant-identity-title">{copy.organization.configuration}</h2><p>{copy.organization.configurationSubtitle}</p></div></header>
               <dl>
-                <div><dt>Nom</dt><dd>{resource.data.tenant.name}</dd></div>
-                <div><dt>Domaine</dt><dd>{resource.data.tenant.domain}</dd></div>
-                <div><dt>Co-marque</dt><dd>{resource.data.tenant.branding?.enabled ? "Activée" : "Parkventory par défaut"}</dd></div>
-                {resource.data.tenant.branding?.enabled && <div><dt>Nom affiché</dt><dd>{resource.data.tenant.branding.companyName}</dd></div>}
+                <div><dt>{copy.organization.name}</dt><dd>{resource.data.tenant.name}</dd></div>
+                <div><dt>{copy.organization.domain}</dt><dd>{resource.data.tenant.domain}</dd></div>
+                <div><dt>{copy.organization.cobranded}</dt><dd>{resource.data.tenant.branding?.enabled ? copy.organization.enabled : copy.organization.parkventoryDefault}</dd></div>
+                {resource.data.tenant.branding?.enabled && <div><dt>{copy.organization.displayName}</dt><dd>{resource.data.tenant.branding.companyName}</dd></div>}
               </dl>
             </section>
             <section className="admin-panel" aria-labelledby="tenant-activity-title">
               <header>
-                <div><h2 id="tenant-activity-title">Activité récente</h2><p>Événements rattachés à ce tenant</p></div>
-                <AppLink href={activityUrl}>Tout voir</AppLink>
+                <div><h2 id="tenant-activity-title">{copy.organization.recentActivity}</h2><p>{copy.organization.organizationEvents}</p></div>
+                <AppLink href={activityUrl}>{copy.common.viewAll}</AppLink>
               </header>
               {resource.data.recentActivity.length
                 ? <AdminActivityList items={resource.data.recentActivity} compact />
-                : <AdminEmpty title="Aucun événement récent.">L’activité de ce tenant apparaîtra ici.</AdminEmpty>}
+                : <AdminEmpty title={copy.organization.noRecentEvent}>{copy.organization.noRecentEventBody}</AdminEmpty>}
             </section>
           </div>
           <section className="admin-panel admin-tenant-facts" aria-labelledby="tenant-members-title">
             <header>
-              <div><h2 id="tenant-members-title">Membres récents</h2><p>Comptes les plus récemment rattachés au tenant</p></div>
-              <AppLink href={usersUrl}>Liste filtrée</AppLink>
+              <div><h2 id="tenant-members-title">{copy.organization.recentMembers}</h2><p>{copy.organization.recentMembersSubtitle}</p></div>
+              <AppLink href={usersUrl}>{copy.organization.filteredList}</AppLink>
             </header>
             {roleError && <div className="admin-inline-error" role="alert">{roleError}</div>}
             {resource.data.recentMembers.length ? (
-              <div className="admin-table-wrap" aria-label="Table des membres récents, défilement horizontal" role="region" tabIndex={0}>
+              <div className="admin-table-wrap" aria-label={copy.organization.membersTableLabel} role="region" tabIndex={0}>
                 <table className="admin-table">
-                  <caption>Membres récents de {resource.data.tenant.name}</caption>
-                  <thead><tr><th>Membre</th><th>Rôle</th><th>Inscription</th><th>Sessions</th><th>Dernière activité</th><th>Faits</th></tr></thead>
+                  <caption>{copy.organization.membersCaption(resource.data.tenant.name)}</caption>
+                  <thead><tr><th>{copy.organization.member}</th><th>{copy.organization.role}</th><th>{copy.organization.registered}</th><th>{copy.organization.sessions}</th><th>{copy.organization.lastActivity}</th><th>{copy.organization.facts}</th></tr></thead>
                   <tbody>{resource.data.recentMembers.map((member) => (
                     <tr key={member.membershipId}>
-                      <th scope="row"><strong>{member.displayName}</strong><span>{member.email ?? "E-mail effacé"}</span></th>
+                      <th scope="row"><strong>{member.displayName}</strong><span>{member.email ?? copy.common.erasedEmail}</span></th>
                       <td>
-                        <span className="admin-role">{formatRole(member.role)}</span>
+                        <span className="admin-role">{formatRole(member.role, copy.common.role)}</span>
                         {member.emailErasedAt === null && (
                           roleTarget?.membershipId === member.membershipId ? (
                             <span className="admin-role-confirm">
-                              <button type="button" onClick={() => void confirmRole()} disabled={roleBusy}>Confirmer</button>
-                              <button type="button" onClick={() => setRoleTarget(null)} disabled={roleBusy}>Annuler</button>
+                              <button type="button" onClick={() => void confirmRole()} disabled={roleBusy}>{copy.organization.confirm}</button>
+                              <button type="button" onClick={() => setRoleTarget(null)} disabled={roleBusy}>{copy.organization.cancel}</button>
                             </span>
                           ) : (
                             <button
@@ -133,40 +138,40 @@ export function AdminTenantPage({
                                 role: member.role === "ADMIN" ? "MEMBER" : "ADMIN",
                               })}
                             >
-                              {member.role === "ADMIN" ? "Retirer l’accès admin" : "Nommer admin du tenant"}
+                              {member.role === "ADMIN" ? copy.organization.removeAdmin : copy.organization.appointAdmin}
                             </button>
                           )
                         )}
                       </td>
-                      <td>{formatDateTime(member.createdAt)}</td>
-                      <td>{formatNumber(member.activeSessions)}</td>
-                      <td>{formatDateTime(member.lastActivityAt)}</td>
-                      <td><AppLink href={filteredUrl(adminOperationsUrl, "userId", member.userId)}>Activité</AppLink></td>
+                      <td>{formatDateTime(member.createdAt, intlLocale, copy.common.never)}</td>
+                      <td>{formatNumber(member.activeSessions, intlLocale)}</td>
+                      <td>{formatDateTime(member.lastActivityAt, intlLocale, copy.common.never)}</td>
+                      <td><AppLink href={filteredUrl(urls.adminOperationsUrl, "userId", member.userId)}>{copy.common.activity}</AppLink></td>
                     </tr>
                   ))}</tbody>
                 </table>
               </div>
-            ) : <AdminEmpty title="Aucun membre récent.">Les membres rattachés apparaîtront ici.</AdminEmpty>}
+            ) : <AdminEmpty title={copy.organization.noRecentMember}>{copy.organization.noRecentMemberBody}</AdminEmpty>}
           </section>
           <section className="admin-panel admin-tenant-facts" aria-labelledby="tenant-spots-title">
-            <header><div><h2 id="tenant-spots-title">Places récentes</h2><p>Inventaire, propriétaires et utilisation observée</p></div><AppLink href={usersUrl}>Inventaire complet</AppLink></header>
+            <header><div><h2 id="tenant-spots-title">{copy.organization.recentSpaces}</h2><p>{copy.organization.recentSpacesSubtitle}</p></div><AppLink href={usersUrl}>{copy.organization.fullInventory}</AppLink></header>
             {resource.data.recentSpots.length ? (
-              <div className="admin-table-wrap" aria-label="Table des places récentes, défilement horizontal" role="region" tabIndex={0}>
+              <div className="admin-table-wrap" aria-label={copy.organization.spacesTableLabel} role="region" tabIndex={0}>
                 <table className="admin-table">
-                  <caption>Places récentes de {resource.data.tenant.name}</caption>
-                  <thead><tr><th>Place</th><th>Propriétaire</th><th>Création</th><th>Partages</th><th>Réservations</th></tr></thead>
+                  <caption>{copy.organization.spacesCaption(resource.data.tenant.name)}</caption>
+                  <thead><tr><th>{copy.organization.parkingSpace}</th><th>{copy.organization.owner}</th><th>{copy.organization.createdAt}</th><th>{copy.organization.shares}</th><th>{copy.organization.bookings}</th></tr></thead>
                   <tbody>{resource.data.recentSpots.map((spot) => (
                     <tr key={spot.id}>
                       <th scope="row"><strong>{spot.label}</strong><span>{spot.level} · {spot.timeZone}</span></th>
-                      <td><strong>{spot.owner.displayName}</strong><span>{spot.owner.email ?? "E-mail effacé"}</span></td>
-                      <td>{formatDateTime(spot.createdAt)}</td>
-                      <td>{formatNumber(spot.shares)}</td>
-                      <td>{formatNumber(spot.reservations)}</td>
+                      <td><strong>{spot.owner.displayName}</strong><span>{spot.owner.email ?? copy.common.erasedEmail}</span></td>
+                      <td>{formatDateTime(spot.createdAt, intlLocale, copy.common.never)}</td>
+                      <td>{formatNumber(spot.shares, intlLocale)}</td>
+                      <td>{formatNumber(spot.reservations, intlLocale)}</td>
                     </tr>
                   ))}</tbody>
                 </table>
               </div>
-            ) : <AdminEmpty title="Aucune place récente.">Les places déclarées apparaîtront ici.</AdminEmpty>}
+            ) : <AdminEmpty title={copy.organization.noRecentSpace}>{copy.organization.noRecentSpaceBody}</AdminEmpty>}
           </section>
         </>
       )}

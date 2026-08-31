@@ -11,9 +11,11 @@ import { AdminActivityList } from "../../components/admin/AdminActivityList";
 import { AdminEmpty, AdminError, AdminLoading } from "../../components/admin/AdminState";
 import { AdminMetricBand, AdminPageHeader } from "../../components/admin/AdminPageHeader";
 import { AdminTrend } from "../../components/admin/AdminTrend";
-import { formatDateTime, formatNumber } from "../../components/admin/adminFormat";
-import { adminOperationsUrl, adminTenantUrl, adminTenantsUrl } from "../../config";
+import { formatDateTime, formatNumber, formatPercent } from "../../components/admin/adminFormat";
+import { localizedUrls } from "../../config";
 import { useAdminResource } from "../../hooks/useAdminResource";
+import { useI18n } from "../../i18n/I18n";
+import { adminMessages } from "../../i18n/admin";
 
 export function AdminOverviewPage({
   onSessionExpired,
@@ -22,6 +24,9 @@ export function AdminOverviewPage({
   onSessionExpired: () => void;
   onForbidden: () => void;
 }) {
+  const { locale, intlLocale } = useI18n();
+  const copy = adminMessages[locale];
+  const urls = localizedUrls(locale);
   const loader = useCallback(async () => {
     const [overview, tenants, activity, diagnostics] = await Promise.all([
       loadAdminOverview(),
@@ -36,86 +41,86 @@ export function AdminOverviewPage({
   return (
     <section className="admin-page admin-overview-page">
       <AdminPageHeader
-        title="Vue d’ensemble"
-        description="État du réseau Parkventory, activité récente et signaux à investiguer. Le tenant système est exclu des métriques."
+        title={copy.overview.title}
+        description={copy.overview.description}
         actions={resource.data && (
           <button className="button button-secondary button-small" type="button" onClick={() => void resource.reload()} disabled={resource.refreshing}>
-            <RefreshCw className={resource.refreshing ? "spin" : ""} aria-hidden="true" /> Actualiser
+            <RefreshCw className={resource.refreshing ? "spin" : ""} aria-hidden="true" /> {copy.common.refresh}
           </button>
         )}
       />
-      {resource.loading && <AdminLoading label="Construction de la vue réseau…" />}
+      {resource.loading && <AdminLoading label={copy.overview.loading} />}
       {!resource.data && resource.error && <AdminError error={resource.error} onRetry={() => void resource.reload()} />}
       {resource.data && (
         <>
-          {resource.error && <AdminError error={resource.error} onRetry={() => void resource.reload()} title="L’actualisation a échoué." />}
+          {resource.error && <AdminError error={resource.error} onRetry={() => void resource.reload()} title={copy.common.refreshFailed} />}
           <section className="admin-posture" aria-labelledby="network-posture-title">
             <div>
-              <h2 id="network-posture-title">Posture du réseau</h2>
-              <p>État au {formatDateTime(resource.data.overview.generatedAt)}</p>
+              <h2 id="network-posture-title">{copy.overview.networkPosture}</h2>
+              <p>{copy.overview.statusAt(formatDateTime(resource.data.overview.generatedAt, intlLocale, copy.common.never))}</p>
             </div>
             <div className="admin-posture-signals">
               <span className="admin-signal admin-signal-ok">
-                <CheckCircle2 aria-hidden="true" /> Base de données opérationnelle
+                <CheckCircle2 aria-hidden="true" /> {copy.overview.databaseOperational}
               </span>
               <span className={resource.data.diagnostics.incidents.last24Hours ? "admin-signal admin-signal-alert" : "admin-signal admin-signal-ok"}>
                 {resource.data.diagnostics.incidents.last24Hours ? <AlertTriangle aria-hidden="true" /> : <CheckCircle2 aria-hidden="true" />}
-                {formatNumber(resource.data.diagnostics.incidents.last24Hours)} incident{resource.data.diagnostics.incidents.last24Hours === 1 ? "" : "s"} · 24 h
+                {copy.overview.incidents24h(resource.data.diagnostics.incidents.last24Hours, formatNumber(resource.data.diagnostics.incidents.last24Hours, intlLocale))}
               </span>
             </div>
           </section>
 
           <AdminMetricBand
-            label="Totaux du réseau"
+            label={copy.overview.totalsLabel}
             items={[
-              { label: "Tenants", value: formatNumber(resource.data.overview.totals.tenants), detail: `+${formatNumber(resource.data.overview.period.newTenants)} sur 30 j` },
-              { label: "Utilisateurs", value: formatNumber(resource.data.overview.totals.users), detail: `+${formatNumber(resource.data.overview.period.newUsers)} sur 30 j` },
-              { label: "Places", value: formatNumber(resource.data.overview.totals.parkingSpots) },
-              { label: "Partages", value: formatNumber(resource.data.overview.totals.shares), detail: `${formatNumber(resource.data.overview.period.shares)} sur 30 j` },
-              { label: "Réservations", value: formatNumber(resource.data.overview.totals.reservations), detail: `${formatNumber(resource.data.overview.period.reservations)} sur 30 j` },
-              { label: "Sessions actives", value: formatNumber(resource.data.overview.totals.activeSessions) },
+              { label: copy.overview.organizations, value: formatNumber(resource.data.overview.totals.tenants, intlLocale), detail: copy.overview.addedOver30Days(formatNumber(resource.data.overview.period.newTenants, intlLocale)) },
+              { label: copy.overview.users, value: formatNumber(resource.data.overview.totals.users, intlLocale), detail: copy.overview.addedOver30Days(formatNumber(resource.data.overview.period.newUsers, intlLocale)) },
+              { label: copy.overview.parkingSpaces, value: formatNumber(resource.data.overview.totals.parkingSpots, intlLocale) },
+              { label: copy.overview.shares, value: formatNumber(resource.data.overview.totals.shares, intlLocale), detail: copy.overview.over30Days(formatNumber(resource.data.overview.period.shares, intlLocale)) },
+              { label: copy.overview.bookings, value: formatNumber(resource.data.overview.totals.reservations, intlLocale), detail: copy.overview.over30Days(formatNumber(resource.data.overview.period.reservations, intlLocale)) },
+              { label: copy.overview.activeSessions, value: formatNumber(resource.data.overview.totals.activeSessions, intlLocale) },
             ]}
           />
 
-          <dl className="admin-period-rail" aria-label="Activité sur la fenêtre de trente jours">
-            <div><dt>Utilisateurs actifs · 7 j</dt><dd>{formatNumber(resource.data.overview.period.activeUsers7d)}</dd></div>
-            <div><dt>Utilisateurs actifs · 30 j</dt><dd>{formatNumber(resource.data.overview.period.activeUsers30d)}</dd></div>
-            <div><dt>Réservations / partages</dt><dd>{resource.data.overview.period.reservationRate === null ? "—" : `${new Intl.NumberFormat("fr-FR", { style: "percent", maximumFractionDigits: 1 }).format(resource.data.overview.period.reservationRate)}`}</dd></div>
-            <div><dt>Retraits / annulations</dt><dd>{formatNumber(resource.data.overview.period.withdrawals)} / {formatNumber(resource.data.overview.period.cancellations)}</dd></div>
-            <div><dt>Incidents</dt><dd>{formatNumber(resource.data.overview.period.incidents)}</dd></div>
+          <dl className="admin-period-rail" aria-label={copy.overview.thirtyDayActivityLabel}>
+            <div><dt>{copy.overview.activeUsers7d}</dt><dd>{formatNumber(resource.data.overview.period.activeUsers7d, intlLocale)}</dd></div>
+            <div><dt>{copy.overview.activeUsers30d}</dt><dd>{formatNumber(resource.data.overview.period.activeUsers30d, intlLocale)}</dd></div>
+            <div><dt>{copy.overview.bookingShareRate}</dt><dd>{resource.data.overview.period.reservationRate === null ? "—" : formatPercent(resource.data.overview.period.reservationRate, intlLocale)}</dd></div>
+            <div><dt>{copy.overview.withdrawalsCancellations}</dt><dd>{formatNumber(resource.data.overview.period.withdrawals, intlLocale)} / {formatNumber(resource.data.overview.period.cancellations, intlLocale)}</dd></div>
+            <div><dt>{copy.overview.incidents}</dt><dd>{formatNumber(resource.data.overview.period.incidents, intlLocale)}</dd></div>
           </dl>
 
           <div className="admin-overview-grid">
             <AdminTrend series={resource.data.overview.series} />
             <section className="admin-panel admin-tenant-pulse" aria-labelledby="tenant-pulse-title">
               <header>
-                <div><h2 id="tenant-pulse-title">Tenants les plus récents</h2><p>Adoption et dernière activité observée</p></div>
-                <AppLink href={adminTenantsUrl}>Tout voir</AppLink>
+                <div><h2 id="tenant-pulse-title">{copy.overview.recentOrganizations}</h2><p>{copy.overview.recentOrganizationsSubtitle}</p></div>
+                <AppLink href={urls.adminTenantsUrl}>{copy.common.viewAll}</AppLink>
               </header>
               {resource.data.tenants.items.length ? <ol>
                 {resource.data.tenants.items.map((tenant) => (
                   <li key={tenant.id}>
-                    <AppLink href={adminTenantUrl(tenant.id)}>
+                    <AppLink href={urls.adminTenantUrl(tenant.id)}>
                       <strong>{tenant.name}</strong><span>{tenant.domain}</span>
                     </AppLink>
                     <time dateTime={tenant.lastActivityAt ? new Date(tenant.lastActivityAt * 1_000).toISOString() : undefined}>
-                      {formatDateTime(tenant.lastActivityAt)}
+                      {formatDateTime(tenant.lastActivityAt, intlLocale, copy.common.never)}
                     </time>
-                    <span>{formatNumber(tenant.activeSessionCount)} session{tenant.activeSessionCount === 1 ? "" : "s"}</span>
+                    <span>{copy.overview.activeSessionCount(tenant.activeSessionCount, formatNumber(tenant.activeSessionCount, intlLocale))}</span>
                   </li>
                 ))}
-              </ol> : <AdminEmpty title="Aucun tenant client.">Les premiers tenants apparaîtront ici.</AdminEmpty>}
+              </ol> : <AdminEmpty title={copy.overview.noOrganizations}>{copy.overview.noOrganizationsBody}</AdminEmpty>}
             </section>
           </div>
 
           <section className="admin-panel admin-events" aria-labelledby="recent-events-title">
             <header>
-              <div><h2 id="recent-events-title">Activité récente</h2><p>Derniers événements du réseau</p></div>
-              <AppLink href={adminOperationsUrl}>Ouvrir les opérations</AppLink>
+              <div><h2 id="recent-events-title">{copy.overview.recentActivity}</h2><p>{copy.overview.recentActivitySubtitle}</p></div>
+              <AppLink href={urls.adminOperationsUrl}>{copy.overview.openOperations}</AppLink>
             </header>
             {resource.data.activity.items.length
               ? <AdminActivityList items={resource.data.activity.items} compact />
-              : <AdminEmpty title="Aucun événement récent.">Le journal d’activité est vide pour le moment.</AdminEmpty>}
+              : <AdminEmpty title={copy.overview.noRecentEvents}>{copy.overview.emptyActivity}</AdminEmpty>}
           </section>
         </>
       )}

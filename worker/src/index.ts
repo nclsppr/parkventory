@@ -8,11 +8,28 @@ import {
 } from "./admin";
 import { recordActivityEvent } from "./activity";
 import {
+  adminTenantSeoMetadata,
+  defaultLocale,
+  isLocale,
+  legacyAdminTenantIdFromPathname,
+  legacyRouteFromPathname,
+  localeConfig,
+  localeCookieName,
+  localeFromLanguagePreferences,
+  localeFromPathname,
+  localizedAdminTenantPath,
+  localizedAdminTenantRouteFromPathname,
+  localizedPath,
+  localizedRouteFromPathname,
+  type Locale,
+  type RouteId,
+} from "../../shared/i18n";
+import {
   loadOrganizationBranding,
   organizationBrandingFromRow,
 } from "./branding";
 import type { OrganizationBrandingRow } from "./branding";
-import { addDays, displayName, frenchDate, initials, organizationName, parisDate, zonedDateTimeToEpoch } from "./domain";
+import { addDays, displayName, initials, localizedDate, organizationName, zonedDateTimeToEpoch } from "./domain";
 import { magicLinkEmail } from "./email";
 import {
   cookieValue,
@@ -27,6 +44,13 @@ import {
   sha256,
   verifyTurnstile,
 } from "./security";
+import { localizedHtmlResponse } from "./seo";
+import {
+  requestLocale,
+  serverMessage,
+  serverMessageCode,
+  type ServerMessageKey,
+} from "./i18n";
 import type { AppEnvironment, AuthenticatedMember } from "./types";
 import { registerTenantAdminRoutes, requireTenantAdmin } from "./tenant-admin";
 
@@ -34,12 +58,13 @@ const app = new Hono<AppEnvironment>();
 const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
 const MAGIC_LINK_TTL_SECONDS = 15 * 60;
 const TIME_ZONE = "Europe/Paris";
-const genericMagicLinkMessage = "Si cette adresse professionnelle est autorisée, un lien de connexion vient d’être envoyé.";
+const localDatePattern = /^\d{4}-\d{2}-\d{2}$/;
 const EXACT_CLASSIFIED_ROUTES = new Set([
   "/api/v1/health",
   "/api/v1/auth/requests",
   "/api/v1/auth/verify",
   "/api/v1/auth/session",
+  "/api/v1/profile",
   "/api/v1/dashboard",
   "/api/v1/spots",
   "/api/v1/shares",
@@ -54,21 +79,168 @@ const EXACT_CLASSIFIED_ROUTES = new Set([
   "/api/v1/tenant-admin/branding",
 ]);
 
-function problem(status: number, detail: string): Response {
-  return Response.json({
-    type: "about:blank",
-    title: status >= 500 ? "Erreur du service" : "Requête refusée",
-    status,
-    detail,
-  }, { status });
+function canonicalOriginRedirect(request: Request): Response | null {
+  const url = new URL(request.url);
+  if (url.hostname !== "parkventory.com" && url.hostname !== "www.parkventory.com") {
+    return null;
+  }
+  if (url.protocol === "https:" && url.hostname === "parkventory.com") return null;
+  url.protocol = "https:";
+  url.hostname = "parkventory.com";
+  return Response.redirect(url.toString(), 308);
 }
 
-function accepted(message: string): Response {
-  return Response.json({ accepted: true, message }, { status: 200 });
+function localeCookie(request: Request): Locale | null {
+  const cookieHeader = request.headers.get("Cookie") ?? "";
+  for (const part of cookieHeader.split(";")) {
+    const [name, value] = part.trim().split("=", 2);
+    if (name === localeCookieName && isLocale(value)) return value;
+  }
+  return null;
+}
+
+function preferredLocale(request: Request): Locale {
+  return localeCookie(request)
+    ?? localeFromLanguagePreferences(request.headers.get("Accept-Language"), defaultLocale);
+}
+
+function redirectWithVary(url: URL, status = 302) {
+  return new Response(null, {
+    status,
+    headers: {
+      Location: url.toString(),
+      Vary: "Accept-Language, Cookie",
+    },
+  });
+}
+
+function legacyTarget(url: URL, locale: Locale): {
+  locale: Locale;
+  route: Exclude<RouteId, "notFound">;
+  status: 302 | 308;
+} | null {
+  const route = legacyRouteFromPathname(url.pathname);
+  if (!route || route === "home") return null;
+  if (route === "privacy" || route === "legal") {
+    return { locale: "fr", route, status: 308 };
+  }
+  if (route === "app") {
+    const intent = url.searchParams.get("intent");
+    if (intent === "share" || intent === "find") {
+      url.searchParams.delete("intent");
+      return { locale, route: intent, status: 302 };
+    }
+  }
+  return { locale, route, status: 302 };
+}
+
+function looksLikeAsset(pathname: string) {
+  return /\/[^/]+\.[^/]+$/.test(pathname);
+}
+
+function isProductionHost(hostname: string) {
+  return hostname === "parkventory.com" || hostname === "www.parkventory.com";
+}
+
+function localizedAdminTenantHtmlResponse(
+  response: Response,
+  locale: Locale,
+  tenantId: string,
+  forceNoIndex: boolean,
+): Response {
+  const metadata = adminTenantSeoMetadata(locale, tenantId);
+  const localized = localizedHtmlResponse(response, locale, "adminTenants", { forceNoIndex });
+  return new HTMLRewriter()
+    .on('title[data-seo-managed="true"]', {
+      element(element) {
+        element.setInnerContent(metadata.title);
+      },
+    })
+    .on('meta[data-seo-managed="true"][name="description"]', {
+      element(element) {
+        element.setAttribute("content", metadata.description);
+      },
+    })
+    .on('link[data-seo-managed="true"][rel="canonical"]', {
+      element(element) {
+        element.setAttribute("href", metadata.canonicalUrl ?? "");
+      },
+    })
+    .transform(localized);
+}
+
+function problem(
+  status: number,
+  detail: string,
+  options: {
+    code?: string;
+    headers?: HeadersInit;
+    title?: string;
+  } = {},
+): Response {
+  return Response.json({
+    type: "about:blank",
+    title: options.title ?? (status >= 500 ? "Erreur du service" : "Requête refusée"),
+    status,
+    ...(options.code ? { code: options.code } : {}),
+    detail,
+  }, { status, headers: options.headers });
+}
+
+function localizedProblem(
+  request: Request,
+  status: number,
+  key: ServerMessageKey,
+  variables: Record<string, string | number> = {},
+  headers?: HeadersInit,
+): Response {
+  const locale = requestLocale(request);
+  return problem(status, serverMessage(locale, key, variables), {
+    code: serverMessageCode(key),
+    headers,
+    title: serverMessage(
+      locale,
+      status >= 500 ? "serviceErrorTitle" : "requestRejectedTitle",
+    ),
+  });
+}
+
+function localizedAccepted(
+  request: Request,
+  key: ServerMessageKey,
+  variables: Record<string, string | number> = {},
+  status = 200,
+): Response {
+  return Response.json({
+    accepted: true,
+    code: serverMessageCode(key),
+    message: serverMessage(requestLocale(request), key, variables),
+  }, { status });
 }
 
 function nowSeconds(): number {
   return Math.floor(Date.now() / 1000);
+}
+
+function localDateAt(epochSeconds: number, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(epochSeconds * 1000));
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+export function isShareDateWithinSiteWindow(
+  date: string,
+  epochSeconds: number,
+  timeZone = TIME_ZONE,
+): boolean {
+  if (!localDatePattern.test(date)) return false;
+  const today = localDateAt(epochSeconds, timeZone);
+  return date >= today && date <= addDays(today, 7);
 }
 
 function classifiedErrorType(error: unknown): "TypeError" | "Error" | "unknown" {
@@ -92,7 +264,7 @@ async function classifiedErrorCode(error: unknown, secret: string): Promise<stri
 
 interface TenantConflictInput {
   code: string;
-  detail: string;
+  messageKey: ServerMessageKey;
   route: string;
   entityType?: "PARKING_SPOT" | "AVAILABILITY_OFFER" | "RESERVATION";
   entityId?: string;
@@ -121,7 +293,7 @@ async function tenantConflict(
     errorCode: input.code,
     dedupeWindowSeconds: 5 * 60,
   }).catch(() => undefined);
-  return problem(409, input.detail);
+  return localizedProblem(context.req.raw, 409, input.messageKey);
 }
 
 function clientIp(request: Request): string {
@@ -165,6 +337,7 @@ app.use("/api/*", async (context, next) => {
   context.header("X-Content-Type-Options", "nosniff");
   context.header("Referrer-Policy", "same-origin");
   context.header("Cache-Control", "no-store");
+  context.header("X-Robots-Tag", "noindex, nofollow");
   context.header("X-Request-ID", requestId);
   console.log(JSON.stringify({
     event: "http_request",
@@ -176,9 +349,15 @@ app.use("/api/*", async (context, next) => {
   }));
 });
 
+app.use("*", async (context, next) => {
+  const redirect = canonicalOriginRedirect(context.req.raw);
+  if (redirect) return redirect;
+  await next();
+});
+
 app.use("/api/*", async (context, next) => {
   if (["POST", "PUT", "PATCH", "DELETE"].includes(context.req.method) && !isSameOrigin(context.req.raw)) {
-    return problem(403, "Cette action doit provenir de Parkventory.");
+    return localizedProblem(context.req.raw, 403, "originRequired");
   }
   await next();
 });
@@ -186,7 +365,7 @@ app.use("/api/*", async (context, next) => {
 const requireMember: MiddlewareHandler<AppEnvironment> = async (context, next) => {
   const cookieName = sessionCookieName(context.env.APP_ENV);
   const token = cookieValue(context.req.header("Cookie"), cookieName);
-  if (!token) return problem(401, "Votre connexion a expiré. Reconnectez-vous pour continuer.");
+  if (!token) return localizedProblem(context.req.raw, 401, "sessionExpired");
 
   const tokenHash = await sha256(token);
   const member = await context.env.DB.prepare(`
@@ -199,6 +378,7 @@ const requireMember: MiddlewareHandler<AppEnvironment> = async (context, next) =
       user_account.id AS user_id,
       user_account.normalized_email AS email,
       user_account.display_name,
+      user_account.preferred_locale,
       membership.role,
       branding.enabled AS branding_enabled,
       branding.company_name AS branding_company_name,
@@ -232,12 +412,13 @@ const requireMember: MiddlewareHandler<AppEnvironment> = async (context, next) =
     user_id: string;
     email: string;
     display_name: string;
+    preferred_locale: string | null;
     role: "MEMBER" | "ADMIN";
   } & OrganizationBrandingRow>();
 
   if (!member) {
     context.header("Set-Cookie", expiredSessionCookie(context.env.APP_ENV));
-    return problem(401, "Votre connexion a expiré. Reconnectez-vous pour continuer.");
+    return localizedProblem(context.req.raw, 401, "sessionExpired");
   }
 
   const branding = organizationBrandingFromRow(member);
@@ -254,6 +435,7 @@ const requireMember: MiddlewareHandler<AppEnvironment> = async (context, next) =
     userId: member.user_id,
     email: member.email,
     displayName: member.display_name,
+    preferredLocale: isLocale(member.preferred_locale) ? member.preferred_locale : null,
     role: member.role,
     godmode,
     branding,
@@ -263,6 +445,7 @@ const requireMember: MiddlewareHandler<AppEnvironment> = async (context, next) =
 
 for (const route of [
   "/api/v1/auth/session",
+  "/api/v1/profile",
   "/api/v1/dashboard",
   "/api/v1/spots",
   "/api/v1/shares",
@@ -278,7 +461,11 @@ app.use("/api/v1/tenant-admin/*", requireTenantAdmin);
 
 const requireTenantMember: MiddlewareHandler<AppEnvironment> = async (context, next) => {
   if (context.get("member").organizationKind !== "TENANT") {
-    return problem(403, "Ce compte opérateur ne peut pas utiliser les routes d’un tenant.");
+    return localizedProblem(
+      context.req.raw,
+      403,
+      "operatorOrganizationRoutesForbidden",
+    );
   }
   await next();
 };
@@ -296,7 +483,7 @@ registerTenantAdminRoutes(app);
 
 app.get("/api/v1/health", async (context) => {
   const row = await context.env.DB.prepare("SELECT 1 AS ready").first<{ ready: number }>();
-  if (row?.ready !== 1) return problem(503, "La base de données n’est pas disponible.");
+  if (row?.ready !== 1) return localizedProblem(context.req.raw, 503, "databaseUnavailable");
   return context.json({ status: "ok" });
 });
 
@@ -306,10 +493,10 @@ app.post("/api/v1/auth/requests", async (context) => {
     turnstileToken?: unknown;
     purpose?: unknown;
   }>(context.req.raw);
-  if (!body) return problem(400, "La requête n’est pas valide.");
+  if (!body) return localizedProblem(context.req.raw, 400, "invalidRequest");
   const purpose = body.purpose === undefined ? "tenant" : body.purpose;
   if (purpose !== "tenant" && purpose !== "admin") {
-    return problem(400, "La requête n’est pas valide.");
+    return localizedProblem(context.req.raw, 400, "invalidRequest");
   }
 
   const remoteIp = clientIp(context.req.raw);
@@ -318,7 +505,7 @@ app.post("/api/v1/auth/requests", async (context) => {
     body.turnstileToken,
     remoteIp === "unknown" ? undefined : remoteIp,
   ).catch(() => false);
-  if (!challengePassed) return problem(400, "La vérification de sécurité a échoué. Réessayez.");
+  if (!challengePassed) return localizedProblem(context.req.raw, 400, "securityCheckFailed");
 
   const candidate = parseEmail(body.email);
   const godmodeRequest = purpose === "admin" && candidate
@@ -329,18 +516,20 @@ app.post("/api/v1/auth/requests", async (context) => {
       ? { email: candidate!.email, domain: SYSTEM_ORGANIZATION_DOMAIN }
       : null
     : parseProfessionalEmail(body.email);
-  const genericAdminResponse = () => Response.json(
-    { accepted: true, message: genericMagicLinkMessage },
-    { status: 202 },
+  const genericResponse = () => localizedAccepted(
+    context.req.raw,
+    "magicLinkGeneric",
+    {},
+    202,
   );
-  if (!parsed) return genericAdminResponse();
+  if (!parsed) return genericResponse();
 
   const issueMagicLink = async (): Promise<Response> => {
     if (!context.env.EMAIL) {
-      return problem(503, "L’envoi des e-mails n’est pas encore activé.");
+      return localizedProblem(context.req.raw, 503, "emailUnavailable");
     }
     if (!context.env.APP_SECRET) {
-      return problem(503, "Le service d’authentification n’est pas configuré.");
+      return localizedProblem(context.req.raw, 503, "authUnavailable");
     }
 
     const now = nowSeconds();
@@ -376,16 +565,17 @@ app.post("/api/v1/auth/requests", async (context) => {
       now - 3600,
     ).run();
     if ((insert.meta.changes ?? 0) < 1) {
-      return new Response(JSON.stringify({
-        type: "about:blank",
-        title: "Trop de demandes",
-        status: 429,
-        detail: "Trop de liens ont été demandés. Réessayez dans une heure.",
-      }), { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "3600" } });
+      const locale = requestLocale(context.req.raw);
+      return problem(429, serverMessage(locale, "tooManyMagicLinks"), {
+        code: serverMessageCode("tooManyMagicLinks"),
+        title: serverMessage(locale, "tooManyRequestsTitle"),
+        headers: { "Retry-After": "3600" },
+      });
     }
 
-    const link = `${publicOrigin(context.req.raw, context.env.PUBLIC_ORIGIN)}/auth/callback#token=${encodeURIComponent(token)}`;
-    const email = magicLinkEmail(link, branding?.colors);
+    const locale = requestLocale(context.req.raw);
+    const link = `${publicOrigin(context.req.raw, context.env.PUBLIC_ORIGIN)}${localizedPath(locale, "authCallback")}#token=${encodeURIComponent(token)}`;
+    const email = magicLinkEmail(link, branding?.colors, locale);
     try {
       await context.env.EMAIL.send({
         to: parsed.email,
@@ -399,10 +589,10 @@ app.post("/api/v1/auth/requests", async (context) => {
         request_id: requestId,
         error_type: classifiedErrorType(error),
       }));
-      return problem(503, "L’e-mail n’a pas pu être envoyé. Réessayez dans un instant.");
+      return localizedProblem(context.req.raw, 503, "emailSendFailed");
     }
 
-    return genericAdminResponse();
+    return genericResponse();
   };
 
   if (purpose === "admin") {
@@ -418,7 +608,7 @@ app.post("/api/v1/auth/requests", async (context) => {
           }));
         }),
     );
-    return genericAdminResponse();
+    return genericResponse();
   }
 
   return issueMagicLink();
@@ -427,7 +617,7 @@ app.post("/api/v1/auth/requests", async (context) => {
 app.post("/api/v1/auth/verify", async (context) => {
   const body = await readBody<{ token?: unknown }>(context.req.raw);
   if (!body || typeof body.token !== "string" || body.token.length < 40 || body.token.length > 100) {
-    return problem(400, "Ce lien de connexion n’est pas valide.");
+    return localizedProblem(context.req.raw, 400, "invalidMagicLink");
   }
 
   const tokenHash = await sha256(body.token);
@@ -444,13 +634,13 @@ app.post("/api/v1/auth/verify", async (context) => {
     consumed_at: number | null;
   }>();
   if (!link || link.consumed_at !== null || link.expires_at < now) {
-    return problem(400, "Ce lien est expiré ou a déjà été utilisé.");
+    return localizedProblem(context.req.raw, 400, "expiredMagicLink");
   }
 
   const godmode = link.normalized_domain === SYSTEM_ORGANIZATION_DOMAIN
     && await isGodmodeEmail(link.normalized_email, context.env.GODMODE_ADMIN_EMAIL_SHA256);
   if (link.normalized_domain === SYSTEM_ORGANIZATION_DOMAIN && !godmode) {
-    return problem(400, "Ce lien est expiré ou a déjà été utilisé.");
+    return localizedProblem(context.req.raw, 400, "expiredMagicLink");
   }
 
   const orgId = godmode
@@ -461,7 +651,8 @@ app.post("/api/v1/auth/verify", async (context) => {
   const sessionId = crypto.randomUUID();
   const sessionToken = randomToken();
   const sessionHash = await sha256(sessionToken);
-  const name = displayName(link.normalized_email);
+  const locale = requestLocale(context.req.raw);
+  const name = displayName(link.normalized_email, link.normalized_email);
   const organizationStatement = godmode
     ? context.env.DB.prepare(`
         SELECT id
@@ -485,14 +676,20 @@ app.post("/api/v1/auth/verify", async (context) => {
       `).bind(now, link.id),
       organizationStatement,
       context.env.DB.prepare(`
-        INSERT INTO user_account (id, normalized_email, display_name, created_at, email_erased_at)
-        VALUES (?1, ?2, ?3, ?4, NULL)
+        INSERT INTO user_account (
+          id, normalized_email, display_name, created_at, email_erased_at, preferred_locale
+        ) VALUES (?1, ?2, ?3, ?4, NULL, ?5)
         ON CONFLICT(id) DO UPDATE SET
           normalized_email = excluded.normalized_email,
           display_name = excluded.display_name,
           email_erased_at = NULL
         WHERE user_account.email_erased_at IS NOT NULL
-      `).bind(userId, link.normalized_email, name, now),
+      `).bind(userId, link.normalized_email, name, now, locale),
+      context.env.DB.prepare(`
+        UPDATE user_account
+        SET preferred_locale = COALESCE(preferred_locale, ?1)
+        WHERE id = ?2
+      `).bind(locale, userId),
       context.env.DB.prepare(`
         INSERT OR IGNORE INTO membership (id, organization_id, user_id, role, created_at)
         VALUES (?1, ?2, ?3, ?4, ?5)
@@ -535,15 +732,23 @@ app.post("/api/v1/auth/verify", async (context) => {
       ),
     ]);
   } catch {
-    return problem(400, "Ce lien est expiré ou a déjà été utilisé.");
+    return localizedProblem(context.req.raw, 400, "expiredMagicLink");
   }
 
   context.header("Set-Cookie", sessionCookie(sessionToken, context.env.APP_ENV));
   const authenticatedMembership = await context.env.DB.prepare(`
     SELECT role FROM membership WHERE id = ?1 AND organization_id = ?2 AND user_id = ?3
   `).bind(membershipId, orgId, userId).first<{ role: "MEMBER" | "ADMIN" }>();
-  if (!authenticatedMembership) return problem(400, "Ce lien est expiré ou a déjà été utilisé.");
+  if (!authenticatedMembership) {
+    return localizedProblem(context.req.raw, 400, "expiredMagicLink");
+  }
   const branding = await loadOrganizationBranding(context.env.DB, link.normalized_domain);
+  const accountLocale = await context.env.DB.prepare(`
+    SELECT preferred_locale FROM user_account WHERE id = ?1
+  `).bind(userId).first<{ preferred_locale: string | null }>();
+  const authenticatedLocale = isLocale(accountLocale?.preferred_locale)
+    ? accountLocale.preferred_locale
+    : locale;
   return context.json({
     authenticated: true,
     displayName: name,
@@ -552,6 +757,7 @@ app.post("/api/v1/auth/verify", async (context) => {
     role: authenticatedMembership.role,
     godmode,
     branding,
+    locale: authenticatedLocale,
   });
 });
 
@@ -565,7 +771,21 @@ app.get("/api/v1/auth/session", (context) => {
     role: member.role,
     godmode: member.godmode,
     branding: member.branding,
+    locale: member.preferredLocale ?? requestLocale(context.req.raw),
   });
+});
+
+app.patch("/api/v1/profile", async (context) => {
+  const body = await readBody<{ locale?: unknown }>(context.req.raw);
+  if (!body || typeof body.locale !== "string" || !isLocale(body.locale)) {
+    return localizedProblem(context.req.raw, 400, "invalidLocale");
+  }
+
+  const member = context.get("member");
+  await context.env.DB.prepare(`
+    UPDATE user_account SET preferred_locale = ?1 WHERE id = ?2
+  `).bind(body.locale, member.userId).run();
+  return context.json({ locale: body.locale });
 });
 
 app.delete("/api/v1/auth/session", async (context) => {
@@ -573,7 +793,7 @@ app.delete("/api/v1/auth/session", async (context) => {
   await context.env.DB.prepare("UPDATE app_session SET revoked_at = ?1 WHERE id = ?2")
     .bind(nowSeconds(), member.sessionId).run();
   context.header("Set-Cookie", expiredSessionCookie(context.env.APP_ENV));
-  return context.json({ accepted: true, message: "Vous êtes déconnecté." });
+  return localizedAccepted(context.req.raw, "loggedOut");
 });
 
 interface SpotRow {
@@ -597,16 +817,19 @@ interface OfferRow {
   reserver_membership_id: string | null;
 }
 
-function offerView(row: OfferRow, member: AuthenticatedMember) {
+function offerView(row: OfferRow, member: AuthenticatedMember, locale: Locale) {
   const offered = row.owner_membership_id === member.membershipId;
   const reserved = row.reserver_membership_id === member.membershipId;
   return {
     id: row.id,
-    dateLabel: frenchDate(row.local_date),
+    localDate: row.local_date,
+    localFrom: row.local_from,
+    localTo: row.local_to,
+    dateLabel: localizedDate(row.local_date, localeConfig[locale].intlLocale),
     timeLabel: `${row.local_from} – ${row.local_to}`,
     timeZone: row.time_zone,
     spot: row.label,
-    level: row.level || "Niveau non renseigné",
+    level: row.level || serverMessage(locale, "levelUnknown"),
     status: offered ? (row.reservation_id ? "RESERVED" : "UNAVAILABLE") : reserved ? "RESERVED" : "AVAILABLE",
     viewerRelation: offered ? "OFFERED" : reserved ? "RESERVED" : "NONE",
     reservationId: reserved ? row.reservation_id : null,
@@ -617,6 +840,7 @@ function offerView(row: OfferRow, member: AuthenticatedMember) {
 
 app.get("/api/v1/dashboard", async (context) => {
   const member = context.get("member");
+  const locale = requestLocale(context.req.raw);
   const now = nowSeconds();
   const end = now + (8 * 24 * 60 * 60);
   const [spotResult, offersResult, statsResult] = await context.env.DB.batch([
@@ -669,14 +893,14 @@ app.get("/api/v1/dashboard", async (context) => {
 
   const spot = (spotResult.results[0] as SpotRow | undefined) ?? null;
   const rows = offersResult.results as unknown as OfferRow[];
-  const availability = rows.map((row) => offerView(row, member));
+  const availability = rows.map((row) => offerView(row, member, locale));
   const stats = (statsResult.results[0] as {
     shared_total?: number;
     shares?: number;
     reservations?: number;
     available_spots?: number;
   } | undefined) ?? {};
-  const firstName = member.displayName.split(/\s+/)[0] || "membre";
+  const firstName = member.displayName.split(/\s+/)[0] || serverMessage(locale, "memberFallback");
 
   return context.json({
     user: {
@@ -708,7 +932,7 @@ app.post("/api/v1/spots", async (context) => {
   const label = typeof body?.label === "string" ? body.label.trim() : "";
   const level = typeof body?.level === "string" ? body.level.trim() : "";
   if (label.length < 1 || label.length > 40 || level.length > 40) {
-    return problem(400, "Renseignez un libellé de place valide.");
+    return localizedProblem(context.req.raw, 400, "invalidSpot");
   }
   try {
     await context.env.DB.prepare(`
@@ -739,13 +963,13 @@ app.post("/api/v1/spots", async (context) => {
     `).bind(member.organizationId, member.membershipId, label).first<{ id: string }>();
     return tenantConflict(context, {
       code: "SPOT_ALREADY_DECLARED",
-      detail: "Cette place est déjà déclarée dans votre entreprise.",
+      messageKey: "spotAlreadyDeclared",
       route: "/api/v1/spots",
       entityType: "PARKING_SPOT",
       entityId: existingSpot?.id,
     });
   }
-  return accepted(`La place ${label} est prête à être partagée.`);
+  return localizedAccepted(context.req.raw, "spotReady", { label });
 });
 
 app.post("/api/v1/shares", async (context) => {
@@ -753,30 +977,35 @@ app.post("/api/v1/shares", async (context) => {
   const body = await readBody<{ spot?: unknown; date?: unknown; from?: unknown; to?: unknown }>(context.req.raw);
   if (!body || typeof body.spot !== "string" || typeof body.date !== "string"
     || typeof body.from !== "string" || typeof body.to !== "string") {
-    return problem(400, "Le créneau n’est pas valide.");
-  }
-
-  const today = parisDate(nowSeconds());
-  if (body.date < today || body.date > addDays(today, 7)) {
-    return problem(400, "Choisissez une date dans les 7 prochains jours.");
-  }
-  const startsAt = zonedDateTimeToEpoch(body.date, body.from, TIME_ZONE);
-  const endsAt = zonedDateTimeToEpoch(body.date, body.to, TIME_ZONE);
-  if (startsAt === null || endsAt === null || endsAt <= startsAt || startsAt <= nowSeconds()) {
-    return problem(400, "Choisissez un créneau futur avec une fin postérieure au début.");
+    return localizedProblem(context.req.raw, 400, "invalidSlot");
   }
 
   const spot = await context.env.DB.prepare(`
-    SELECT id, label FROM parking_spot
+    SELECT id, label, time_zone FROM parking_spot
     WHERE organization_id = ?1 AND owner_membership_id = ?2
-  `).bind(member.organizationId, member.membershipId).first<{ id: string; label: string }>();
+  `).bind(member.organizationId, member.membershipId).first<{
+    id: string;
+    label: string;
+    time_zone: string;
+  }>();
   if (!spot || spot.label !== body.spot) {
     return tenantConflict(context, {
       code: "SPOT_REQUIRED_FOR_SHARE",
-      detail: "Déclarez votre place avant de la partager.",
+      messageKey: "spotRequired",
       route: "/api/v1/shares",
       entityType: "PARKING_SPOT",
     });
+  }
+
+  const now = nowSeconds();
+  const siteTimeZone = spot.time_zone || TIME_ZONE;
+  if (!isShareDateWithinSiteWindow(body.date, now, siteTimeZone)) {
+    return localizedProblem(context.req.raw, 400, "dateOutOfRange");
+  }
+  const startsAt = zonedDateTimeToEpoch(body.date, body.from, siteTimeZone);
+  const endsAt = zonedDateTimeToEpoch(body.date, body.to, siteTimeZone);
+  if (startsAt === null || endsAt === null || endsAt <= startsAt || startsAt <= now) {
+    return localizedProblem(context.req.raw, 400, "invalidFutureSlot");
   }
 
   try {
@@ -787,13 +1016,13 @@ app.post("/api/v1/shares", async (context) => {
       ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
     `).bind(
       crypto.randomUUID(), member.organizationId, spot.id, member.membershipId,
-      startsAt, endsAt, body.date, body.from, body.to, TIME_ZONE, nowSeconds(),
+      startsAt, endsAt, body.date, body.from, body.to, siteTimeZone, now,
     ).run();
   } catch (error) {
     if (String(error).includes("availability_overlap")) {
       return tenantConflict(context, {
         code: "SHARE_OVERLAP",
-        detail: "Cette place est déjà partagée sur tout ou partie de ce créneau.",
+        messageKey: "overlappingShare",
         route: "/api/v1/shares",
         entityType: "PARKING_SPOT",
         entityId: spot.id,
@@ -801,7 +1030,7 @@ app.post("/api/v1/shares", async (context) => {
     }
     throw error;
   }
-  return accepted(`La place ${spot.label} est partagée le`);
+  return localizedAccepted(context.req.raw, "spotShared", { label: spot.label });
 });
 
 app.post("/api/v1/availability/:id/reservations", async (context) => {
@@ -809,7 +1038,7 @@ app.post("/api/v1/availability/:id/reservations", async (context) => {
   const offerId = context.req.param("id");
   const idempotencyKey = context.req.header("Idempotency-Key")?.trim() ?? "";
   if (!/^[\w-]{16,100}$/.test(idempotencyKey)) {
-    return problem(400, "La réservation n’a pas pu être confirmée. Réessayez.");
+    return localizedProblem(context.req.raw, 400, "reservationFailed");
   }
 
   const existing = await context.env.DB.prepare(`
@@ -820,10 +1049,10 @@ app.post("/api/v1/availability/:id/reservations", async (context) => {
     .first<{ id: string; availability_offer_id: string }>();
   if (existing) {
     return existing.availability_offer_id === offerId
-      ? accepted("La place est réservée.")
+      ? localizedAccepted(context.req.raw, "spotReserved")
       : tenantConflict(context, {
           code: "RESERVATION_IDEMPOTENCY_CONFLICT",
-          detail: "Cette tentative de réservation a déjà été utilisée.",
+          messageKey: "idempotencyConflict",
           route: "/api/v1/availability/:id/reservations",
           entityType: "AVAILABILITY_OFFER",
           entityId: existing.availability_offer_id,
@@ -861,10 +1090,10 @@ app.post("/api/v1/availability/:id/reservations", async (context) => {
         .first<{ id: string; availability_offer_id: string }>();
       if (concurrentExisting) {
         return concurrentExisting.availability_offer_id === offerId
-          ? accepted("La place est réservée.")
+          ? localizedAccepted(context.req.raw, "spotReserved")
           : tenantConflict(context, {
               code: "RESERVATION_IDEMPOTENCY_CONFLICT",
-              detail: "Cette tentative de réservation a déjà été utilisée.",
+              messageKey: "idempotencyConflict",
               route: "/api/v1/availability/:id/reservations",
               entityType: "AVAILABILITY_OFFER",
               entityId: concurrentExisting.availability_offer_id,
@@ -872,7 +1101,7 @@ app.post("/api/v1/availability/:id/reservations", async (context) => {
       }
       return tenantConflict(context, {
         code: "RESERVATION_UNAVAILABLE",
-        detail: "Cette place n’est plus disponible.",
+        messageKey: "spotUnavailable",
         route: "/api/v1/availability/:id/reservations",
         entityType: "AVAILABILITY_OFFER",
       });
@@ -892,10 +1121,10 @@ app.post("/api/v1/availability/:id/reservations", async (context) => {
         .first<{ id: string; availability_offer_id: string }>();
       if (!concurrentExisting) throw error;
       return concurrentExisting.availability_offer_id === offerId
-        ? accepted("La place est réservée.")
+        ? localizedAccepted(context.req.raw, "spotReserved")
         : tenantConflict(context, {
             code: "RESERVATION_IDEMPOTENCY_CONFLICT",
-            detail: "Cette tentative de réservation a déjà été utilisée.",
+            messageKey: "idempotencyConflict",
             route: "/api/v1/availability/:id/reservations",
             entityType: "AVAILABILITY_OFFER",
             entityId: concurrentExisting.availability_offer_id,
@@ -914,13 +1143,13 @@ app.post("/api/v1/availability/:id/reservations", async (context) => {
     `).bind(offerId, member.organizationId).first<{ id: string }>();
     return tenantConflict(context, {
       code: "RESERVATION_WRITE_CONFLICT",
-      detail: "Cette place vient d’être réservée par un collègue.",
+      messageKey: "spotJustReserved",
       route: "/api/v1/availability/:id/reservations",
       entityType: "AVAILABILITY_OFFER",
       entityId: conflictingOffer?.id,
     });
   }
-  return accepted("La place est réservée.");
+  return localizedAccepted(context.req.raw, "spotReserved");
 });
 
 app.delete("/api/v1/reservations/:id", async (context) => {
@@ -942,12 +1171,12 @@ app.delete("/api/v1/reservations/:id", async (context) => {
   if ((result.meta.changes ?? 0) < 1) {
     return tenantConflict(context, {
       code: "RESERVATION_CANCELLATION_REJECTED",
-      detail: "Cette réservation ne peut plus être annulée.",
+      messageKey: "reservationCannotCancel",
       route: "/api/v1/reservations/:id",
       entityType: "RESERVATION",
     });
   }
-  return accepted("La réservation est annulée et la place redevient disponible.");
+  return localizedAccepted(context.req.raw, "reservationCancelled");
 });
 
 app.delete("/api/v1/availability/:id", async (context) => {
@@ -969,33 +1198,121 @@ app.delete("/api/v1/availability/:id", async (context) => {
   if ((result.meta.changes ?? 0) < 1) {
     return tenantConflict(context, {
       code: "SHARE_WITHDRAWAL_REJECTED",
-      detail: "Une disponibilité réservée ou déjà commencée ne peut pas être retirée.",
+      messageKey: "shareCannotWithdraw",
       route: "/api/v1/availability/:id",
       entityType: "AVAILABILITY_OFFER",
     });
   }
-  return accepted("La disponibilité est retirée.");
+  return localizedAccepted(context.req.raw, "shareWithdrawn");
 });
 
 app.all("*", async (context) => {
   const url = new URL(context.req.url);
-  if (url.hostname === "www.parkventory.com") {
-    url.hostname = "parkventory.com";
-    return Response.redirect(url.toString(), 308);
-  }
   if (url.pathname.startsWith("/api/")) {
-    return problem(404, "Cette route API n’existe pas.");
+    return localizedProblem(context.req.raw, 404, "apiRouteNotFound");
   }
-  const response = await context.env.ASSETS.fetch(context.req.raw);
-  if (["/admin", "/app", "/auth"].some((prefix) => url.pathname === prefix || url.pathname.startsWith(`${prefix}/`))) {
-    const headers = new Headers(response.headers);
-    headers.set("X-Robots-Tag", "noindex, nofollow");
-    return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+  if (context.req.method !== "GET" && context.req.method !== "HEAD") {
+    return localizedProblem(context.req.raw, 404, "routeNotFound");
+  }
+
+  const selectedLocale = preferredLocale(context.req.raw);
+  if (url.pathname === "/") {
+    url.pathname = localizedPath(selectedLocale, "home");
+    return redirectWithVary(url);
+  }
+  if (url.pathname === "/privacy" || url.pathname === "/legal") {
+    url.pathname = localizedPath(
+      selectedLocale,
+      url.pathname === "/privacy" ? "privacy" : "legal",
+    );
+    return redirectWithVary(url);
+  }
+
+  const legacy = legacyTarget(url, selectedLocale);
+  if (legacy) {
+    url.pathname = localizedPath(legacy.locale, legacy.route);
+    return legacy.status === 308
+      ? Response.redirect(url.toString(), 308)
+      : redirectWithVary(url, legacy.status);
+  }
+
+  const legacyAdminTenantId = legacyAdminTenantIdFromPathname(url.pathname);
+  if (legacyAdminTenantId) {
+    url.pathname = localizedAdminTenantPath(selectedLocale, legacyAdminTenantId);
+    return redirectWithVary(url);
+  }
+
+  const localizedRoute = localizedRouteFromPathname(url.pathname);
+  if (localizedRoute) {
+    const canonicalPath = localizedPath(localizedRoute.locale, localizedRoute.route);
+    if (url.pathname !== canonicalPath) {
+      url.pathname = canonicalPath;
+      return Response.redirect(url.toString(), 308);
+    }
+  }
+
+  const localizedAdminTenant = localizedAdminTenantRouteFromPathname(url.pathname);
+  if (localizedAdminTenant) {
+    const canonicalPath = localizedAdminTenantPath(
+      localizedAdminTenant.locale,
+      localizedAdminTenant.tenantId,
+    );
+    if (url.pathname !== canonicalPath) {
+      url.pathname = canonicalPath;
+      return Response.redirect(url.toString(), 308);
+    }
+  }
+
+  if (!localizedRoute && !localizedAdminTenant && looksLikeAsset(url.pathname)) {
+    const assetResponse = await context.env.ASSETS.fetch(context.req.raw);
+    const contentType = assetResponse.headers.get("Content-Type") ?? "";
+    if (contentType.includes("text/html")) {
+      return new Response("Not found", {
+        status: 404,
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "X-Robots-Tag": "noindex, nofollow",
+        },
+      });
+    }
+    return assetResponse;
+  }
+
+  const locale = localizedAdminTenant?.locale
+    ?? localizedRoute?.locale
+    ?? localeFromPathname(url.pathname)
+    ?? selectedLocale;
+  const route: RouteId = localizedAdminTenant
+    ? "adminTenants"
+    : localizedRoute?.route ?? "notFound";
+  const shellUrl = new URL("/", context.req.url);
+  const shellHeaders = new Headers(context.req.raw.headers);
+  shellHeaders.delete("If-Modified-Since");
+  shellHeaders.delete("If-None-Match");
+  const shellRequest = new Request(shellUrl, {
+    method: context.req.method,
+    headers: shellHeaders,
+  });
+  const shell = await context.env.ASSETS.fetch(shellRequest);
+  const forceNoIndex = !isProductionHost(url.hostname);
+  const response = localizedAdminTenant
+    ? localizedAdminTenantHtmlResponse(
+        shell,
+        locale,
+        localizedAdminTenant.tenantId,
+        forceNoIndex,
+      )
+    : localizedHtmlResponse(shell, locale, route, {
+        forceNoIndex,
+        status: route === "notFound" ? 404 : undefined,
+      });
+  if (route === "notFound" && localeFromPathname(url.pathname) === null) {
+    response.headers.append("Vary", "Accept-Language, Cookie");
   }
   return response;
 });
 
-app.notFound(() => problem(404, "Cette route n’existe pas."));
+app.notFound((context) => localizedProblem(context.req.raw, 404, "routeNotFound"));
 
 app.onError(async (error, context) => {
   const incidentId = crypto.randomUUID();
@@ -1024,7 +1341,7 @@ app.onError(async (error, context) => {
     error_code: errorCode,
     error_type: classifiedErrorType(error),
   }));
-  return problem(500, `Le service rencontre un problème. Référence : ${incidentId}`);
+  return localizedProblem(context.req.raw, 500, "serviceIncident", { incidentId });
 });
 
 export default app;

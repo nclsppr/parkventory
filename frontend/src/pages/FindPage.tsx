@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   CalendarDays,
@@ -7,7 +7,6 @@ import {
   Clock3,
   Info,
   LoaderCircle,
-  MapPin,
   Search,
   ShieldCheck,
   Trash2,
@@ -15,8 +14,15 @@ import {
 } from "lucide-react";
 import { ApiError, cancelReservation, reserveSpot } from "../api/client";
 import { AppLink } from "../components/AppLink";
-import { appUrl } from "../config";
-import { formatTimeZone } from "../lib/dates";
+import { localizedUrls } from "../config";
+import { applicationMessages } from "../i18n/application";
+import { useI18n } from "../i18n/I18n";
+import {
+  formatAvailabilityDate,
+  formatAvailabilityTime,
+  formatAvailabilityTimePhrase,
+  formatTimeZone,
+} from "../lib/dates";
 import type { AvailabilityItem, DashboardData } from "../types";
 
 interface FindPageProps {
@@ -25,19 +31,16 @@ interface FindPageProps {
   onSessionExpired: () => void;
 }
 
-function statusLabel(item: AvailabilityItem) {
-  if (item.viewerRelation === "RESERVED") return "Votre réservation";
-  if (item.viewerRelation === "OFFERED") return "Votre partage";
-  if (item.status === "AVAILABLE") return "Disponible";
-  if (item.status === "RESERVED") return "Réservée";
-  return "Votre partage";
-}
-
 export function FindPage({
   data,
   onRefresh,
   onSessionExpired,
 }: FindPageProps) {
+  const { locale, intlLocale } = useI18n();
+  const copy = applicationMessages[locale].find;
+  const availabilityCopy = applicationMessages[locale].availability;
+  const { appUrl } = localizedUrls(locale);
+  const numberFormat = useMemo(() => new Intl.NumberFormat(intlLocale), [intlLocale]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reserveBusy, setReserveBusy] = useState(false);
   const [cancelBusyId, setCancelBusyId] = useState<string | null>(null);
@@ -48,6 +51,41 @@ export function FindPage({
   const reservationAttempt = useRef<{ availabilityId: string; key: string } | null>(null);
   const selected = data.availability.find((item) => item.id === selectedId) ?? null;
   const availableCount = data.availability.filter((item) => item.status === "AVAILABLE").length;
+  const displayDate = (item: AvailabilityItem) => formatAvailabilityDate(
+    item,
+    intlLocale,
+    availabilityCopy.dateUnknown,
+  );
+  const displayTime = (item: AvailabilityItem) => formatAvailabilityTime(
+    item,
+    intlLocale,
+    availabilityCopy.timeUnknown,
+  );
+  const sentenceTime = (item: AvailabilityItem) => formatAvailabilityTimePhrase(
+    item,
+    intlLocale,
+    availabilityCopy.timeUnknown,
+  );
+  const displayTimeZone = (timeZone?: string | null, localDate?: string, localFrom?: string) => formatTimeZone(
+    timeZone,
+    intlLocale,
+    availabilityCopy.timeZoneUnknown,
+    availabilityCopy.localTime,
+    localDate && localFrom ? `${localDate}T${localFrom}` : localDate,
+  );
+  const statusLabel = (item: AvailabilityItem) => {
+    if (item.viewerRelation === "RESERVED") return availabilityCopy.viewerReservation;
+    if (item.viewerRelation === "OFFERED") return availabilityCopy.viewerAvailability;
+    if (item.status === "AVAILABLE") return availabilityCopy.available;
+    if (item.status === "RESERVED") return availabilityCopy.reserved;
+    return availabilityCopy.unavailable;
+  };
+
+  useEffect(() => {
+    setResultMessage(null);
+    setSelectedId(null);
+    reservationAttempt.current = null;
+  }, [locale]);
 
   const handleReserve = async () => {
     if (!selected || selected.status !== "AVAILABLE" || reserveLock.current) return;
@@ -61,7 +99,11 @@ export function FindPage({
     try {
       await reserveSpot(selected.id, attempt.key);
       await onRefresh(false);
-      const message = `${selected.spot} est réservée pour ${selected.dateLabel}, ${selected.timeLabel}.`;
+      const message = copy.bookedSuccess(
+        selected.spot,
+        displayDate(selected),
+        sentenceTime(selected),
+      );
       setResultTone("success");
       setResultMessage(message);
       setSelectedId(null);
@@ -73,10 +115,10 @@ export function FindPage({
       }
       const conflict = error instanceof ApiError && error.status === 409;
       const message = conflict
-        ? "Cette place vient d’être prise par un collègue. La liste a été actualisée."
+        ? copy.bookingConflict
         : error instanceof Error
           ? error.message
-          : "La place n’a pas pu être réservée.";
+          : copy.bookingFailed;
       setResultTone("error");
       setResultMessage(message);
       if (conflict) {
@@ -92,18 +134,18 @@ export function FindPage({
 
   const handleCancel = async (item: AvailabilityItem) => {
     if (!item.reservationId || !item.canCancel || cancelLock.current) return;
-    if (!window.confirm(
-      `Annuler votre réservation de ${item.spot}, ${item.dateLabel}, ${item.timeLabel} ?`,
-    )) return;
+    const date = displayDate(item);
+    const time = sentenceTime(item);
+    if (!window.confirm(copy.cancellationConfirmation(item.spot, date, time))) return;
 
     cancelLock.current = item.reservationId;
     setCancelBusyId(item.reservationId);
     setResultMessage(null);
     try {
-      const response = await cancelReservation(item.reservationId);
+      await cancelReservation(item.reservationId);
       await onRefresh(false);
       setResultTone("success");
-      setResultMessage(response.message);
+      setResultMessage(copy.cancellationSuccess(item.spot, date, time));
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
         onSessionExpired();
@@ -113,7 +155,7 @@ export function FindPage({
       setResultMessage(
         error instanceof Error
           ? error.message
-          : "La réservation n’a pas pu être annulée.",
+          : copy.cancellationFailed,
       );
       if (error instanceof ApiError && error.status === 409) {
         await onRefresh(false);
@@ -128,31 +170,30 @@ export function FindPage({
     <div className="app-page route-page find-route-page">
       <header className="app-page-header route-page-header">
         <div>
-          <p className="dashboard-eyebrow">Réserver</p>
-          <h1 tabIndex={-1}>Trouver une place</h1>
-          <p>Choisissez une disponibilité publiée, puis confirmez votre réservation.</p>
+          <p className="dashboard-eyebrow">{copy.eyebrow}</p>
+          <h1 tabIndex={-1}>{copy.title}</h1>
+          <p>{copy.introduction}</p>
         </div>
-        <span className="route-safety-note route-safety-note-cyan"><ShieldCheck aria-hidden="true" /> Une place, une réservation</span>
+        <span className="route-safety-note route-safety-note-cyan"><ShieldCheck aria-hidden="true" /> {copy.oneSpaceOneBooking}</span>
       </header>
 
       <section className="availability-scope" aria-labelledby="scope-title">
         <div className="workflow-section-heading workflow-section-heading-cyan">
           <span><Search aria-hidden="true" /></span>
-          <div><h2 id="scope-title">Disponibilités des 7 prochains jours</h2><p>Créneaux publiés par les collègues de votre entreprise.</p></div>
+          <div><h2 id="scope-title">{copy.scopeTitle}</h2><p>{copy.scopeIntroduction}</p></div>
         </div>
         <dl>
-          <div><dt>Sites</dt><dd><MapPin aria-hidden="true" /> Tous les parkings</dd></div>
-          <div><dt>Horaires</dt><dd><Clock3 aria-hidden="true" /> Heure locale</dd></div>
-          <div><dt>Disponibles</dt><dd className="scope-available"><CarFront aria-hidden="true" /> {availableCount}</dd></div>
+          <div><dt>{copy.schedules}</dt><dd><Clock3 aria-hidden="true" /> {copy.localTime}</dd></div>
+          <div><dt>{copy.available}</dt><dd className="scope-available"><CarFront aria-hidden="true" /> {numberFormat.format(availableCount)}</dd></div>
         </dl>
-        <p><Info aria-hidden="true" /> Chaque créneau suit l’heure locale de son parking.</p>
+        <p><Info aria-hidden="true" /> {copy.timeZoneNote}</p>
       </section>
 
       {resultMessage && (
         <div className={`inline-feedback ${resultTone === "error" ? "inline-feedback-error" : "inline-feedback-success"}`} role={resultTone === "error" ? "alert" : "status"}>
           {resultTone === "error" ? <Info aria-hidden="true" /> : <Check aria-hidden="true" />}
           <p>{resultMessage}</p>
-          {resultTone === "success" && <AppLink href={appUrl}>Revenir au tableau de bord <ArrowRight aria-hidden="true" /></AppLink>}
+          {resultTone === "success" && <AppLink href={appUrl}>{copy.backToDashboard} <ArrowRight aria-hidden="true" /></AppLink>}
         </div>
       )}
 
@@ -160,16 +201,16 @@ export function FindPage({
         <section className="availability-results" aria-labelledby="results-title">
           <div className="section-heading-compact">
             <div>
-              <p className="section-kicker">Créneaux publiés</p>
-              <h2 id="results-title">{availableCount} place{availableCount > 1 ? "s" : ""} à choisir</h2>
+              <p className="section-kicker">{copy.publishedSlots}</p>
+              <h2 id="results-title">{copy.choicesCount(availableCount, numberFormat.format(availableCount))}</h2>
             </div>
           </div>
 
           {data.availability.length === 0 ? (
             <div className="route-empty-state">
               <CalendarDays aria-hidden="true" />
-              <h3>Aucune place n’est encore partagée.</h3>
-              <p>Revenez plus tard ou invitez un collègue à publier son premier créneau.</p>
+              <h3>{copy.emptyTitle}</h3>
+              <p>{copy.emptyBody}</p>
             </div>
           ) : (
             <ol className="availability-agenda">
@@ -179,13 +220,13 @@ export function FindPage({
                   <li className={isSelected ? "selected" : undefined} key={item.id}>
                     <div className="availability-agenda-status">
                       <span className={`status status-${item.status.toLowerCase()}`}><i />{statusLabel(item)}</span>
-                      <span>{item.dateLabel}</span>
+                      <span>{displayDate(item)}</span>
                     </div>
                     <div className="availability-agenda-place">
                       <CarFront aria-hidden="true" />
-                      <p><strong>{item.spot}</strong><span>{item.level}</span></p>
+                      <p><strong>{item.spot}</strong><span>{item.level || availabilityCopy.levelUnknown}</span></p>
                     </div>
-                    <p className="availability-agenda-time"><Clock3 aria-hidden="true" />{item.timeLabel} · {formatTimeZone(item.timeZone)}</p>
+                    <p className="availability-agenda-time"><Clock3 aria-hidden="true" />{displayTime(item)} · {displayTimeZone(item.timeZone, item.localDate, item.localFrom)}</p>
                     {item.status === "AVAILABLE" ? (
                       <button
                         className="choose-spot-button"
@@ -203,7 +244,7 @@ export function FindPage({
                           });
                         }}
                       >
-                        {isSelected ? "Sélectionnée" : "Choisir"}<ArrowRight aria-hidden="true" />
+                        {isSelected ? copy.selected : copy.choose}<ArrowRight aria-hidden="true" />
                       </button>
                     ) : item.viewerRelation === "RESERVED" && item.reservationId ? (
                       <div className="availability-agenda-actions">
@@ -218,10 +259,10 @@ export function FindPage({
                             {cancelBusyId === item.reservationId
                               ? <LoaderCircle className="spin" aria-hidden="true" />
                               : <Trash2 aria-hidden="true" />}
-                            {cancelBusyId === item.reservationId ? "Annulation…" : "Annuler"}
+                            {cancelBusyId === item.reservationId ? copy.canceling : copy.cancel}
                           </button>
                         ) : (
-                          <span className="availability-agenda-static">Annulation fermée</span>
+                          <span className="availability-agenda-static">{copy.cancellationClosed}</span>
                         )}
                       </div>
                     ) : (
@@ -243,26 +284,26 @@ export function FindPage({
               <button className="reservation-summary-close" type="button" onClick={() => {
                 setSelectedId(null);
                 reservationAttempt.current = null;
-              }} aria-label="Annuler la sélection"><X aria-hidden="true" /></button>
-              <p className="section-kicker">Votre sélection</p>
+              }} aria-label={copy.closeSelection}><X aria-hidden="true" /></button>
+              <p className="section-kicker">{copy.yourSelection}</p>
               <h2>{selected.spot}</h2>
               <dl>
-                <div><dt>Niveau</dt><dd>{selected.level}</dd></div>
-                <div><dt>Date</dt><dd>{selected.dateLabel}</dd></div>
-                <div><dt>Horaire</dt><dd>{selected.timeLabel}</dd></div>
-                <div><dt>Heure locale</dt><dd>{formatTimeZone(selected.timeZone)}</dd></div>
+                <div><dt>{copy.level}</dt><dd>{selected.level || availabilityCopy.levelUnknown}</dd></div>
+                <div><dt>{copy.date}</dt><dd>{displayDate(selected)}</dd></div>
+                <div><dt>{copy.schedule}</dt><dd>{displayTime(selected)}</dd></div>
+                <div><dt>{copy.localTime}</dt><dd>{displayTimeZone(selected.timeZone, selected.localDate, selected.localFrom)}</dd></div>
               </dl>
-              <p><ShieldCheck aria-hidden="true" /> La confirmation attribuera ce créneau uniquement à votre compte.</p>
+              <p><ShieldCheck aria-hidden="true" /> {copy.confirmationNote}</p>
               <button className="button button-primary workflow-primary-action" type="button" onClick={() => void handleReserve()} disabled={reserveBusy} aria-busy={reserveBusy}>
                 {reserveBusy ? <LoaderCircle className="spin" aria-hidden="true" /> : <Check aria-hidden="true" />}
-                {reserveBusy ? "Confirmation…" : "Confirmer la réservation"}
+                {reserveBusy ? copy.confirming : copy.confirmBooking}
               </button>
             </>
           ) : (
             <div className="reservation-summary-empty">
               <CarFront aria-hidden="true" />
-              <h2>Sélectionnez une place</h2>
-              <p>Le récapitulatif apparaîtra ici avant toute réservation.</p>
+              <h2>{copy.selectSpace}</h2>
+              <p>{copy.selectSpaceBody}</p>
             </div>
           )}
         </aside>

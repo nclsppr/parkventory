@@ -1,7 +1,9 @@
 import { Hono } from "hono";
 import type { MiddlewareHandler } from "hono";
 import { recordActivityEvent } from "./activity";
+import { adminDisplayName, adminMessage, adminProblem } from "./admin-i18n";
 import { deriveBrandingPalette } from "./branding";
+import { requestLocale } from "./i18n";
 import type { AppEnvironment } from "./types";
 
 const DEFAULT_PAGE_SIZE = 25;
@@ -16,15 +18,6 @@ interface PageCursor {
 
 function nowSeconds(): number {
   return Math.floor(Date.now() / 1000);
-}
-
-function problem(status: number, detail: string): Response {
-  return Response.json({
-    type: "about:blank",
-    title: status >= 500 ? "Erreur du service" : "Requête refusée",
-    status,
-    detail,
-  }, { status });
 }
 
 function validIdentifier(value: string): boolean {
@@ -87,7 +80,7 @@ export const requireTenantAdmin: MiddlewareHandler<AppEnvironment> = async (cont
       errorCode: "TENANT_ADMIN_FORBIDDEN",
       dedupeWindowSeconds: 5 * 60,
     }).catch(() => undefined);
-    return problem(403, "Cet espace est réservé aux administrateurs de votre tenant.");
+    return adminProblem(context.req.raw, 403, "tenantAdminForbidden");
   }
   await next();
 };
@@ -146,7 +139,7 @@ export function registerTenantAdminRoutes(app: Hono<AppEnvironment>): void {
     ]);
 
     const organization = organizationResult.results[0] as Record<string, unknown> | undefined;
-    if (!organization) return problem(404, "Ce tenant n’existe plus.");
+    if (!organization) return adminProblem(context.req.raw, 404, "tenantGone");
     const totals = totalsResult.results[0] as Record<string, unknown> | undefined;
     const period = periodResult.results[0] as Record<string, unknown> | undefined;
     const series = new Map<string, { date: string; shares: number; reservations: number }>();
@@ -204,12 +197,13 @@ export function registerTenantAdminRoutes(app: Hono<AppEnvironment>): void {
 
   app.get("/api/v1/tenant-admin/members", async (context) => {
     const member = context.get("member");
+    const locale = requestLocale(context.req.raw);
     const limit = parseLimit(context.req.query("limit"));
     const cursorValue = context.req.query("cursor");
     const cursor = decodeCursor(cursorValue);
     const query = (context.req.query("q") ?? "").trim();
     if (limit === null || (cursorValue && !cursor) || query.length > 100 || /[\u0000-\u001f]/.test(query)) {
-      return problem(400, "Les paramètres de recherche ne sont pas valides.");
+      return adminProblem(context.req.raw, 400, "invalidMemberSearch");
     }
 
     const clauses = ["membership.organization_id = ?1"];
@@ -249,7 +243,7 @@ export function registerTenantAdminRoutes(app: Hono<AppEnvironment>): void {
       return {
         membershipId: String(row.membership_id),
         userId: String(row.user_id),
-        displayName: String(row.display_name),
+        displayName: adminDisplayName(locale, row.display_name, row.email_erased_at),
         email: emailErasedAt === null ? String(row.normalized_email) : null,
         emailErasedAt,
         role: String(row.role),
@@ -276,10 +270,10 @@ export function registerTenantAdminRoutes(app: Hono<AppEnvironment>): void {
     const member = context.get("member");
     const body = await readBody<{ enabled?: unknown; logoEnabled?: unknown; actionColor?: unknown; availableColor?: unknown }>(context.req.raw);
     if (!body || typeof body.enabled !== "boolean" || typeof body.logoEnabled !== "boolean") {
-      return problem(400, "La configuration de marque n’est pas valide.");
+      return adminProblem(context.req.raw, 400, "invalidBranding");
     }
     const palette = deriveBrandingPalette(body.actionColor, body.availableColor);
-    if (!palette) return problem(400, "Les couleurs doivent utiliser le format hexadécimal #RRGGBB.");
+    if (!palette) return adminProblem(context.req.raw, 400, "invalidHexColors");
 
     const existing = await context.env.DB.prepare(`
       SELECT logo_url FROM organization_branding
@@ -288,7 +282,7 @@ export function registerTenantAdminRoutes(app: Hono<AppEnvironment>): void {
     const logoUrl = existing?.logo_url ?? DEFAULT_LOGO_URL;
     const logoAvailable = logoUrl !== DEFAULT_LOGO_URL;
     if (body.logoEnabled && !logoAvailable) {
-      return problem(409, "Aucun logo de tenant n’a encore été autorisé par Parkventory.");
+      return adminProblem(context.req.raw, 409, "logoNotAuthorized");
     }
     const now = nowSeconds();
     await context.env.DB.prepare(`
@@ -326,16 +320,25 @@ export function registerTenantAdminRoutes(app: Hono<AppEnvironment>): void {
       requestId: context.get("requestId"),
       route: "/api/v1/tenant-admin/branding",
     });
-    return context.json({ accepted: true, message: "L’identité visuelle du tenant a été mise à jour." });
+    return context.json({
+      accepted: true,
+      message: adminMessage(requestLocale(context.req.raw), "brandingUpdated"),
+    });
   });
 
   app.delete("/api/v1/tenant-admin/members/:membershipId/email", async (context) => {
     const actor = context.get("member");
     const membershipId = context.req.param("membershipId");
-    if (!validIdentifier(membershipId)) return problem(400, "L’identifiant du membre n’est pas valide.");
+    if (!validIdentifier(membershipId)) {
+      return adminProblem(context.req.raw, 400, "invalidMembershipIdentifier");
+    }
     const body = await readBody<{ confirmation?: unknown }>(context.req.raw);
-    if (!body || body.confirmation !== "EFFACER") return problem(400, "La confirmation d’effacement est requise.");
-    if (membershipId === actor.membershipId) return problem(409, "Vous ne pouvez pas effacer votre propre adresse depuis cet espace.");
+    if (!body || body.confirmation !== "EFFACER") {
+      return adminProblem(context.req.raw, 400, "eraseConfirmationRequired");
+    }
+    if (membershipId === actor.membershipId) {
+      return adminProblem(context.req.raw, 409, "cannotEraseOwnEmail");
+    }
 
     const target = await context.env.DB.prepare(`
       SELECT membership.id AS membership_id, membership.user_id, membership.role,
@@ -352,11 +355,11 @@ export function registerTenantAdminRoutes(app: Hono<AppEnvironment>): void {
       email_erased_at: number | null;
       membership_count: number;
     }>();
-    if (!target) return problem(404, "Ce membre n’existe pas dans votre tenant.");
-    if (target.role !== "MEMBER") return problem(409, "Le compte d’un administrateur ne peut pas être effacé ici.");
-    if (target.email_erased_at !== null) return problem(409, "Cette adresse a déjà été effacée.");
+    if (!target) return adminProblem(context.req.raw, 404, "memberNotFoundInOwnTenant");
+    if (target.role !== "MEMBER") return adminProblem(context.req.raw, 409, "cannotEraseAdminEmail");
+    if (target.email_erased_at !== null) return adminProblem(context.req.raw, 409, "emailAlreadyErased");
     if (Number(target.membership_count) !== 1) {
-      return problem(409, "Ce compte est rattaché à plusieurs tenants et doit être traité par Parkventory.");
+      return adminProblem(context.req.raw, 409, "multiTenantEraseRequiresSupport");
     }
 
     const now = nowSeconds();
@@ -380,7 +383,7 @@ export function registerTenantAdminRoutes(app: Hono<AppEnvironment>): void {
     ]);
     return context.json({
       accepted: true,
-      message: "L’adresse e-mail a été effacée et les sessions du compte ont été supprimées. L’historique métier est conservé.",
+      message: adminMessage(requestLocale(context.req.raw), "emailErased"),
     });
   });
 }

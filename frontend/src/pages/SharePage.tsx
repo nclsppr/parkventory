@@ -12,8 +12,19 @@ import {
   Trash2,
 } from "lucide-react";
 import { ApiError, declareSpot, shareSpot, withdrawAvailability } from "../api/client";
-import { dateInputValue, formatInputDate, formatTimeZone } from "../lib/dates";
-import type { DashboardData } from "../types";
+import { applicationMessages } from "../i18n/application";
+import { useI18n } from "../i18n/I18n";
+import {
+  DEFAULT_SITE_TIME_ZONE,
+  dateInputValue,
+  formatAvailabilityDate,
+  formatAvailabilityTime,
+  formatInputDate,
+  formatInputTime,
+  formatTimeRange,
+  formatTimeZone,
+} from "../lib/dates";
+import type { AvailabilityItem, DashboardData } from "../types";
 
 interface SharePageProps {
   data: DashboardData;
@@ -26,15 +37,19 @@ export function SharePage({
   onRefresh,
   onSessionExpired,
 }: SharePageProps) {
+  const { locale, intlLocale } = useI18n();
+  const copy = applicationMessages[locale].share;
+  const availabilityCopy = applicationMessages[locale].availability;
   const [shareBusy, setShareBusy] = useState(false);
   const [spotBusy, setSpotBusy] = useState(false);
   const [withdrawBusyId, setWithdrawBusyId] = useState<string | null>(null);
   const [inlineError, setInlineError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [spotForm, setSpotForm] = useState({ label: "", level: "" });
+  const siteTimeZone = data.user.assignedSiteTimeZone ?? DEFAULT_SITE_TIME_ZONE;
   const [shareForm, setShareForm] = useState({
     spot: data.user.assignedSpot ?? "",
-    date: dateInputValue(1),
+    date: dateInputValue(1, siteTimeZone),
     from: "08:00",
     to: "18:00",
   });
@@ -44,11 +59,32 @@ export function SharePage({
   const timeZone = data.user.assignedSiteTimeZone;
   const ownShares = useMemo(() => data.activeShares, [data.activeShares]);
   const timeOrderInvalid = Boolean(shareForm.from && shareForm.to && shareForm.from >= shareForm.to);
-  const timeOrderMessage = "L’heure de fin doit être postérieure à l’heure de début.";
+  const displayDate = (item: AvailabilityItem) => formatAvailabilityDate(
+    item,
+    intlLocale,
+    availabilityCopy.dateUnknown,
+  );
+  const displayTime = (item: AvailabilityItem) => formatAvailabilityTime(
+    item,
+    intlLocale,
+    availabilityCopy.timeUnknown,
+  );
+  const displayTimeZone = (timeZoneValue?: string | null, localDate?: string, localFrom?: string) => formatTimeZone(
+    timeZoneValue,
+    intlLocale,
+    availabilityCopy.timeZoneUnknown,
+    availabilityCopy.localTime,
+    localDate && localFrom ? `${localDate}T${localFrom}` : localDate,
+  );
 
   useEffect(() => {
     setShareForm((current) => ({ ...current, spot: data.user.assignedSpot ?? "" }));
   }, [data.user.assignedSpot]);
+
+  useEffect(() => {
+    setInlineError(null);
+    setSuccessMessage(null);
+  }, [locale]);
 
   const reportError = (error: unknown, fallback: string) => {
     if (error instanceof ApiError && error.status === 401) {
@@ -67,14 +103,14 @@ export function SharePage({
     setInlineError(null);
     setSuccessMessage(null);
     try {
-      const response = await declareSpot({
+      await declareSpot({
         label: spotForm.label.trim(),
         level: spotForm.level.trim() || undefined,
       });
       await onRefresh(false);
-      setSuccessMessage(response.message);
+      setSuccessMessage(copy.spotAssigned(spotForm.label.trim()));
     } catch (error) {
-      reportError(error, "La place n’a pas pu être déclarée.");
+      reportError(error, copy.declareError);
     } finally {
       spotLock.current = false;
       setSpotBusy(false);
@@ -93,30 +129,35 @@ export function SharePage({
     shareLock.current = true;
     setShareBusy(true);
     try {
-      const response = await shareSpot(shareForm);
+      await shareSpot(shareForm);
       await onRefresh(false);
-      const summary = `${response.message} ${formatInputDate(shareForm.date)}, de ${shareForm.from} à ${shareForm.to}.`;
-      setSuccessMessage(summary);
+      setSuccessMessage(copy.publishedSuccess(
+        shareForm.spot,
+        formatInputDate(shareForm.date, intlLocale, availabilityCopy.dateUnknown),
+        formatInputTime(shareForm.from, intlLocale, availabilityCopy.timeUnknown),
+        formatInputTime(shareForm.to, intlLocale, availabilityCopy.timeUnknown),
+      ));
     } catch (error) {
-      reportError(error, "La disponibilité n’a pas pu être publiée.");
+      reportError(error, copy.publishError);
     } finally {
       shareLock.current = false;
       setShareBusy(false);
     }
   };
 
-  const handleWithdraw = async (availabilityId: string, spot: string, dateLabel: string) => {
+  const handleWithdraw = async (item: AvailabilityItem) => {
     if (withdrawLock.current) return;
-    if (!window.confirm(`Retirer le partage de ${spot} pour ${dateLabel} ?`)) return;
+    const date = displayDate(item);
+    if (!window.confirm(copy.withdrawConfirmation(item.spot, date))) return;
 
-    withdrawLock.current = availabilityId;
-    setWithdrawBusyId(availabilityId);
+    withdrawLock.current = item.id;
+    setWithdrawBusyId(item.id);
     setInlineError(null);
     setSuccessMessage(null);
     try {
-      const response = await withdrawAvailability(availabilityId);
+      await withdrawAvailability(item.id);
       await onRefresh(false);
-      setSuccessMessage(response.message);
+      setSuccessMessage(copy.withdrawnSuccess(item.spot, date));
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
         onSessionExpired();
@@ -125,7 +166,7 @@ export function SharePage({
       setInlineError(
         error instanceof Error
           ? error.message
-          : "La disponibilité n’a pas pu être retirée.",
+          : copy.withdrawError,
       );
       if (error instanceof ApiError && error.status === 409) {
         await onRefresh(false);
@@ -143,15 +184,15 @@ export function SharePage({
     <div className="app-page route-page share-route-page">
       <header className="app-page-header route-page-header">
         <div>
-          <p className="dashboard-eyebrow">Partager</p>
-          <h1 tabIndex={-1}>{data.user.assignedSpot ? "Partager ma place" : "Déclarer ma place"}</h1>
+          <p className="dashboard-eyebrow">{copy.eyebrow}</p>
+          <h1 tabIndex={-1}>{data.user.assignedSpot ? copy.titleAssigned : copy.titleUnassigned}</h1>
           <p>
             {data.user.assignedSpot
-              ? `Indiquez quand ${data.user.assignedSpot} est libre. Aucun motif d’absence n’est demandé.`
-              : "Affectez d’abord la place que vous utilisez habituellement."}
+              ? copy.assignedIntroduction(data.user.assignedSpot)
+              : copy.unassignedIntroduction}
           </p>
         </div>
-        <span className="route-safety-note"><ShieldCheck aria-hidden="true" /> Visible seulement par votre entreprise</span>
+        <span className="route-safety-note"><ShieldCheck aria-hidden="true" /> {copy.companyOnly}</span>
       </header>
 
       {successMessage && (
@@ -171,24 +212,24 @@ export function SharePage({
           <form
             className="workflow-surface workflow-form"
             id="share-workflow-form"
-            aria-label="Formulaire de partage"
+            aria-label={copy.formLabel}
             onSubmit={handleShare}
           >
             <div className="workflow-section-heading">
               <span><CalendarCheck aria-hidden="true" /></span>
-              <div><h2>Créneau de disponibilité</h2><p>Les heures suivent l’heure locale du parking.</p></div>
+              <div><h2>{copy.availabilitySlot}</h2><p>{copy.parkingLocalTime}</p></div>
             </div>
 
             <div className="field-group">
-              <span>Votre place</span>
-              <span className="assigned-spot-field"><CarFront aria-hidden="true" /><strong>{shareForm.spot}</strong><small>{data.user.assignedLevel ?? "Niveau non renseigné"}</small></span>
+              <span>{copy.yourSpace}</span>
+              <span className="assigned-spot-field"><CarFront aria-hidden="true" /><strong>{shareForm.spot}</strong><small>{data.user.assignedLevel ?? availabilityCopy.levelUnknown}</small></span>
             </div>
 
             <label className="field-group">
-              <span>Date</span>
+              <span>{copy.date}</span>
               <input
                 type="date"
-                min={dateInputValue()}
+                min={dateInputValue(0, siteTimeZone)}
                 value={shareForm.date}
                 onChange={(event) => setShareForm({ ...shareForm, date: event.target.value })}
                 required
@@ -197,7 +238,7 @@ export function SharePage({
 
             <div className="time-fields">
               <label className="field-group">
-                <span>Début</span>
+                <span>{copy.start}</span>
                 <input
                   type="time"
                   value={shareForm.from}
@@ -208,7 +249,7 @@ export function SharePage({
                 />
               </label>
               <label className="field-group">
-                <span>Fin</span>
+                <span>{copy.end}</span>
                 <input
                   type="time"
                   value={shareForm.to}
@@ -220,20 +261,20 @@ export function SharePage({
               </label>
             </div>
 
-            <p className="timezone-note"><Clock3 aria-hidden="true" /> Heure locale : <strong>{formatTimeZone(timeZone)}</strong></p>
-            {timeOrderInvalid && <p className="field-error" id="share-time-error" role="alert">{timeOrderMessage}</p>}
+            <p className="timezone-note"><Clock3 aria-hidden="true" /> {copy.localTime} : <strong>{displayTimeZone(timeZone, shareForm.date, shareForm.from)}</strong></p>
+            {timeOrderInvalid && <p className="field-error" id="share-time-error" role="alert">{copy.timeOrderError}</p>}
           </form>
 
           <aside className="workflow-surface workflow-summary" aria-labelledby="share-summary-title">
-            <p className="section-kicker">Récapitulatif</p>
+            <p className="section-kicker">{copy.summary}</p>
             <h2 id="share-summary-title">{shareForm.spot}</h2>
             <dl>
-              <div><dt>Emplacement</dt><dd><MapPin aria-hidden="true" />{data.user.assignedLevel ?? "Niveau non renseigné"}</dd></div>
-              <div><dt>Date</dt><dd>{formatInputDate(shareForm.date)}</dd></div>
-              <div><dt>Horaire</dt><dd>{shareForm.from || "—"} – {shareForm.to || "—"}</dd></div>
-              <div><dt>Heure locale</dt><dd>{formatTimeZone(timeZone)}</dd></div>
+              <div><dt>{copy.location}</dt><dd><MapPin aria-hidden="true" />{data.user.assignedLevel ?? availabilityCopy.levelUnknown}</dd></div>
+              <div><dt>{copy.date}</dt><dd>{formatInputDate(shareForm.date, intlLocale, availabilityCopy.dateUnknown)}</dd></div>
+              <div><dt>{copy.schedule}</dt><dd>{formatTimeRange(shareForm.from, shareForm.to, intlLocale, availabilityCopy.timeUnknown)}</dd></div>
+              <div><dt>{copy.localTime}</dt><dd>{displayTimeZone(timeZone, shareForm.date, shareForm.from)}</dd></div>
             </dl>
-            <p className="workflow-trust"><ShieldCheck aria-hidden="true" /> Votre absence et son motif ne sont jamais demandés.</p>
+            <p className="workflow-trust"><ShieldCheck aria-hidden="true" /> {copy.privacyNote}</p>
             <button
               className="button button-primary workflow-primary-action"
               type="submit"
@@ -242,19 +283,19 @@ export function SharePage({
               aria-busy={shareBusy}
             >
               {shareBusy ? <LoaderCircle className="spin" aria-hidden="true" /> : <Share2 aria-hidden="true" />}
-              {shareBusy ? "Publication…" : "Partager ma place"}
+              {shareBusy ? copy.publishing : copy.publish}
             </button>
           </aside>
         </div>
       ) : (
         <div className="workflow-layout workflow-layout-onboarding">
-          <form className="workflow-surface workflow-form" aria-label="Déclarer ma place" onSubmit={handleDeclareSpot}>
+          <form className="workflow-surface workflow-form" aria-label={copy.declareFormLabel} onSubmit={handleDeclareSpot}>
             <div className="workflow-section-heading">
               <span><CarFront aria-hidden="true" /></span>
-              <div><h2>Votre place habituelle</h2><p>Vous pourrez la partager dès cette étape terminée.</p></div>
+              <div><h2>{copy.regularSpace}</h2><p>{copy.regularSpaceIntroduction}</p></div>
             </div>
             <label className="field-group">
-              <span>Libellé de la place</span>
+              <span>{copy.spotLabel}</span>
               <input
                 placeholder="A-24"
                 maxLength={32}
@@ -264,9 +305,9 @@ export function SharePage({
               />
             </label>
             <label className="field-group">
-              <span>Niveau ou zone <small>optionnel</small></span>
+              <span>{copy.levelOrZone} <small>{copy.optional}</small></span>
               <input
-                placeholder="Niveau A"
+                placeholder={copy.levelPlaceholder}
                 maxLength={64}
                 value={spotForm.level}
                 onChange={(event) => setSpotForm({ ...spotForm, level: event.target.value })}
@@ -274,13 +315,13 @@ export function SharePage({
             </label>
             <button className="button button-primary workflow-primary-action" type="submit" disabled={spotBusy || !spotForm.label.trim()} aria-busy={spotBusy}>
               {spotBusy ? <LoaderCircle className="spin" aria-hidden="true" /> : <CarFront aria-hidden="true" />}
-              {spotBusy ? "Enregistrement…" : "Affecter cette place"}
+              {spotBusy ? copy.saving : copy.assignSpace}
             </button>
           </form>
           <aside className="workflow-side-note">
-            <p className="section-kicker">Pourquoi cette étape ?</p>
-            <h2>Une place stable, des créneaux flexibles.</h2>
-            <p>Parkventory rattache chaque disponibilité à une place précise pour éviter les conflits de réservation.</p>
+            <p className="section-kicker">{copy.whyStep}</p>
+            <h2>{copy.stableSpaceTitle}</h2>
+            <p>{copy.stableSpaceBody}</p>
           </aside>
         </div>
       )}
@@ -289,44 +330,47 @@ export function SharePage({
         <section className="availability-results managed-availability" aria-labelledby="my-shares-title">
           <div className="section-heading-compact">
             <div>
-              <p className="section-kicker">Suivi</p>
-              <h2 id="my-shares-title">Mes partages actifs</h2>
+              <p className="section-kicker">{copy.tracking}</p>
+              <h2 id="my-shares-title">{copy.activeShares}</h2>
             </div>
           </div>
           {ownShares.length === 0 ? (
             <div className="route-empty-state route-empty-state-compact">
               <CalendarCheck aria-hidden="true" />
-              <h3>Aucun partage actif.</h3>
-              <p>Le prochain créneau publié apparaîtra ici et pourra être retiré tant qu’il n’est pas réservé.</p>
+              <h3>{copy.noActiveShares}</h3>
+              <p>{copy.noActiveSharesBody}</p>
             </div>
           ) : (
             <ol className="availability-agenda">
               {ownShares.map((item) => (
                 <li key={item.id}>
                   <div className="availability-agenda-status">
-                    <span className={`status status-${item.status.toLowerCase()}`}><i />{item.status === "RESERVED" ? "Réservée" : "Publiée"}</span>
-                    <span>{item.dateLabel}</span>
+                    <span className={`status status-${item.status.toLowerCase()}`}><i />{item.status === "RESERVED" ? availabilityCopy.reserved : availabilityCopy.published}</span>
+                    <span>{displayDate(item)}</span>
                   </div>
                   <div className="availability-agenda-place">
                     <CarFront aria-hidden="true" />
-                    <p><strong>{item.spot}</strong><span>{item.level}</span></p>
+                    <p><strong>{item.spot}</strong><span>{item.level || availabilityCopy.levelUnknown}</span></p>
                   </div>
-                  <p className="availability-agenda-time"><Clock3 aria-hidden="true" />{item.timeLabel} · {formatTimeZone(item.timeZone)}</p>
+                  <p className="availability-agenda-time"><Clock3 aria-hidden="true" />{displayTime(item)} · {displayTimeZone(item.timeZone, item.localDate, item.localFrom)}</p>
                   {item.canWithdraw ? (
                     <button
                       className="button button-danger button-small"
                       type="button"
-                      onClick={() => void handleWithdraw(item.id, item.spot, item.dateLabel)}
+                      onClick={() => void handleWithdraw(item)}
                       disabled={withdrawBusyId === item.id}
                       aria-busy={withdrawBusyId === item.id}
                     >
                       {withdrawBusyId === item.id
                         ? <LoaderCircle className="spin" aria-hidden="true" />
                         : <Trash2 aria-hidden="true" />}
-                      {withdrawBusyId === item.id ? "Retrait…" : "Retirer"}
+                      {withdrawBusyId === item.id ? copy.withdrawing : copy.withdraw}
                     </button>
                   ) : (
-                    <span className="availability-agenda-static"><ShieldCheck aria-hidden="true" />Réservation active</span>
+                    <span className="availability-agenda-static">
+                      <ShieldCheck aria-hidden="true" />
+                      {item.status === "RESERVED" ? availabilityCopy.reservationActive : availabilityCopy.withdrawalUnavailable}
+                    </span>
                   )}
                 </li>
               ))}

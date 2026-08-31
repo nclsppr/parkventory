@@ -4,13 +4,13 @@ const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
 export function organizationName(domain: string): string {
   const stem = domain.split(".")[0].replace(/[-_]+/g, " ").trim();
   if (!stem) return domain;
-  return stem.replace(/\b\p{L}/gu, (letter) => letter.toLocaleUpperCase("fr-FR"));
+  return stem.replace(/\b\p{L}/gu, (letter) => letter.toLocaleUpperCase());
 }
 
-export function displayName(email: string): string {
+export function displayName(email: string, fallback = "Member"): string {
   const local = email.split("@")[0].replace(/[._-]+/g, " ").trim();
-  const value = local || "Membre";
-  return value.replace(/\b\p{L}/gu, (letter) => letter.toLocaleUpperCase("fr-FR"));
+  if (!local) return fallback;
+  return local.replace(/\b\p{L}/gu, (letter) => letter.toLocaleUpperCase());
 }
 
 function formattedParts(epochSeconds: number, timeZone: string) {
@@ -72,14 +72,18 @@ export function addDays(date: string, days: number): string {
   return shifted.toISOString().slice(0, 10);
 }
 
-export function frenchDate(date: string): string {
+export function localizedDate(date: string, locale = "fr-FR"): string {
   const [year, month, day] = date.split("-").map(Number);
-  return new Intl.DateTimeFormat("fr-FR", {
+  return new Intl.DateTimeFormat(locale, {
     weekday: "short",
     day: "numeric",
     month: "short",
     timeZone: "UTC",
   }).format(new Date(Date.UTC(year, month - 1, day)));
+}
+
+export function frenchDate(date: string): string {
+  return localizedDate(date, "fr-FR");
 }
 
 export function initials(name: string): string {

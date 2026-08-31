@@ -5,9 +5,29 @@ afterEach(() => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
   vi.resetModules();
+  document.documentElement.lang = "fr";
 });
 
 describe("production error boundary", () => {
+  it("transmet la langue active sur chaque requête API", async () => {
+    document.documentElement.lang = "de";
+    const fetchMock = vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ availability: [] }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ));
+    vi.stubGlobal("fetch", fetchMock);
+    const { loadDashboard } = await import("./client");
+
+    await loadDashboard();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/dashboard",
+      expect.objectContaining({
+        headers: expect.objectContaining({ "X-Parkventory-Locale": "de" }),
+      }),
+    );
+  });
+
   it.each([
     [403, "Action interdite.", "Action interdite."],
     [409, "La place vient de changer.", "La place vient de changer."],
@@ -68,6 +88,30 @@ describe("production error boundary", () => {
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({ "Idempotency-Key": "stable-attempt-key" }),
+      }),
+    );
+  });
+
+  it("enregistre la langue du profil avec une mutation authentifiée", async () => {
+    document.documentElement.lang = "en";
+    const fetchMock = vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ locale: "lb" }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ));
+    vi.stubGlobal("fetch", fetchMock);
+    const { updateProfileLocale } = await import("./client");
+
+    await expect(updateProfileLocale("lb")).resolves.toEqual({ locale: "lb" });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/profile",
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({ locale: "lb" }),
+        credentials: "include",
+        headers: expect.objectContaining({
+          "Content-Type": "application/json",
+          "X-Parkventory-Locale": "en",
+        }),
       }),
     );
   });

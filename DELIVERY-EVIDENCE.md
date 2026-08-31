@@ -932,6 +932,60 @@ partagé avant toute migration ou activation Compose.
   avec le schéma. Le retour à la démo statique est un cutover plateforme
   exclusif, jamais l'activation simultanée des deux contrats.
 
+## Extension : candidat SEO/i18n et revue Chrome du 2026-08-31
+
+Cette extension consigne le candidat de la branche
+`codex/seo-i18n-four-locales`, ouvert dans la PR #29 sur
+`origin/main@938c3a40aef5e65affaf19d6a1c546cbfa5a78f1`. Elle décrit uniquement un
+candidat local et une CI de PR : ni fusion, ni déploiement, ni indexation ne
+sont prouvés ici.
+
+### Gate automatisée locale
+
+| Contrôle | Résultat observé | Frontière de preuve |
+| --- | --- | --- |
+| `npm run verify` | Succès : 6 tests de marque, 1 test d’upgrade de migration, 102 tests Worker/D1, 100 tests React, typechecks Worker et frontend, build Vite et dry-run Wrangler | Exécution locale sur le worktree exact ; aucun déploiement |
+| Pages publiques | Douze variantes passent par le binding Assets avec canonical, `hreflang`, contenu initial localisé, `HEAD`, validateurs et vraies 404 | Contrat Worker et HTML ; ne prouve ni crawl ni indexation |
+| Régression `lb-LU` | Date et heure luxembourgeoises déterministes ; absence de nom de fuseau anglais lorsque Chrome ne fournit pas cette locale | Données lexicales issues d’Unicode CLDR ; les autres moteurs restent à contrôler |
+| Responsive | La cible réelle du sélecteur couvre 44 px ; les grilles allemandes restent dans 320 px | Tests CSS et mesure dans Chrome, pas appareil tactile réel |
+| Préférence connectée | Migration `0006` appliquée sur une D1 locale isolée, mutation `fr` vers `de`, lecture directe `preferred_locale = de`, puis restauration de `/fr/app` vers `/de/app` | Base locale temporaire uniquement ; aucune migration distante |
+| Visibilité selon la session | Landing, page légale, callback et 404 testés avec session reconnue ; aucun sélecteur public, préférence profil appliquée par `replaceState`, callback plus récent prioritaire | Tests DOM React ; le contrôle visuel ciblé du navigateur intégré reste bloqué par sa politique administrateur |
+
+### Matrice visuelle locale
+
+| Surface | États contrôlés | Viewports | Résultat |
+| --- | ---: | --- | --- |
+| Accueil, confidentialité et mentions légales, quatre langues | 24 | 320 × 568 et 1 440 × 900 | Un `h1`, bon `lang`, aucune image cassée, aucun débordement |
+| Tableau de bord, partage et recherche connectés, quatre langues | 24 | 320 × 568 et 1 440 × 900 | Même contrat ; aucune fuite anglaise dans le parcours luxembourgeois |
+| Connexion sans session, quatre langues | 8 | 320 × 568 et 1 440 × 900 | Formulaires visibles, contrôles au moins 44 px, aucune largeur excédentaire |
+| Callback sans jeton et page introuvable, quatre langues | 16 | 320 × 568 et 1 440 × 900 | Erreurs localisées, un `h1`, aucun débordement |
+| Menus publics, quatre langues | 4 | 320 × 568 | Ouverture réussie, sélecteur 72 × 50 px, aucune image cassée |
+| Profil connecté, français puis allemand | 5 | 320 × 568, 390 × 844 et 1 440 × 900 | Un seul sélecteur dans le profil, aucun dans la topbar, cible 64 × 44 px, restauration de session et aucun débordement |
+
+Les 81 états ci-dessus ont été sondés par le protocole DevTools d’un Chrome
+local 151 ; les vues française, anglaise, allemande et luxembourgeoise ont aussi
+été inspectées sur captures, dont des compositions à 390 × 844. Le navigateur
+intégré restait bloqué par sa politique administrateur ; le contrôle a utilisé
+un processus Chrome local séparé, sans modifier ni contourner cette politique.
+
+La passe profil a utilisé le même protocole sur un Worker et une D1 locaux
+isolés. Les trois viewports n’ont produit ni image cassée ni erreur console ; le
+sélecteur public de la landing est resté présent après suppression du cookie de
+session.
+
+Après centralisation de l’état de session, la distinction connecté/déconnecté a
+été rejouée par les tests DOM sur quatre familles de pages. Une nouvelle tentative
+dans le navigateur intégré a de nouveau été refusée par sa politique
+administrateur ; aucune preuve visuelle supplémentaire n’est revendiquée pour
+ce seul ajustement conditionnel.
+
+La revue a découvert puis fait corriger trois écarts mesurables : le repli
+anglais de la date luxembourgeoise dans une distribution Chrome sans ICU
+`lb-LU`, une zone interactive de sélecteur réduite par ses bordures de 44 à
+42 px, et des grilles allemandes dépassant de 3 à 8 px à la largeur minimale.
+Safari, Firefox, Edge, le zoom à 200 % et un iPhone réel restent les contrôles
+perceptifs exigés avant pilote. La production publique observée reste celle
+décrite dans `STATUS.md`, sans ces changements.
 ## Extension : administration générale et administration de tenant du 2026-08-31
 
 Cette extension consigne la livraison de la palette Victor Buck Services, du

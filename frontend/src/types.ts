@@ -1,10 +1,15 @@
+import type { Locale } from "../../shared/i18n";
+
 export type AvailabilityStatus = "AVAILABLE" | "RESERVED" | "UNAVAILABLE";
 export type AvailabilityViewerRelation = "NONE" | "OFFERED" | "RESERVED";
 
 export interface AvailabilityItem {
   id: string;
-  dateLabel: string;
-  timeLabel: string;
+  localDate?: string;
+  localFrom?: string;
+  localTo?: string;
+  dateLabel?: string;
+  timeLabel?: string;
   timeZone: string;
   spot: string;
   level: string;
@@ -86,6 +91,7 @@ export interface SessionData {
   role: "MEMBER" | "ADMIN";
   godmode: boolean;
   branding: OrganizationBranding | null;
+  locale: Locale;
 }
 
 export type AdminActivitySeverity = "INFO" | "WARNING" | "ERROR";

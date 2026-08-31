@@ -1,23 +1,14 @@
 import { Activity, Building2, Gauge, UsersRound } from "lucide-react";
 import type { ReactNode } from "react";
 import { AppShell, type NoticeTone, type ShellNavigationItem } from "../AppShell";
-import {
-  adminOperationsUrl,
-  adminTenantsUrl,
-  adminUrl,
-  adminUsersUrl,
-} from "../../config";
+import { localizedUrls } from "../../config";
+import type { Locale } from "../../../../shared/i18n";
 import type { SessionData } from "../../types";
+import { useI18n } from "../../i18n/I18n";
+import { adminMessages } from "../../i18n/admin";
 import { operatorInitials } from "./adminFormat";
 
 export type AdminRoute = "overview" | "tenants" | "tenant" | "users" | "operations";
-
-const adminNavigation: readonly ShellNavigationItem[] = [
-  { route: "overview", label: "Vue d’ensemble", mobileLabel: "Vue", href: adminUrl, icon: Gauge },
-  { route: "tenants", label: "Tenants", mobileLabel: "Tenants", href: adminTenantsUrl, icon: Building2 },
-  { route: "users", label: "Utilisateurs", mobileLabel: "Comptes", href: adminUsersUrl, icon: UsersRound },
-  { route: "operations", label: "Opérations", mobileLabel: "Suivi", href: adminOperationsUrl, icon: Activity },
-];
 
 export function AdminShell({
   route,
@@ -28,6 +19,7 @@ export function AdminShell({
   onRetry,
   onNotify,
   onSessionExpired,
+  onLocalePersisted,
 }: {
   route: AdminRoute;
   session: SessionData;
@@ -37,26 +29,38 @@ export function AdminShell({
   onRetry: () => void;
   onNotify: (message: string, tone?: NoticeTone) => void;
   onSessionExpired: () => void;
+  onLocalePersisted: (locale: Locale) => void;
 }) {
+  const { locale } = useI18n();
+  const copy = adminMessages[locale];
+  const urls = localizedUrls(locale);
+  const adminNavigation: readonly ShellNavigationItem[] = [
+    { route: "overview", label: copy.shell.overview, mobileLabel: copy.shell.overviewShort, href: urls.adminUrl, icon: Gauge },
+    { route: "tenants", label: copy.shell.organizations, mobileLabel: copy.shell.organizationsShort, href: urls.adminTenantsUrl, icon: Building2 },
+    { route: "users", label: copy.shell.users, mobileLabel: copy.shell.usersShort, href: urls.adminUsersUrl, icon: UsersRound },
+    { route: "operations", label: copy.shell.operations, mobileLabel: copy.shell.operationsShort, href: urls.adminOperationsUrl, icon: Activity },
+  ];
+
   return (
     <AppShell
       activeRoute={route === "tenant" ? "tenants" : route}
       contentId="admin-content"
-      homeHref={adminUrl}
-      homeLabel="Vue d’ensemble de la console Parkventory"
+      homeHref={urls.adminUrl}
+      homeLabel={copy.shell.homeLabel}
       navigationItems={adminNavigation}
-      navigationLabel="Navigation de la console d’administration"
-      quickNavigationLabel="Navigation rapide de la console"
-      sidebarLabel="Console d’administration Parkventory"
+      navigationLabel={copy.shell.navigationLabel}
+      quickNavigationLabel={copy.shell.quickNavigationLabel}
+      sidebarLabel={copy.shell.sidebarLabel}
       shellClassName="admin-shell"
       profile={{
         initials: operatorInitials(session.displayName, session.email),
         primary: session.displayName,
-        secondary: "Opérateur système",
+        secondary: copy.shell.systemOperator,
       }}
       loading={loading}
       loadError={loadError}
       onNotify={onNotify}
+      onLocalePersisted={onLocalePersisted}
       onRetry={onRetry}
       onSessionExpired={onSessionExpired}
     >

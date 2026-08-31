@@ -50,10 +50,15 @@ describe("nomination d’un administrateur de tenant", () => {
         ...sessionHeaders(otherTenantAdmin.token),
         Origin: "https://parkventory.test",
         "Content-Type": "application/json",
+        "Accept-Language": "de-DE, fr;q=0.7",
       },
       body: JSON.stringify({ role: "ADMIN" }),
     });
     expect(denied.status).toBe(403);
+    expect(await denied.json()).toMatchObject({
+      title: "Anfrage abgelehnt",
+      detail: "Dieser Bereich ist dem Parkventory-Systemoperator vorbehalten.",
+    });
 
     const godmode = await verifyGodmodeMagicLink();
     const promoted = await SELF.fetch(`https://parkventory.test${route}`, {
@@ -62,11 +67,16 @@ describe("nomination d’un administrateur de tenant", () => {
         Cookie: godmode.cookie,
         Origin: "https://parkventory.test",
         "Content-Type": "application/json",
+        "X-Parkventory-Locale": "en",
       },
       body: JSON.stringify({ role: "ADMIN" }),
     });
     expect(promoted.status).toBe(200);
-    expect(await promoted.json()).toMatchObject({ accepted: true, role: "ADMIN" });
+    expect(await promoted.json()).toMatchObject({
+      accepted: true,
+      role: "ADMIN",
+      message: "The member is now an organisation administrator.",
+    });
     expect(await testEnv.DB.prepare("SELECT role FROM membership WHERE id = ?1").bind(member.membershipId).first())
       .toEqual({ role: "ADMIN" });
 
@@ -76,10 +86,16 @@ describe("nomination d’un administrateur de tenant", () => {
         Cookie: godmode.cookie,
         Origin: "https://parkventory.test",
         "Content-Type": "application/json",
+        "Accept-Language": "lb-LU, fr;q=0.5",
       },
       body: JSON.stringify({ role: "MEMBER" }),
     });
     expect(demoted.status).toBe(200);
+    expect(await demoted.json()).toMatchObject({
+      accepted: true,
+      role: "MEMBER",
+      message: "De Member ass elo Benotzer vun der Organisatioun.",
+    });
     expect(await testEnv.DB.prepare("SELECT role FROM membership WHERE id = ?1").bind(member.membershipId).first())
       .toEqual({ role: "MEMBER" });
 
@@ -328,7 +344,11 @@ describe("godmode Parkventory", () => {
     );
 
     expect(response.status).toBe(202);
-    expect(await response.json()).toEqual({ accepted: true, message: expect.any(String) });
+    expect(await response.json()).toMatchObject({
+      accepted: true,
+      code: "MAGIC_LINK_GENERIC",
+      message: expect.any(String),
+    });
     await deferred.drain();
     const request = await testEnv.DB.prepare(`
       SELECT id FROM magic_link_request WHERE normalized_email = ?1
@@ -370,9 +390,9 @@ describe("godmode Parkventory", () => {
     await deferred.drain();
     expect(send).toHaveBeenCalledTimes(1);
     const message = send.mock.calls[0]?.[0] as { html?: string; text?: string } | undefined;
-    expect(message?.html).toContain("/auth/callback#token=");
-    expect(message?.text).toContain("/auth/callback#token=");
-    expect(message?.html).not.toContain("/auth/callback?token=");
+    expect(message?.html).toContain("/fr/auth/callback#token=");
+    expect(message?.text).toContain("/fr/auth/callback#token=");
+    expect(message?.html).not.toContain("/fr/auth/callback?token=");
     const request = await testEnv.DB.prepare(`
       SELECT normalized_domain FROM magic_link_request WHERE normalized_email = ?1
     `).bind(godmodeEmail).first<{ normalized_domain: string }>();
@@ -417,7 +437,11 @@ describe("godmode Parkventory", () => {
     );
 
     expect(response.status).toBe(202);
-    expect(await response.json()).toEqual({ accepted: true, message: expect.any(String) });
+    expect(await response.json()).toMatchObject({
+      accepted: true,
+      code: "MAGIC_LINK_GENERIC",
+      message: expect.any(String),
+    });
     await expect(deferred.drain()).resolves.toBeDefined();
     expect(send).not.toHaveBeenCalled();
   });
@@ -590,9 +614,18 @@ describe("godmode Parkventory", () => {
           Cookie: godmode.cookie,
           Origin: "https://parkventory.test",
           "Content-Type": "application/json",
+          "X-Parkventory-Locale": "de",
         },
       });
       expect(response.status, `${method} ${path}`).toBe(403);
+      if (path === "/api/v1/dashboard") {
+        const body = await response.json<{ detail: string; code: string }>();
+        expect(body).toMatchObject({
+          code: "OPERATOR_ORGANIZATION_ROUTES_FORBIDDEN",
+          detail: "Dieses Operatorkonto kann keine Funktionen verwenden, die Kundenorganisationen vorbehalten sind.",
+        });
+        expect(body.detail.toLowerCase()).not.toContain("tenant");
+      }
     }
   });
 
@@ -761,15 +794,25 @@ describe("godmode Parkventory", () => {
     expect(referencedActivity.items).toHaveLength(2);
     expect(referencedActivity.items.every((event) => event.entityId === reservationId)).toBe(true);
 
-    const diagnosticsResponse = await SELF.fetch("https://parkventory.test/api/v1/admin/diagnostics", { headers });
+    const diagnosticsResponse = await SELF.fetch("https://parkventory.test/api/v1/admin/diagnostics", {
+      headers: { ...headers, "X-Parkventory-Locale": "de" },
+    });
     const diagnostics = await diagnosticsResponse.json<{
       database: { status: string };
-      integrity: { status: string; issueCount: number; checks: Array<{ key: string; count: number }> };
+      integrity: {
+        status: string;
+        issueCount: number;
+        checks: Array<{ key: string; label: string; detail: string; count: number }>;
+      };
       authentication: { activeTenantSessions: number; activeSystemSessions: number };
     }>();
     expect(diagnostics.database.status).toBe("ok");
     expect(diagnostics.integrity).toMatchObject({ status: "healthy", issueCount: 0 });
     expect(diagnostics.integrity.checks).toHaveLength(9);
+    expect(diagnostics.integrity.checks).toContainEqual(expect.objectContaining({
+      key: "tenant_without_member",
+      label: "Organisationen ohne Mitglieder",
+    }));
     expect(diagnostics.authentication).toMatchObject({ activeTenantSessions: 3, activeSystemSessions: 1 });
 
     for (const check of diagnostics.integrity.checks) {

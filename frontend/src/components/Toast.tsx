@@ -1,4 +1,6 @@
 import { AlertTriangle, Check, X } from "lucide-react";
+import { commonMessages } from "../i18n/common";
+import { useI18n } from "../i18n/I18n";
 
 interface ToastProps {
   message: string | null;
@@ -7,6 +9,9 @@ interface ToastProps {
 }
 
 export function Toast({ message, onDismiss, tone = "success" }: ToastProps) {
+  const { locale } = useI18n();
+  const copy = commonMessages[locale];
+
   if (!message) return null;
 
   return (
@@ -19,7 +24,7 @@ export function Toast({ message, onDismiss, tone = "success" }: ToastProps) {
         {tone === "error" ? <AlertTriangle aria-hidden="true" /> : <Check aria-hidden="true" />}
       </span>
       <span>{message}</span>
-      <button type="button" onClick={onDismiss} aria-label="Fermer la notification">
+      <button type="button" onClick={onDismiss} aria-label={copy.closeNotification}>
         <X aria-hidden="true" />
       </button>
     </div>

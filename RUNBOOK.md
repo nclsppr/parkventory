@@ -57,6 +57,9 @@ déployée normalement.
 Workers Builds n'applique pas les migrations D1. Toute migration créant une
 table utilisée par le Worker doit donc être appliquée et vérifiée dans
 l'environnement ciblé avant la fusion sur `main`, qui déclenche le déploiement.
+Cela inclut la migration `0006_user_locale.sql` : vérifier la colonne
+`user_account.preferred_locale` sur la préversion puis la production avant que
+le Worker qui la lit soit publié.
 
 La migration `0005_tenant_administration.sql` doit être appliquée avant tout
 Worker qui lit `logo_enabled` ou `email_erased_at`. Elle ajoute uniquement des
@@ -113,25 +116,46 @@ et incidents classifiés écrits par le Worker portent `WORKER`.
 ## Vérifications après déploiement
 
 1. `GET /api/v1/health` répond `200` avec `{"status":"ok"}`.
-2. Les routes `/`, `/app`, `/app/partager`, `/app/trouver`, `/app/admin`, `/admin` et
-   `/auth/callback` répondent directement ; ce seul statut ne prouve pas
-   l’autorisation godmode.
-3. Un magic link réel arrive, ne fonctionne qu’une fois et expire après 15 min.
+2. `/` négocie la langue par cookie puis `Accept-Language` ; les douze pages
+   accueil, confidentialité et mentions légales sous `/fr`, `/en`, `/de` et
+   `/lb` répondent `200` avec le bon `Content-Language`, leur canonical, cinq
+   alternates et un contenu visible dans le HTML initial.
+3. Une route inconnue répond `404` avec `noindex`; un asset pointé mais absent
+   répond aussi `404` en `text/plain`, jamais avec le shell HTML.
+4. `robots.txt`, `sitemap.xml`, `llms.txt`, les quatre manifestes, les icônes et
+   cartes sociales répondent avec leur MIME attendu. Le sitemap contient
+   exactement les douze pages indexables.
+5. Les routes applicatives localisées — par exemple `/fr/app/partager`,
+   `/en/app/share`, `/de/app/suchen` et `/lb/auth/callback` — répondent
+   directement et restent hors index.
+6. Un magic link réel arrive, ne fonctionne qu’une fois et expire après 15 min.
+7. Deux membres du même domaine réalisent le parcours partage/réservation.
+8. Deux réservations concurrentes donnent un `200` et un `409`.
+9. Un membre d’un autre domaine ne voit aucune donnée du premier.
+10. Sur une session connectée, le sélecteur n’apparaît que dans le profil, y
+    compris après retour sur la landing, les pages légales ou une 404 ; un
+    changement persiste après reconnexion, tandis que ces mêmes surfaces
+    déconnectées conservent leur propre sélecteur.
+11. Les routes privées localisées `/{locale}/app/admin`, `/{locale}/admin`,
+    `/{locale}/admin/tenants`, `/{locale}/admin/users` et
+    `/{locale}/admin/operations` répondent directement avec `noindex`; ce seul
+    statut ne prouve pas l’autorisation godmode.
+12. Un magic link réel arrive, ne fonctionne qu’une fois et expire après 15 min.
    En préversion contrôlée, cinq demandes concurrentes pour une même adresse
    doivent en accepter trois et en limiter deux, sans cinquième ligne ni envoi.
-4. Deux membres du même domaine réalisent le parcours partage/réservation.
-5. Deux réservations concurrentes avec des clés distinctes donnent un `200` et
+13. Deux membres du même domaine réalisent le parcours partage/réservation.
+14. Deux réservations concurrentes avec des clés distinctes donnent un `200` et
    un `409`. Deux requêtes portant la même clé idempotente et la même offre
    donnent `200` et `200`, avec une seule ligne `reservation` et aucun faux refus
    métier dans `activity_event`.
-6. Un membre d’un autre domaine ne voit aucune donnée du premier.
-7. Sans session, `GET /api/v1/admin/overview` répond `401` ; une session tenant,
+15. Un membre d’un autre domaine ne voit aucune donnée du premier.
+16. Sans session, `GET /api/v1/admin/overview` répond `401` ; une session tenant,
    y compris avec rôle `ADMIN`, reçoit `403`.
-8. Une session réelle de l’identité système autorisée reçoit `200` sur les sept
+17. Une session réelle de l’identité système autorisée reçoit `200` sur les sept
    lectures admin, détail tenant et détail d’intégrité compris, et voit uniquement
    des organisations `TENANT` dans les métriques d’adoption. La même session
    reçoit `403` sur `GET /api/v1/dashboard`.
-9. Les listes tenants, utilisateurs et activité paginent sans doublon ; un
+18. Les listes tenants, utilisateurs et activité paginent sans doublon ; un
    tenant inconnu répond `404`. Contrôler séparément que la table
    `activity_event`, les diagnostics et les logs ne contiennent ni adresse, ni
    token, ni cookie, ni hash d’authentification, ni erreur brute ; provoquer en
@@ -142,15 +166,15 @@ et incidents classifiés écrits par le Worker portent `WORKER`.
    d’intégrité en anomalie, ouvrir « Voir les lignes », paginer au moins deux pages
    si disponible, puis vérifier que tenant et références rejoignent les vues
    attendues sans exposer de donnée libre.
-10. Les nouveaux liens placent le jeton dans le fragment `#token=`, jamais envoyé
+19. Les nouveaux liens placent le jeton dans le fragment `#token=`, jamais envoyé
     dans la requête de navigation ; le callback le retire immédiatement de l’URL.
     Les logs applicatifs structurés n’exposent que la route canonique et les logs
     d’invocation Cloudflare restent désactivés. Tester aussi la compatibilité
     transitoire avec un ancien lien query sans en recopier la valeur.
-11. Sans session, `GET /api/v1/tenant-admin/overview` répond `401`; un membre
+20. Sans session, `GET /api/v1/tenant-admin/overview` répond `401`; un membre
     simple reçoit `403`. Après nomination godmode, l’admin tenant reçoit `200`,
     ne voit que son domaine et ne peut fournir aucun autre tenant à l’API.
-12. Sur des comptes de test uniquement, vérifier la modification des deux
+21. Sur des comptes de test uniquement, vérifier la modification des deux
     couleurs, l’opt-out du logo, puis l’effacement en deux étapes d’un membre :
     sessions et demandes de lien absentes, e-mail public `null`, adhésion et faits
     métier conservés. Ne jamais effectuer ce smoke sur une identité réelle.

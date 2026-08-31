@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { relativePathname } from "./config";
 import type { DashboardData, OrganizationBranding, SessionData } from "./types";
@@ -9,8 +9,14 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  window.localStorage.removeItem("parkventory:locale:v1");
+  window.history.replaceState({}, "", "/fr/");
+});
+
+beforeEach(() => {
+  window.localStorage.removeItem("parkventory:locale:v1");
+  window.history.replaceState({}, "", "/fr/");
   Object.defineProperty(window, "innerWidth", { configurable: true, value: 1024 });
-  window.history.replaceState({}, "", "/");
 });
 
 function jsonResponse(body: unknown, status = 200) {
@@ -43,6 +49,7 @@ const session: SessionData = {
   role: "MEMBER",
   godmode: false,
   branding: null,
+  locale: "fr",
 };
 
 const dashboard: DashboardData = {
@@ -93,6 +100,7 @@ const godmodeSession: SessionData = {
   role: "ADMIN",
   godmode: true,
   branding: null,
+  locale: "fr",
 };
 
 const adminOverview = {
@@ -133,34 +141,51 @@ function stubAuthenticatedApi(
   loadedSession: SessionData = session,
   loadedDashboard: DashboardData = dashboard,
 ) {
-  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     if (url.endsWith("/auth/session") && init?.method === "DELETE") {
       return jsonResponse({ accepted: true, message: "Vous êtes déconnecté." });
     }
     if (url.endsWith("/auth/session")) return jsonResponse(loadedSession);
+    if (url.endsWith("/profile") && init?.method === "PATCH") {
+      const body = JSON.parse(String(init.body)) as { locale: SessionData["locale"] };
+      return jsonResponse({ locale: body.locale });
+    }
     if (url.endsWith("/dashboard")) return jsonResponse(loadedDashboard);
     throw new Error(`Unexpected request: ${url}`);
-  }));
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
 }
 
 describe("Parkventory", () => {
+  it("utilise la langue du navigateur sur la racine puis fixe une route localisée", async () => {
+    vi.spyOn(window.navigator, "languages", "get").mockReturnValue(["de-DE", "fr-FR"]);
+    window.history.replaceState({}, "", "/");
+
+    render(<App />);
+
+    expect(screen.getByRole("heading", { name: /Teilen Sie Ihren Parkplatz/i })).toBeInTheDocument();
+    await waitFor(() => expect(window.location.pathname).toBe("/de/"));
+    expect(document.documentElement).toHaveAttribute("lang", "de");
+  });
+
   it("résout les routes directes sous une base", () => {
-    expect(relativePathname("/parkventory/app/partager", "/parkventory/")).toBe("/app/partager");
-    expect(relativePathname("/parkventory/auth/callback", "/parkventory/")).toBe("/auth/callback");
+    expect(relativePathname("/parkventory/fr/app/partager", "/parkventory/")).toBe("/fr/app/partager");
+    expect(relativePathname("/parkventory/fr/auth/callback", "/parkventory/")).toBe("/fr/auth/callback");
   });
 
   it("présente la promesse et les deux actions cœur", () => {
     const { container } = render(<App />);
     expect(screen.getByRole("heading", { name: /Partagez votre place/i })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Parkventory, accueil" })).toHaveAttribute("href", "/");
-    expect(screen.getByRole("link", { name: /Partager ma place/i })).toHaveAttribute("href", "/app/partager");
-    expect(screen.getByRole("link", { name: /Voir les disponibilités/i })).toHaveAttribute("href", "/app/trouver");
+    expect(screen.getByRole("link", { name: "Parkventory, accueil" })).toHaveAttribute("href", "/fr/");
+    expect(screen.getByRole("link", { name: /Partager ma place/i })).toHaveAttribute("href", "/fr/app/partager");
+    expect(screen.getByRole("link", { name: /Voir les disponibilités/i })).toHaveAttribute("href", "/fr/app/trouver");
     expect(container.querySelector(".organization-brand-scope")).not.toBeInTheDocument();
     expect(container.querySelector(".organization-logo")).not.toBeInTheDocument();
   });
 
-  it("ouvre et ferme le menu mobile public", () => {
+  it("ouvre le menu mobile public et le referme avec Échap en restaurant le focus", async () => {
     render(<App />);
     const trigger = screen.getByRole("button", { name: "Ouvrir le menu" });
     expect(trigger).toHaveAttribute("aria-expanded", "false");
@@ -169,20 +194,43 @@ describe("Parkventory", () => {
     expect(screen.getByRole("button", { name: "Fermer le menu" })).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("navigation", { name: "Navigation mobile" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Fermer le menu" }));
-    expect(screen.queryByRole("navigation", { name: "Navigation mobile" })).not.toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() => {
+      expect(screen.queryByRole("navigation", { name: "Navigation mobile" })).not.toBeInTheDocument();
+      expect(trigger).toHaveFocus();
+    });
   });
 
   it("affiche la connexion lorsqu’aucune session n’existe", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ detail: "Session expirée." }, 401)));
-    window.history.replaceState({}, "", "/app");
+    window.history.replaceState({}, "", "/fr/app");
     render(<App />);
     expect(await screen.findByRole("heading", { name: /Connectez-vous sans mot de passe/i })).toBeInTheDocument();
   });
 
+  it("ne montre pas la langue hors du profil pendant la vérification de session", () => {
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => undefined)));
+    window.history.replaceState({}, "", "/fr/app");
+    render(<App />);
+
+    expect(screen.queryByLabelText("Choisir la langue")).not.toBeInTheDocument();
+  });
+
+  it("retraduit l’échec de contrôle de session après un changement de langue", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ detail: "Service indisponible." }, 503)));
+    window.history.replaceState({}, "", "/fr/app");
+    render(<App />);
+
+    expect(await screen.findByText("La connexion n’a pas pu être vérifiée.")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Choisir la langue"), { target: { value: "de" } });
+
+    expect(await screen.findByText("Ihre Anmeldung konnte nicht überprüft werden.")).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/de/app");
+  });
+
   it("affiche une entrée opérateur dédiée sur /admin sans révéler l’allowlist", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ detail: "Session expirée." }, 401)));
-    window.history.replaceState({}, "", "/admin");
+    window.history.replaceState({}, "", "/fr/admin");
     render(<App />);
 
     expect(await screen.findByRole("heading", { name: "Accédez à la console d’exploitation." })).toBeInTheDocument();
@@ -194,7 +242,7 @@ describe("Parkventory", () => {
   it("rend une 404 aux sessions tenant sans charger le module ou les API admin", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(session));
     vi.stubGlobal("fetch", fetchMock);
-    window.history.replaceState({}, "", "/admin");
+    window.history.replaceState({}, "", "/fr/admin");
     render(<App />);
 
     expect(await screen.findByRole("heading", { name: "Cette place n’existe pas." })).toBeInTheDocument();
@@ -206,7 +254,7 @@ describe("Parkventory", () => {
   it("masque /app/admin à un membre simple sans charger les données tenant-admin", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(session));
     vi.stubGlobal("fetch", fetchMock);
-    window.history.replaceState({}, "", "/app/admin");
+    window.history.replaceState({}, "", "/fr/app/admin");
     render(<App />);
 
     expect(await screen.findByRole("heading", { name: "Cette place n’existe pas." })).toBeInTheDocument();
@@ -234,12 +282,12 @@ describe("Parkventory", () => {
       throw new Error(`Unexpected request: ${url}`);
     });
     vi.stubGlobal("fetch", fetchMock);
-    window.history.replaceState({}, "", "/app/admin");
+    window.history.replaceState({}, "", "/fr/app/admin");
     render(<App />);
 
     expect(await screen.findByRole("heading", { name: "Acme", level: 1 })).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: "Administration du tenant" })[0]).toHaveAttribute("href", "/app/admin");
-    expect(screen.getByRole("region", { name: "Indicateurs du tenant" })).toHaveTextContent("Utilisateurs2");
+    expect(screen.getAllByRole("link", { name: "Administration de l’organisation" })[0]).toHaveAttribute("href", "/fr/app/admin");
+    expect(screen.getByRole("region", { name: "Indicateurs de l’organisation" })).toHaveTextContent("Utilisateurs2");
     expect(fetchMock).toHaveBeenCalledWith("/api/v1/tenant-admin/overview", expect.objectContaining({ credentials: "include" }));
   });
 
@@ -255,22 +303,22 @@ describe("Parkventory", () => {
       throw new Error(`Unexpected request: ${url}`);
     });
     vi.stubGlobal("fetch", fetchMock);
-    window.history.replaceState({}, "", "/admin");
+    window.history.replaceState({}, "", "/fr/admin");
     const { container } = render(<App />);
 
     expect(await screen.findByRole("heading", { name: "Vue d’ensemble" })).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Navigation de la console d’administration" })).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: "Vue d’ensemble" })[0]).toHaveAttribute("href", "/admin");
-    expect(screen.getAllByRole("link", { name: "Tenants" })[0]).toHaveAttribute("href", "/admin/tenants");
-    expect(screen.getAllByRole("link", { name: "Utilisateurs" })[0]).toHaveAttribute("href", "/admin/users");
-    expect(screen.getAllByRole("link", { name: "Opérations" })[0]).toHaveAttribute("href", "/admin/operations");
+    expect(screen.getAllByRole("link", { name: "Vue d’ensemble" })[0]).toHaveAttribute("href", "/fr/admin");
+    expect(screen.getAllByRole("link", { name: "Organisations" })[0]).toHaveAttribute("href", "/fr/admin/tenants");
+    expect(screen.getAllByRole("link", { name: "Utilisateurs" })[0]).toHaveAttribute("href", "/fr/admin/users");
+    expect(screen.getAllByRole("link", { name: "Opérations" })[0]).toHaveAttribute("href", "/fr/admin/operations");
     const mobileNavigation = screen.getByRole("navigation", { name: "Navigation rapide de la console" });
     expect(within(mobileNavigation).getAllByRole("link").map((link) => link.textContent)).toEqual([
-      "Vue", "Tenants", "Comptes", "Suivi",
+      "Vue", "Organisations", "Comptes", "Suivi",
     ]);
     expect(screen.queryByRole("link", { name: /Partager ma place|Trouver une place/ })).not.toBeInTheDocument();
     expect(container.querySelector(".organization-brand-scope")).not.toBeInTheDocument();
-    expect(await screen.findByText("Aucun tenant client.")).toBeInTheDocument();
+    expect(await screen.findByText("Aucune organisation cliente.")).toBeInTheDocument();
     expect(screen.getByText("Aucun événement récent.")).toBeInTheDocument();
 
     const menuTrigger = screen.getByRole("button", { name: "Ouvrir la navigation" });
@@ -286,7 +334,7 @@ describe("Parkventory", () => {
       if (url.endsWith("/auth/session")) return jsonResponse(godmodeSession);
       return jsonResponse({}, 401);
     }));
-    window.history.replaceState({}, "", "/admin");
+    window.history.replaceState({}, "", "/fr/admin");
     render(<App />);
 
     expect(await screen.findByRole("heading", { name: "Accédez à la console d’exploitation." })).toBeInTheDocument();
@@ -308,7 +356,7 @@ describe("Parkventory", () => {
       throw new Error(`Unexpected request: ${url}`);
     });
     vi.stubGlobal("fetch", fetchMock);
-    window.history.replaceState({}, "", "/admin");
+    window.history.replaceState({}, "", "/fr/admin");
     render(<App />);
 
     expect(await screen.findByText("Le service rencontre un problème. Réessayez dans un instant.")).toBeInTheDocument();
@@ -324,11 +372,11 @@ describe("Parkventory", () => {
       if (url.endsWith("/admin/tenants/org_missing")) return jsonResponse({ detail: "Ce tenant n’existe pas." }, 404);
       throw new Error(`Unexpected request: ${url}`);
     }));
-    window.history.replaceState({}, "", "/admin/tenants/org_missing");
+    window.history.replaceState({}, "", "/fr/admin/tenants/org_missing");
     render(<App />);
 
-    expect(await screen.findByText("Tenant introuvable.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Tous les tenants/ })).toHaveAttribute("href", "/admin/tenants");
+    expect(await screen.findByText("Organisation introuvable.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Toutes les organisations/ })).toHaveAttribute("href", "/fr/admin/tenants");
   });
 
   it("traduit les diagnostics et expose les références incident et requête", async () => {
@@ -412,7 +460,7 @@ describe("Parkventory", () => {
       throw new Error(`Unexpected request: ${url}`);
     });
     vi.stubGlobal("fetch", fetchMock);
-    window.history.replaceState({}, "", "/admin/operations?view=diagnostics");
+    window.history.replaceState({}, "", "/fr/admin/operations?view=diagnostics");
     render(<App />);
 
     expect(await screen.findByRole("heading", { name: "Contrôles d’intégrité" })).toBeInTheDocument();
@@ -424,15 +472,15 @@ describe("Parkventory", () => {
     expect(screen.getByTitle("inc_public_1")).toHaveTextContent("Incident · inc_public_1");
     expect(screen.getByTitle("req_public_1")).toHaveTextContent("Requête · req_public_1");
     const incidentCode = screen.getByRole("link", { name: "UNHANDLED_ERROR" });
-    expect(incidentCode).toHaveAttribute("href", "/admin/operations?errorCode=UNHANDLED_ERROR");
+    expect(incidentCode).toHaveAttribute("href", "/fr/admin/operations?errorCode=UNHANDLED_ERROR");
 
     fireEvent.click(screen.getByRole("link", { name: "Voir les lignes" }));
     expect(window.location.search).toBe("?view=diagnostics&check=active_offer_overlap");
     const integrityHeading = await screen.findByRole("heading", { name: "Lignes à examiner" });
     expect(integrityHeading).toBeInTheDocument();
     await waitFor(() => expect(integrityHeading).toHaveFocus());
-    expect(screen.getByRole("link", { name: "Ouvrir le tenant org_1" })).toHaveAttribute("href", "/admin/tenants/org_1");
-    expect(screen.getByRole("link", { name: "Rechercher la référence AVAILABILITY_OFFER share_1 dans le journal" })).toHaveAttribute("href", "/admin/operations?reference=share_1");
+    expect(screen.getByRole("link", { name: "Ouvrir l’organisation org_1" })).toHaveAttribute("href", "/fr/admin/tenants/org_1");
+    expect(screen.getByRole("link", { name: "Rechercher la référence AVAILABILITY_OFFER share_1 dans le journal" })).toHaveAttribute("href", "/fr/admin/operations?reference=share_1");
     expect(screen.getByText("occurrences")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Suivant/ }));
@@ -488,14 +536,14 @@ describe("Parkventory", () => {
       throw new Error(`Unexpected request: ${url}`);
     });
     vi.stubGlobal("fetch", fetchMock);
-    window.history.replaceState({}, "", "/admin/tenants");
+    window.history.replaceState({}, "", "/fr/admin/tenants");
     render(<App />);
 
     expect(await screen.findByText("Tenant Alpha")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Suivant/ }));
     expect(await screen.findByText("Tenant Beta")).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Rechercher un tenant"), { target: { value: "Acme" } });
+    fireEvent.change(screen.getByLabelText("Rechercher une organisation"), { target: { value: "Acme" } });
     fireEvent.click(screen.getByRole("button", { name: "Rechercher" }));
     expect(await screen.findByText("Acme")).toBeInTheDocument();
     expect(window.location.search).toBe("?q=Acme");
@@ -504,7 +552,7 @@ describe("Parkventory", () => {
   it("ne donne pas accès à l’application métier au compte système", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(godmodeSession));
     vi.stubGlobal("fetch", fetchMock);
-    window.history.replaceState({}, "", "/app");
+    window.history.replaceState({}, "", "/fr/app");
     render(<App />);
 
     expect(await screen.findByRole("heading", { name: "Cette place n’existe pas." })).toBeInTheDocument();
@@ -518,7 +566,7 @@ describe("Parkventory", () => {
       if (url.endsWith("/auth/session")) return jsonResponse(godmodeSession);
       return jsonResponse({}, 403);
     }));
-    window.history.replaceState({}, "", "/admin");
+    window.history.replaceState({}, "", "/fr/admin");
     render(<App />);
 
     expect(await screen.findByRole("heading", { name: "Cette place n’existe pas." })).toBeInTheDocument();
@@ -528,23 +576,24 @@ describe("Parkventory", () => {
   it("ne consomme un lien magique qu’une fois et conserve le succès sous StrictMode", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(victorBuckSession));
     vi.stubGlobal("fetch", fetchMock);
-    window.history.replaceState({}, "", `/auth/callback#token=${"a".repeat(43)}`);
+    window.history.replaceState({}, "", `/fr/auth/callback#token=${"a".repeat(43)}`);
     const { container } = render(<StrictMode><App /></StrictMode>);
-    expect(await screen.findByRole("heading", { name: "Vous êtes connecté." })).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(await screen.findByRole("heading", { name: "Connexion réussie" })).toBeInTheDocument();
+    expect(fetchMock.mock.calls.filter(([input]) => String(input).endsWith("/auth/verify"))).toHaveLength(1);
     expect(window.location.search).toBe("");
+    expect(screen.queryByLabelText("Choisir la langue")).not.toBeInTheDocument();
     expect(window.location.hash).toBe("");
     expect(container.querySelector(".organization-brand-scope")).not.toBeInTheDocument();
     expect(container.querySelector(".organization-logo")).not.toBeInTheDocument();
     await act(async () => {
       await new Promise((resolve) => window.setTimeout(resolve, 0));
     });
-    expect(screen.getByRole("heading", { name: "Vous êtes connecté." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Connexion réussie" })).toBeInTheDocument();
   });
 
   it("charge les disponibilités du membre sans exposer l’infrastructure", async () => {
     stubAuthenticatedApi();
-    window.history.replaceState({}, "", "/app");
+    window.history.replaceState({}, "", "/fr/app");
     render(<App />);
     expect(await screen.findByRole("heading", { name: "Bonjour, Alex" })).toBeInTheDocument();
     expect(screen.getByText("Disponibilités · 7 jours")).toBeInTheDocument();
@@ -552,38 +601,162 @@ describe("Parkventory", () => {
     expect(screen.queryByText(/Cloudflare|D1/i)).not.toBeInTheDocument();
   });
 
-  it("garde les logos du shell connecté dans l’application", async () => {
-    stubAuthenticatedApi();
-    window.history.replaceState({}, "", "/app/trouver");
+  it("conserve la langue sur la landing mais la place uniquement dans le profil connecté", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ detail: "Session expirée." }, 401)));
+    const landing = render(<App />);
+    expect((await screen.findAllByLabelText("Choisir la langue")).length).toBeGreaterThan(0);
+    landing.unmount();
+
+    const fetchMock = stubAuthenticatedApi();
+    window.history.replaceState({}, "", "/fr/app");
+    const { container } = render(<App />);
+    await screen.findByRole("heading", { name: "Bonjour, Alex" });
+
+    const profile = container.querySelector(".sidebar-profile");
+    const switcher = screen.getByLabelText("Choisir la langue");
+    expect(profile).toContainElement(switcher);
+    expect(container.querySelector(".app-topbar .language-switcher")).not.toBeInTheDocument();
+
+    fireEvent.change(switcher, { target: { value: "de" } });
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/profile",
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({ locale: "de" }),
+      }),
+    ));
+    await waitFor(() => expect(window.location.pathname).toBe("/de/app"));
+    expect(await screen.findByRole("heading", { name: "Guten Tag, Alex" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Sprache auswählen")).toHaveValue("de");
+  });
+
+  it("restaure la langue enregistrée du profil au chargement de la session", async () => {
+    stubAuthenticatedApi({ ...session, locale: "de" });
+    window.history.replaceState({}, "", "/fr/app");
     render(<App />);
+
+    expect(await screen.findByRole("heading", { name: "Guten Tag, Alex" })).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/de/app");
+    expect(screen.getByLabelText("Sprache auswählen")).toHaveValue("de");
+  });
+
+  it("retire les sélecteurs publics dès qu’une session est reconnue", async () => {
+    const paths = [
+      ["/fr/", "/de/"],
+      ["/fr/confidentialite", "/de/datenschutz"],
+      ["/fr/auth/callback", "/de/auth/callback"],
+      ["/fr/inconnue", "/de/inconnue"],
+    ];
+
+    for (const [path, expectedPath] of paths) {
+      stubAuthenticatedApi({ ...session, locale: "de" });
+      window.history.replaceState({}, "", path);
+      const view = render(<App />);
+      await waitFor(() => expect(window.location.pathname).toBe(expectedPath));
+      expect(screen.queryByLabelText("Sprache auswählen")).not.toBeInTheDocument();
+      view.unmount();
+    }
+  });
+
+  it("applique la préférence connectée aux pages publiques sans polluer l’historique", async () => {
+    stubAuthenticatedApi({ ...session, locale: "de" });
+    window.history.replaceState({ source: "test" }, "", "/fr/confidentialite");
+    const historyLength = window.history.length;
+    render(<App />);
+
+    await waitFor(() => expect(window.location.pathname).toBe("/de/datenschutz"));
+    expect(document.documentElement).toHaveAttribute("lang", "de");
+    expect(window.history.length).toBe(historyLength);
+    expect(screen.queryByLabelText("Sprache auswählen")).not.toBeInTheDocument();
+  });
+
+  it("remplace l’ancienne session par celle créée par le callback", async () => {
+    const previousSession = { ...session, displayName: "Mitglied A", locale: "de" as const };
+    const nextSession = { ...session, displayName: "Member B", locale: "en" as const };
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/auth/session")) return jsonResponse(previousSession);
+      if (url.endsWith("/auth/verify")) return jsonResponse(nextSession);
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    window.history.replaceState({}, "", `/de/auth/callback?token=${"b".repeat(43)}`);
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { name: "You’re signed in" })).toBeInTheDocument();
+    await waitFor(() => expect(window.location.pathname).toBe("/en/auth/callback"));
+    expect(document.documentElement).toHaveAttribute("lang", "en");
+    expect(screen.queryByLabelText("Choose language")).not.toBeInTheDocument();
+  });
+
+  it("garde les logos du shell connecté dans l’application", async () => {
+    let desktopMatches = false;
+    let desktopLayoutListener: (() => void) | null = null;
+    const desktopLayout = {
+      get matches() {
+        return desktopMatches;
+      },
+      media: "(min-width: 821px)",
+      onchange: null,
+      addEventListener: vi.fn((_type: string, listener: () => void) => {
+        desktopLayoutListener = listener;
+      }),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(() => true),
+    } as unknown as MediaQueryList;
+    vi.stubGlobal("matchMedia", vi.fn(() => desktopLayout));
+    stubAuthenticatedApi();
+    window.history.replaceState({}, "", "/fr/app/trouver");
+    const { container } = render(<App />);
 
     const logos = await screen.findAllByRole("link", { name: "Accueil de l’application Parkventory" });
     expect(logos).toHaveLength(2);
-    logos.forEach((logo) => expect(logo).toHaveAttribute("href", "/app"));
+    logos.forEach((logo) => expect(logo).toHaveAttribute("href", "/fr/app"));
 
     const menuTrigger = screen.getByRole("button", { name: "Ouvrir la navigation" });
     expect(menuTrigger).toHaveAttribute("aria-expanded", "false");
+    expect(menuTrigger).toHaveAttribute("aria-controls", "application-sidebar");
     fireEvent.click(menuTrigger);
     expect(menuTrigger).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("dialog", { name: "Navigation de l’application" }))
+      .toHaveAttribute("aria-modal", "true");
+    expect(document.getElementById("dashboard-content")).toHaveAttribute("inert");
+    expect(container.querySelector(".mobile-app-nav")).toHaveAttribute("inert");
+    expect(document.body.style.overflow).toBe("hidden");
+    expect(document.body.style.overscrollBehavior).toBe("none");
     fireEvent.click(screen.getAllByRole("button", { name: "Fermer la navigation" })[0]);
     expect(menuTrigger).toHaveAttribute("aria-expanded", "false");
+    expect(document.getElementById("dashboard-content")).not.toHaveAttribute("inert");
+    expect(document.body.style.overflow).toBe("");
+    expect(document.body.style.overscrollBehavior).toBe("");
+
+    fireEvent.click(menuTrigger);
+    desktopMatches = true;
+    act(() => desktopLayoutListener?.());
+    expect(menuTrigger).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("dialog", { name: "Navigation de l’application" }))
+      .not.toBeInTheDocument();
+    expect(document.body.style.overflow).toBe("");
 
     fireEvent.click(logos[0]);
-    expect(window.location.pathname).toBe("/app");
+    expect(window.location.pathname).toBe("/fr/app");
     expect(await screen.findByRole("heading", { name: "Bonjour, Alex" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /Partagez votre place/i })).not.toBeInTheDocument();
   });
 
   it("applique la co-marque Victor Buck Services uniquement dans le shell connecté", async () => {
     stubAuthenticatedApi(victorBuckSession, victorBuckDashboard);
-    window.history.replaceState({}, "", "/app");
+    window.history.replaceState({}, "", "/fr/app");
     const { container } = render(<App />);
 
     const homeLinks = await screen.findAllByRole("link", {
       name: "Accueil de l’application Victor Buck Services sur Parkventory",
     });
     expect(homeLinks).toHaveLength(2);
-    homeLinks.forEach((link) => expect(link).toHaveAttribute("href", "/app"));
+    homeLinks.forEach((link) => expect(link).toHaveAttribute("href", "/fr/app"));
     expect(screen.getAllByRole("img", { name: "Victor Buck Services, avec Parkventory" })).toHaveLength(2);
     expect(container.querySelectorAll("img.organization-logo")).toHaveLength(2);
     expect(container.querySelectorAll(".organization-parkventory-badge img")).toHaveLength(2);
@@ -599,7 +772,7 @@ describe("Parkventory", () => {
       ...victorBuckDashboard,
       branding: null,
     });
-    window.history.replaceState({}, "", "/app");
+    window.history.replaceState({}, "", "/fr/app");
     const { container } = render(<App />);
 
     expect(await screen.findByRole("heading", { name: "Bonjour, Alex" })).toBeInTheDocument();
@@ -609,7 +782,7 @@ describe("Parkventory", () => {
 
   it("retire le branding d’entreprise à la déconnexion", async () => {
     stubAuthenticatedApi(victorBuckSession, victorBuckDashboard);
-    window.history.replaceState({}, "", "/app");
+    window.history.replaceState({}, "", "/fr/app");
     const { container } = render(<App />);
 
     await screen.findAllByRole("link", {
@@ -622,12 +795,25 @@ describe("Parkventory", () => {
     expect(container.querySelector(".organization-logo")).not.toBeInTheDocument();
   });
 
-  it("rend une vraie page 404 sans appeler l’API", () => {
-    const fetchMock = vi.fn();
+  it("rend une vraie page 404 et vérifie seulement l’état de session", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ detail: "Session expirée." }, 401));
     vi.stubGlobal("fetch", fetchMock);
-    window.history.replaceState({}, "", "/app/inconnue");
+    window.history.replaceState({}, "", "/fr/app/inconnue");
     render(<App />);
     expect(screen.getByRole("heading", { name: "Cette place n’existe pas." })).toBeInTheDocument();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(await screen.findByLabelText("Choisir la langue")).toHaveValue("fr");
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe("/api/v1/auth/session");
+  });
+
+  it("transfère le focus vers le titre après une navigation légale interne", async () => {
+    window.history.replaceState({}, "", "/fr/confidentialite");
+    render(<App />);
+
+    fireEvent.click(screen.getByRole("link", { name: "Mentions légales" }));
+
+    const heading = await screen.findByRole("heading", { level: 1, name: "Mentions légales" });
+    await waitFor(() => expect(heading).toHaveFocus());
+    expect(window.location.pathname).toBe("/fr/mentions-legales");
   });
 });

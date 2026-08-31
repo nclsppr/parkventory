@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { Locale } from "../../../../shared/i18n";
 import type { NoticeTone } from "../../components/AppShell";
 import { AdminShell, type AdminRoute } from "../../components/admin/AdminShell";
 import { Toast } from "../../components/Toast";
@@ -17,6 +18,7 @@ export interface AdminApplicationPageProps {
   tenantId?: string;
   onSessionExpired: () => void;
   onForbidden: () => void;
+  onLocalePersisted: (locale: Locale) => void;
 }
 
 export default function AdminApplicationPage({
@@ -26,6 +28,7 @@ export default function AdminApplicationPage({
   tenantId,
   onSessionExpired,
   onForbidden,
+  onLocalePersisted,
 }: AdminApplicationPageProps) {
   const [notice, setNotice] = useState<{ message: string; tone: NoticeTone } | null>(null);
   const notify = (message: string, tone: NoticeTone = "success") => setNotice({ message, tone });
@@ -46,6 +49,7 @@ export default function AdminApplicationPage({
         onRetry={() => undefined}
         onNotify={notify}
         onSessionExpired={onSessionExpired}
+        onLocalePersisted={onLocalePersisted}
       >
         {route === "overview" ? (
           <AdminOverviewPage onSessionExpired={onSessionExpired} onForbidden={onForbidden} />

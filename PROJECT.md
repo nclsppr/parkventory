@@ -16,9 +16,12 @@ Inclus :
 - magic link à usage unique, session serveur et protection Turnstile ;
 - organisation créée ou rejointe depuis le domaine professionnel ;
 - une place assignée par membre ;
-- publication d’un créneau dans les 7 prochains jours, fuseau Europe/Paris ;
+- publication d’un créneau dans les 7 prochains jours, dans le fuseau du
+  parking (`Europe/Paris` par défaut) ;
 - recherche, réservation idempotente, annulation et retrait avant le début ;
-- isolation de toutes les données par organisation.
+- isolation de toutes les données par organisation ;
+- interface, erreurs, magic links et pages publiques en français, anglais,
+  allemand et luxembourgeois, avec URLs localisées et SEO cohérent ;
 
 Exclus : invitations, administration autonome des organisations, mutations de
 données depuis la console globale, plan de parking, récurrence, notifications

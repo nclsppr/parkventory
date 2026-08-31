@@ -10,8 +10,13 @@ import {
   ApplicationBrand,
   OrganizationBrandingProvider,
 } from "../components/OrganizationBranding";
+import { ThemeToggle } from "../components/Theme";
 import { Toast } from "../components/Toast";
 import { useDashboardData } from "../hooks/useDashboardData";
+import { applicationMessages } from "../i18n/application";
+import { commonMessages } from "../i18n/common";
+import { useI18n } from "../i18n/I18n";
+import type { Locale } from "../../../shared/i18n";
 import type { OrganizationBranding } from "../types";
 import { DashboardPage } from "./DashboardPage";
 import { FindPage } from "./FindPage";
@@ -21,6 +26,7 @@ import { TenantAdminPage } from "./TenantAdminPage";
 interface ApplicationPageProps {
   route: ApplicationRoute;
   initialBranding: OrganizationBranding | null;
+  onLocalePersisted: (locale: Locale) => void;
   isTenantAdmin: boolean;
   onSessionExpired: () => void;
 }
@@ -28,9 +34,13 @@ interface ApplicationPageProps {
 export function ApplicationPage({
   route,
   initialBranding,
+  onLocalePersisted,
   isTenantAdmin,
   onSessionExpired,
 }: ApplicationPageProps) {
+  const { locale } = useI18n();
+  const copy = applicationMessages[locale].state;
+  const commonCopy = commonMessages[locale];
   const {
     data,
     loading,
@@ -52,17 +62,24 @@ export function ApplicationPage({
     });
   }, [route, hasData]);
 
+  useEffect(() => {
+    setNotice(null);
+  }, [locale]);
+
   if (!data) {
     return (
       <OrganizationBrandingProvider branding={effectiveBranding}>
         <main className="dashboard-state">
+          <div className="dashboard-state-preferences">
+            <ThemeToggle />
+          </div>
           <ApplicationBrand />
           {loadError ? <AlertTriangle aria-hidden="true" /> : <LoaderCircle className="spin" aria-hidden="true" />}
-          <h1>{loadError ? "Le service ne répond pas." : "Chargement de votre espace…"}</h1>
-          <p role={loadError ? "alert" : "status"}>{loadError ?? "Ouverture de votre espace Parkventory."}</p>
+          <h1>{loadError ? copy.serviceUnavailable : copy.loadingWorkspace}</h1>
+          <p role={loadError ? "alert" : "status"}>{loadError ?? copy.openingWorkspace}</p>
           {loadError && (
             <button className="button button-primary" type="button" onClick={() => void refreshDashboard()}>
-              Réessayer
+              {commonCopy.retry}
             </button>
           )}
         </main>
@@ -74,7 +91,7 @@ export function ApplicationPage({
     <OrganizationBrandingProvider branding={effectiveBranding}>
       <AppShell
         activeRoute={route}
-        navigationItems={isTenantAdmin ? tenantAdminNavigation : undefined}
+        navigationItems={isTenantAdmin ? tenantAdminNavigation(locale) : undefined}
         profile={{
           initials: data.user.initials,
           primary: data.user.fullName,
@@ -83,6 +100,7 @@ export function ApplicationPage({
         loading={loading}
         loadError={loadError}
         onNotify={notify}
+        onLocalePersisted={onLocalePersisted}
         onRetry={() => void refreshDashboard()}
         onSessionExpired={onSessionExpired}
       >

@@ -85,9 +85,13 @@ describe("administration du tenant", () => {
   it("refuse un membre simple et journalise le refus sans PII", async () => {
     const member = await verifyMember("alpha.example", "membre@alpha.example");
     const response = await SELF.fetch("https://parkventory.test/api/v1/tenant-admin/overview", {
-      headers: getHeaders(member.cookie),
+      headers: { ...getHeaders(member.cookie), "Accept-Language": "lb-LU, fr;q=0.5" },
     });
     expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({
+      title: "Ufro refuséiert",
+      detail: "Dëse Beräich ass fir d’Administrateure vun Ärer Organisatioun reservéiert.",
+    });
     const event = await env.DB.prepare(`
       SELECT event_type, route, error_code FROM activity_event
       WHERE event_type = 'TENANT_ADMIN_ACCESS_DENIED'
@@ -131,7 +135,7 @@ describe("administration du tenant", () => {
       .bind(admin.membership_id).run();
     const response = await SELF.fetch("https://parkventory.test/api/v1/tenant-admin/branding", {
       method: "PUT",
-      headers: mutationHeaders(admin.cookie),
+      headers: { ...mutationHeaders(admin.cookie), "X-Parkventory-Locale": "de" },
       body: JSON.stringify({
         enabled: true,
         logoEnabled: false,
@@ -140,6 +144,10 @@ describe("administration du tenant", () => {
       }),
     });
     expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      accepted: true,
+      message: "Das visuelle Erscheinungsbild der Organisation wurde aktualisiert.",
+    });
     const row = await env.DB.prepare(`
       SELECT enabled, logo_enabled, action_fill, available_fill,
         dark_action_ink, dark_available_ink, light_action_ink, light_available_ink,
@@ -176,11 +184,15 @@ describe("administration du tenant", () => {
       `https://parkventory.test/api/v1/tenant-admin/members/${encodeURIComponent(target.membership_id)}/email`,
       {
         method: "DELETE",
-        headers: mutationHeaders(admin.cookie),
+        headers: { ...mutationHeaders(admin.cookie), "X-Parkventory-Locale": "en" },
         body: JSON.stringify({ confirmation: "EFFACER" }),
       },
     );
     expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      accepted: true,
+      message: "The email address has been erased and the account sessions have been deleted. Business history has been retained.",
+    });
     const erased = await env.DB.prepare(`
       SELECT normalized_email, display_name, email_erased_at FROM user_account WHERE id = ?1
     `).bind(target.user_id).first<{ normalized_email: string; display_name: string; email_erased_at: number | null }>();
@@ -194,6 +206,18 @@ describe("administration du tenant", () => {
     expect(retainedHistory).toEqual({ count: 1 });
     expect(await env.DB.prepare("SELECT COUNT(*) AS count FROM app_session WHERE membership_id = ?1").bind(target.membership_id).first()).toEqual({ count: 0 });
     expect(await env.DB.prepare("SELECT COUNT(*) AS count FROM magic_link_request WHERE normalized_email = ?1").bind(targetEmail).first()).toEqual({ count: 0 });
+
+    const localizedMembersResponse = await SELF.fetch(
+      "https://parkventory.test/api/v1/tenant-admin/members",
+      { headers: { ...getHeaders(admin.cookie), "X-Parkventory-Locale": "de" } },
+    );
+    const localizedMembers = await localizedMembersResponse.json<{
+      items: Array<{ membershipId: string; displayName: string }>;
+    }>();
+    expect(localizedMembers.items).toContainEqual(expect.objectContaining({
+      membershipId: target.membership_id,
+      displayName: "Gelöschtes Konto",
+    }));
 
     const oldSession = await SELF.fetch("https://parkventory.test/api/v1/auth/session", {
       headers: getHeaders(target.cookie),

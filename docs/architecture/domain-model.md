@@ -5,7 +5,7 @@ Le schéma opérationnel est versionné par les migrations D1 sous `migrations/`
 | Table | Rôle |
 | --- | --- |
 | `organization` | frontière d’autorisation, unique par domaine normalisé et classée `TENANT` ou `SYSTEM` |
-| `user_account` | identité minimale, unique par e-mail normalisé, avec instant d’effacement optionnel |
+| `user_account` | identité minimale, unique par e-mail normalisé, avec préférence de langue nullable et instant d’effacement optionnel |
 | `membership` | rattachement d’un utilisateur à son organisation et rôle `MEMBER` ou `ADMIN` |
 | `magic_link_request` | hash du jeton, expiration, consommation et rate limit |
 | `app_session` | hash du cookie opaque, expiration et révocation |
@@ -30,6 +30,11 @@ Le branding est résolu par égalité exacte sur le domaine normalisé. Son abse
 son opt-out ou une valeur invalide produit `null` et conserve l'identité
 Parkventory. Les réponses authentifiées n'ont pas besoin d'exposer le domaine
 pour transmettre le nom, le logo de même origine et les jetons sémantiques.
+
+La préférence `preferred_locale` appartient au compte global, pas à une
+adhésion ni à une session. Elle accepte uniquement `fr`, `en`, `de` ou `lb` et
+reste `NULL` pour un compte historique tant qu’aucun choix connecté ou nouvelle
+connexion ne l’a initialisée.
 
 La migration `0005_tenant_administration.sql` ajoute l’opt-out du logo, la trace
 de l’administrateur ayant modifié la marque et `email_erased_at`. Des triggers

@@ -1,20 +1,43 @@
+import {
+  localizedAdminTenantPath,
+  localizedPath,
+  type Locale,
+  type RouteId,
+} from "../../shared/i18n";
+
 export const baseUrl = import.meta.env.BASE_URL;
-export const homeUrl = baseUrl;
-export const appUrl = `${baseUrl}app`;
-export const shareUrl = `${baseUrl}app/partager`;
-export const findUrl = `${baseUrl}app/trouver`;
-export const tenantAdminUrl = `${baseUrl}app/admin`;
-export const adminUrl = `${baseUrl}admin`;
-export const adminTenantsUrl = `${baseUrl}admin/tenants`;
-export const adminUsersUrl = `${baseUrl}admin/users`;
-export const adminOperationsUrl = `${baseUrl}admin/operations`;
-export const authCallbackUrl = `${baseUrl}auth/callback`;
-export const privacyUrl = `${baseUrl}confidentialite`;
-export const legalUrl = `${baseUrl}mentions-legales`;
 export const environmentLabel = "Version bêta";
 
-export function adminTenantUrl(id: string) {
-  return `${adminTenantsUrl}/${encodeURIComponent(id)}`;
+export function withBasePath(pathname: string) {
+  if (baseUrl === "/") return pathname;
+  const base = baseUrl.replace(/\/+$/, "");
+  return `${base}${pathname}`;
+}
+
+export function routeUrl(locale: Locale, route: Exclude<RouteId, "notFound">) {
+  return withBasePath(localizedPath(locale, route));
+}
+
+export function localizedUrls(locale: Locale) {
+  return {
+    homeUrl: routeUrl(locale, "home"),
+    appUrl: routeUrl(locale, "app"),
+    shareUrl: routeUrl(locale, "share"),
+    findUrl: routeUrl(locale, "find"),
+    tenantAdminUrl: routeUrl(locale, "tenantAdmin"),
+    adminUrl: routeUrl(locale, "adminOverview"),
+    adminTenantsUrl: routeUrl(locale, "adminTenants"),
+    adminUsersUrl: routeUrl(locale, "adminUsers"),
+    adminOperationsUrl: routeUrl(locale, "adminOperations"),
+    adminTenantUrl: (tenantId: string) => adminTenantUrl(locale, tenantId),
+    authCallbackUrl: routeUrl(locale, "authCallback"),
+    privacyUrl: routeUrl(locale, "privacy"),
+    legalUrl: routeUrl(locale, "legal"),
+  };
+}
+
+export function adminTenantUrl(locale: Locale, tenantId: string) {
+  return withBasePath(localizedAdminTenantPath(locale, tenantId));
 }
 
 export function relativePathname(pathname: string, base = baseUrl) {

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type DependencyList } from "react";
 import { ApiError } from "../api/client";
+import { useI18n } from "../i18n/I18n";
+import { adminMessages } from "../i18n/admin";
 
 interface AdminResourceState<T> {
   data: T | null;
@@ -14,6 +16,8 @@ export function useAdminResource<T>(
   onSessionExpired: () => void,
   onForbidden: () => void,
 ) {
+  const { locale } = useI18n();
+  const fallbackError = adminMessages[locale].common.loadFailed;
   const requestId = useRef(0);
   const [state, setState] = useState<AdminResourceState<T>>({
     data: null,
@@ -40,12 +44,12 @@ export function useAdminResource<T>(
       if (error instanceof ApiError && error.status === 403) onForbidden();
       setState((current) => ({
         ...current,
-        error: error instanceof Error ? error : new Error("Le chargement a échoué."),
+        error: error instanceof Error ? error : new Error(fallbackError),
         loading: false,
         refreshing: false,
       }));
     }
-  }, [loader, onForbidden, onSessionExpired]);
+  }, [fallbackError, loader, onForbidden, onSessionExpired]);
 
   useEffect(() => {
     void load();

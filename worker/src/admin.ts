@@ -2,6 +2,15 @@ import { Hono } from "hono";
 import type { MiddlewareHandler } from "hono";
 import { recordActivityEvent } from "./activity";
 import type { ActivityOutcome, ActivitySeverity } from "./activity";
+import {
+  adminDisplayName,
+  adminIntegrityCheckKeys as INTEGRITY_CHECK_KEYS,
+  adminIntegrityMessages,
+  adminMessage,
+  adminProblem,
+  type AdminIntegrityCheckKey,
+} from "./admin-i18n";
+import { requestLocale } from "./i18n";
 import type { AppEnvironment } from "./types";
 
 export const SYSTEM_ORGANIZATION_ID = "org_system_parkventory";
@@ -13,19 +22,18 @@ const DEFAULT_INTEGRITY_PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 100;
 const OVERVIEW_DAYS = 30;
 
-const INTEGRITY_CHECK_KEYS = [
-  "tenant_without_member",
-  "spot_owner_tenant_mismatch",
-  "offer_spot_owner_mismatch",
-  "reservation_offer_member_mismatch",
-  "active_offer_overlap",
-  "multiple_confirmed_reservations",
-  "system_organization_count",
-  "system_membership_invalid",
-  "system_business_data",
-] as const;
-
-type IntegrityCheckKey = typeof INTEGRITY_CHECK_KEYS[number];
+type IntegrityCheckKey = AdminIntegrityCheckKey;
+const INTEGRITY_CHECK_SEVERITIES: Record<IntegrityCheckKey, "WARNING" | "ERROR"> = {
+  tenant_without_member: "WARNING",
+  spot_owner_tenant_mismatch: "ERROR",
+  offer_spot_owner_mismatch: "ERROR",
+  reservation_offer_member_mismatch: "ERROR",
+  active_offer_overlap: "ERROR",
+  multiple_confirmed_reservations: "ERROR",
+  system_organization_count: "ERROR",
+  system_membership_invalid: "ERROR",
+  system_business_data: "ERROR",
+};
 type IntegrityIssueKind = "ROW" | "MISSING";
 type IntegrityReferenceType =
   | "ORGANIZATION"
@@ -77,19 +85,11 @@ interface ActivityRow {
   organization_domain: string | null;
   actor_display_name: string | null;
   actor_email: string | null;
+  actor_email_erased_at: number | null;
 }
 
 function nowSeconds(): number {
   return Math.floor(Date.now() / 1000);
-}
-
-function problem(status: number, detail: string): Response {
-  return Response.json({
-    type: "about:blank",
-    title: status >= 500 ? "Erreur du service" : "Requête refusée",
-    status,
-    detail,
-  }, { status });
 }
 
 function encodeCursor(cursor: PageCursor): string {
@@ -167,7 +167,7 @@ function publicEmail(value: unknown, erasedAt?: unknown): string | null {
   return value.startsWith("erased_") && value.endsWith("@privacy.parkventory.invalid") ? null : value;
 }
 
-function activityView(row: ActivityRow) {
+function activityView(row: ActivityRow, locale: ReturnType<typeof requestLocale>) {
   return {
     id: row.id,
     type: row.event_type,
@@ -193,8 +193,8 @@ function activityView(row: ActivityRow) {
       ? null
       : {
           id: row.user_id,
-          displayName: row.actor_display_name,
-          email: publicEmail(row.actor_email),
+          displayName: adminDisplayName(locale, row.actor_display_name, row.actor_email_erased_at),
+          email: publicEmail(row.actor_email, row.actor_email_erased_at),
         },
   };
 }
@@ -520,7 +520,7 @@ export const requireGodmode: MiddlewareHandler<AppEnvironment> = async (context,
       errorCode: "GODMODE_FORBIDDEN",
       dedupeWindowSeconds: 5 * 60,
     }).catch(() => undefined);
-    return problem(403, "Cet espace est réservé à l’opérateur Parkventory.");
+    return adminProblem(context.req.raw, 403, "godmodeForbidden");
   }
 
   await next();
@@ -692,7 +692,7 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
     const cursor = decodeCursor(cursorValue);
     const query = (context.req.query("q") ?? "").trim();
     if (limit === null || (cursorValue && !cursor) || query.length > 100 || /[\u0000-\u001f]/.test(query)) {
-      return problem(400, "Les paramètres de pagination ou de recherche ne sont pas valides.");
+      return adminProblem(context.req.raw, 400, "invalidTenantSearch");
     }
 
     const clauses = ["organization.kind = 'TENANT'"];
@@ -773,11 +773,11 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
     const tenantId = context.req.param("id");
     const membershipId = context.req.param("membershipId");
     if (!validIdentifier(tenantId) || !validIdentifier(membershipId)) {
-      return problem(400, "Les identifiants du tenant ou du membre ne sont pas valides.");
+      return adminProblem(context.req.raw, 400, "invalidTenantMembershipIdentifiers");
     }
     const body = await readBody<{ role?: unknown }>(context.req.raw);
     if (!body || (body.role !== "ADMIN" && body.role !== "MEMBER")) {
-      return problem(400, "Le rôle demandé n’est pas valide.");
+      return adminProblem(context.req.raw, 400, "invalidRole");
     }
     const target = await context.env.DB.prepare(`
       SELECT membership.id, membership.role, membership.user_id, user_account.email_erased_at
@@ -793,9 +793,9 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
       user_id: string;
       email_erased_at: number | null;
     }>();
-    if (!target) return problem(404, "Ce membre n’existe pas dans ce tenant.");
+    if (!target) return adminProblem(context.req.raw, 404, "memberNotFoundInTenant");
     if (target.email_erased_at !== null && body.role === "ADMIN") {
-      return problem(409, "Un compte dont l’adresse a été effacée ne peut pas devenir administrateur.");
+      return adminProblem(context.req.raw, 409, "erasedMemberCannotBecomeAdmin");
     }
     if (target.role !== body.role) {
       const update = await context.env.DB.prepare(`
@@ -807,7 +807,7 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
           SELECT role FROM membership WHERE id = ?1 AND organization_id = ?2
         `).bind(membershipId, tenantId).first<{ role: "MEMBER" | "ADMIN" }>();
         if (current?.role !== body.role) {
-          return problem(409, "Le rôle de ce membre vient de changer. Actualisez la page et réessayez.");
+          return adminProblem(context.req.raw, 409, "roleChangedConcurrently");
         }
       } else {
         const actor = context.get("member");
@@ -827,15 +827,17 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
     return context.json({
       accepted: true,
       role: body.role,
-      message: body.role === "ADMIN"
-        ? "Le membre est maintenant administrateur du tenant."
-        : "Le membre est maintenant utilisateur du tenant.",
+      message: adminMessage(
+        requestLocale(context.req.raw),
+        body.role === "ADMIN" ? "memberPromoted" : "memberDemoted",
+      ),
     });
   });
 
   app.get("/api/v1/admin/tenants/:id", async (context) => {
     const tenantId = context.req.param("id");
-    if (!validIdentifier(tenantId)) return problem(400, "L’identifiant du tenant n’est pas valide.");
+    if (!validIdentifier(tenantId)) return adminProblem(context.req.raw, 400, "invalidTenantIdentifier");
+    const locale = requestLocale(context.req.raw);
 
     const [tenantResult, statsResult, activityResult, membersResult, spotsResult] = await context.env.DB.batch([
       context.env.DB.prepare(`
@@ -873,7 +875,8 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
           event_organization.display_name AS organization_name,
           event_organization.normalized_domain AS organization_domain,
           actor.display_name AS actor_display_name,
-          actor.normalized_email AS actor_email
+          actor.normalized_email AS actor_email,
+          actor.email_erased_at AS actor_email_erased_at
         FROM activity_event event
         LEFT JOIN organization event_organization ON event_organization.id = event.organization_id
         LEFT JOIN user_account actor ON actor.id = event.user_id
@@ -929,7 +932,7 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
     ]);
 
     const tenant = tenantResult.results[0] as Record<string, unknown> | undefined;
-    if (!tenant) return problem(404, "Ce tenant n’existe pas.");
+    if (!tenant) return adminProblem(context.req.raw, 404, "tenantNotFound");
     const stats = statsResult.results[0] as Record<string, unknown> | undefined;
     return context.json({
       tenant: {
@@ -954,13 +957,14 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
         reservations: numberValue(stats, "reservations"),
         activeSessions: numberValue(stats, "active_sessions"),
       },
-      recentActivity: (activityResult.results as unknown as ActivityRow[]).map(activityView),
+      recentActivity: (activityResult.results as unknown as ActivityRow[])
+        .map((row) => activityView(row, locale)),
       recentMembers: membersResult.results.map((row) => {
         const member = row as Record<string, unknown>;
         return {
           membershipId: String(member.membership_id),
           userId: String(member.user_id),
-          displayName: String(member.display_name),
+          displayName: adminDisplayName(locale, member.display_name, member.email_erased_at),
           email: publicEmail(member.normalized_email, member.email_erased_at),
           emailErasedAt: member.email_erased_at === null ? null : Number(member.email_erased_at),
           role: String(member.role),
@@ -980,7 +984,7 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
           owner: {
             membershipId: String(spot.owner_membership_id),
             userId: String(spot.owner_user_id),
-            displayName: String(spot.owner_display_name),
+            displayName: adminDisplayName(locale, spot.owner_display_name, spot.owner_email_erased_at),
             email: publicEmail(spot.owner_email, spot.owner_email_erased_at),
           },
           shares: Number(spot.shares ?? 0),
@@ -995,6 +999,7 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
   });
 
   app.get("/api/v1/admin/users", async (context) => {
+    const locale = requestLocale(context.req.raw);
     const limit = parseLimit(context.req.query("limit"), DEFAULT_PAGE_SIZE);
     const cursorValue = context.req.query("cursor");
     const cursor = decodeCursor(cursorValue);
@@ -1006,7 +1011,7 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
       || query.length > 100
       || /[\u0000-\u001f]/.test(query)
       || (tenantId && !validIdentifier(tenantId))
-    ) return problem(400, "Les filtres utilisateurs ne sont pas valides.");
+    ) return adminProblem(context.req.raw, 400, "invalidUserFilters");
 
     const clauses = ["organization.kind = 'TENANT'"];
     const bindings: unknown[] = [];
@@ -1073,7 +1078,7 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
       id: String(row.id),
       email: publicEmail(row.normalized_email, row.email_erased_at),
       emailErasedAt: row.email_erased_at === null ? null : Number(row.email_erased_at),
-      displayName: String(row.display_name),
+      displayName: adminDisplayName(locale, row.display_name, row.email_erased_at),
       createdAt: Number(row.created_at),
       membershipId: String(row.membership_id),
       role: String(row.role),
@@ -1103,6 +1108,7 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
   });
 
   app.get("/api/v1/admin/activity", async (context) => {
+    const locale = requestLocale(context.req.raw);
     const limit = parseLimit(context.req.query("limit"), DEFAULT_ACTIVITY_PAGE_SIZE);
     const cursorValue = context.req.query("cursor");
     const cursor = decodeCursor(cursorValue);
@@ -1121,7 +1127,7 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
       || (severity && !["INFO", "WARNING", "ERROR"].includes(severity))
       || (errorCode && !/^[A-Z][A-Z0-9_]{1,79}$/.test(errorCode))
       || (reference && !validIdentifier(reference))
-    ) return problem(400, "Les filtres d’activité ne sont pas valides.");
+    ) return adminProblem(context.req.raw, 400, "invalidActivityFilters");
 
     const clauses = ["1 = 1"];
     const bindings: unknown[] = [];
@@ -1160,7 +1166,8 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
         event_organization.display_name AS organization_name,
         event_organization.normalized_domain AS organization_domain,
         actor.display_name AS actor_display_name,
-        actor.normalized_email AS actor_email
+        actor.normalized_email AS actor_email,
+        actor.email_erased_at AS actor_email_erased_at
       FROM activity_event event
       LEFT JOIN organization event_organization ON event_organization.id = event.organization_id
       LEFT JOIN user_account actor ON actor.id = event.user_id
@@ -1173,7 +1180,7 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
     const rows = result.results.slice(0, limit);
     const last = rows.at(-1);
     return context.json({
-      items: rows.map(activityView),
+      items: rows.map((row) => activityView(row, locale)),
       page: {
         nextCursor: hasMore && last
           ? encodeCursor({ at: last.occurred_at, id: last.id })
@@ -1187,13 +1194,13 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
     const limit = parseLimit(context.req.query("limit"), DEFAULT_INTEGRITY_PAGE_SIZE);
     const cursorValue = context.req.query("cursor");
     if (!isIntegrityCheckKey(checkValue) || limit === null) {
-      return problem(400, "Le contrôle d’intégrité demandé n’est pas valide.");
+      return adminProblem(context.req.raw, 400, "invalidIntegrityCheck");
     }
     const cursor = cursorValue === undefined
       ? null
       : decodeIntegrityCursor(cursorValue, checkValue);
     if (cursorValue !== undefined && cursor === null) {
-      return problem(400, "Le curseur du contrôle d’intégrité n’est pas valide.");
+      return adminProblem(context.req.raw, 400, "invalidIntegrityCursor");
     }
 
     const result = await context.env.DB.prepare(INTEGRITY_ISSUE_QUERIES[checkValue])
@@ -1219,6 +1226,7 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
   });
 
   app.get("/api/v1/admin/diagnostics", async (context) => {
+    const locale = requestLocale(context.req.raw);
     const now = nowSeconds();
     const dayAgo = now - (24 * 60 * 60);
     const weekAgo = now - (7 * 24 * 60 * 60);
@@ -1353,64 +1361,19 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
       `),
     ]);
     const database = databaseResult.results[0] as { ready?: number } | undefined;
-    if (database?.ready !== 1) return problem(503, "La base de données n’est pas disponible.");
+    if (database?.ready !== 1) return adminProblem(context.req.raw, 503, "databaseUnavailable");
     const telemetry = telemetryResult.results[0] as Record<string, unknown> | undefined;
     const authentication = authenticationResult.results[0] as Record<string, unknown> | undefined;
     const incidents = incidentsResult.results[0] as Record<string, unknown> | undefined;
-    const integrityDefinitions: Record<string, { label: string; severity: "WARNING" | "ERROR"; detail: string }> = {
-      tenant_without_member: {
-        label: "Tenants sans membre",
-        severity: "WARNING",
-        detail: "Chaque tenant issu d’une connexion vérifiée devrait contenir au moins un membre.",
-      },
-      spot_owner_tenant_mismatch: {
-        label: "Places et propriétaires incohérents",
-        severity: "ERROR",
-        detail: "La place et son propriétaire doivent appartenir au même tenant.",
-      },
-      offer_spot_owner_mismatch: {
-        label: "Partages et places incohérents",
-        severity: "ERROR",
-        detail: "Chaque partage doit référencer la place et le propriétaire de son tenant.",
-      },
-      reservation_offer_member_mismatch: {
-        label: "Réservations inter-tenants ou invalides",
-        severity: "ERROR",
-        detail: "L’offre et le réservataire doivent appartenir au même tenant, sans auto-réservation.",
-      },
-      active_offer_overlap: {
-        label: "Chevauchements de partages actifs",
-        severity: "ERROR",
-        detail: "Une place ne doit pas avoir deux créneaux publiés qui se chevauchent.",
-      },
-      multiple_confirmed_reservations: {
-        label: "Réservations confirmées multiples",
-        severity: "ERROR",
-        detail: "Une offre ne doit avoir qu’une réservation confirmée.",
-      },
-      system_organization_count: {
-        label: "Organisation système unique",
-        severity: "ERROR",
-        detail: "Il doit exister exactement une organisation SYSTEM avec son identité interne réservée.",
-      },
-      system_membership_invalid: {
-        label: "Opérateur système unique",
-        severity: "ERROR",
-        detail: "L’organisation SYSTEM accepte au plus un membre, obligatoirement ADMIN.",
-      },
-      system_business_data: {
-        label: "Données métier dans SYSTEM",
-        severity: "ERROR",
-        detail: "L’organisation SYSTEM ne doit contenir aucune place, offre ou réservation.",
-      },
-    };
+    const integrityDefinitions = adminIntegrityMessages(locale);
     const integrity = integrityResult.results[0] as Record<string, unknown> | undefined;
-    const checks = Object.entries(integrityDefinitions).map(([key, definition]) => {
+    const checks = INTEGRITY_CHECK_KEYS.map((key) => {
+      const definition = integrityDefinitions[key];
       const count = numberValue(integrity, key);
       return {
         key,
         label: definition.label,
-        severity: definition.severity,
+        severity: INTEGRITY_CHECK_SEVERITIES[key],
         count,
         status: count === 0 ? "ok" as const : "attention" as const,
         detail: definition.detail,

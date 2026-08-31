@@ -131,4 +131,16 @@ describe("branding d’organisation", () => {
     expect(contrast(branding.colors.highlight, "#F4F6F1")).toBeGreaterThanOrEqual(3);
     expect(styles).toMatch(/\.organization-brand-scope \.app-sidebar\s*\{\s*box-shadow: inset 0 3px var\(--company-highlight\);/);
   });
+
+  it("compacte le verrou de marque et garde la langue dans le profil", () => {
+    expect(styles).toMatch(/@media \(max-width: 560px\)[\s\S]*?\.mobile-organization-logo\s*\{\s*width: 72px;\s*height: 44px;/);
+    expect(styles).toMatch(/\.sidebar-profile-language\s*\{\s*min-width: 64px;\s*min-height: 44px;/);
+    expect(styles).not.toMatch(/\.app-topbar-actions \.language-switcher/);
+    expect(styles).toMatch(/\.language-switcher select\s*\{[\s\S]*?inset: -1px;[\s\S]*?width: calc\(100% \+ 2px\);[\s\S]*?height: calc\(100% \+ 2px\);/);
+    expect(styles).toMatch(/@media \(max-width: 820px\)[\s\S]*?\.app-page\s*\{[\s\S]*?grid-template-columns: minmax\(0, 1fr\);/);
+    expect(styles).toMatch(/@media \(max-width: 560px\)[\s\S]*?\.section-heading-compact\s*\{\s*align-items: flex-start;\s*flex-direction: column;\s*gap: var\(--space-2\);/);
+    expect(styles).toMatch(/@media \(max-width: 560px\)[\s\S]*?\.app-topbar-actions \.theme-toggle\s*\{\s*grid-template-columns: repeat\(2, 44px\);/);
+    expect(styles).toMatch(/@media \(max-width: 560px\)[\s\S]*?\.app-topbar-actions \.theme-toggle button\s*\{\s*width: 44px;\s*height: 44px;/);
+    expect(styles).toMatch(/@media \(max-width: 560px\)[\s\S]*?\.availability-agenda-status\s*\{[\s\S]*?flex-direction: column;/);
+  });
 });

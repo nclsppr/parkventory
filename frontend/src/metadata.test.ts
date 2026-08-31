@@ -1,34 +1,54 @@
 import indexHtml from "../index.html?raw";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { seoMetadata, supportedLocales } from "../../shared/i18n";
+import { applyClientMetadata } from "./i18n/metadata";
 
 const document = new DOMParser().parseFromString(indexHtml, "text/html");
+const frenchHomeUrl = "https://parkventory.com/fr/";
+const frenchSocialImage = "https://parkventory.com/parkventory-social-card-fr.png";
+const frenchDescription =
+  "Partagez et réservez les places de parking disponibles entre collègues, simplement et sans double attribution.";
+const frenchSocialImageAlt =
+  "Carte sociale Parkventory avec le symbole canonique et un parcours entre une place partagée et une place sélectionnée.";
+const runtimeHead = globalThis.document.head.innerHTML;
+const runtimeTitle = globalThis.document.title;
+
+afterEach(() => {
+  globalThis.document.head.innerHTML = runtimeHead;
+  globalThis.document.title = runtimeTitle;
+});
 
 function metaContent(selector: string) {
   return document.querySelector<HTMLMetaElement>(selector)?.content;
 }
 
-describe("métadonnées publiques", () => {
-  it("déclare l'accueil comme URL canonique indexable", () => {
+describe("métadonnées de repli", () => {
+  it("livre un document français non indexable avec la canonique française", () => {
+    expect(document.documentElement.lang).toBe("fr");
+    expect(document.title).toBe("Parkventory — Le parking partagé, simplement");
+    expect(metaContent('meta[name="description"]')).toBe(frenchDescription);
+    expect(metaContent('meta[name="robots"]')).toBe("noindex, nofollow");
     expect(document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.href)
-      .toBe("https://parkventory.com/");
-    expect(document.querySelector('meta[name="robots"]')).toBeNull();
+      .toBe(frenchHomeUrl);
   });
 
-  it("publie une carte Open Graph et Twitter stable", () => {
-    const imageUrl = "https://parkventory.com/parkventory-social-card.png";
-
+  it("référence la carte sociale et le manifeste français", () => {
     expect(metaContent('meta[property="og:type"]')).toBe("website");
-    expect(metaContent('meta[property="og:locale"]')).toBe("fr_FR");
-    expect(metaContent('meta[property="og:url"]')).toBe("https://parkventory.com/");
-    expect(metaContent('meta[property="og:image"]')).toBe(imageUrl);
+    expect(metaContent('meta[property="og:locale"]')).toBe("fr_LU");
+    expect(metaContent('meta[property="og:url"]')).toBe(frenchHomeUrl);
+    expect(metaContent('meta[property="og:image"]')).toBe(frenchSocialImage);
     expect(metaContent('meta[property="og:image:type"]')).toBe("image/png");
     expect(metaContent('meta[property="og:image:width"]')).toBe("1200");
     expect(metaContent('meta[property="og:image:height"]')).toBe("630");
+    expect(metaContent('meta[property="og:image:alt"]')).toBe(frenchSocialImageAlt);
     expect(metaContent('meta[name="twitter:card"]')).toBe("summary_large_image");
-    expect(metaContent('meta[name="twitter:image"]')).toBe(imageUrl);
+    expect(metaContent('meta[name="twitter:image"]')).toBe(frenchSocialImage);
+    expect(metaContent('meta[name="twitter:image:alt"]')).toBe(frenchSocialImageAlt);
+    expect(document.querySelector<HTMLLinkElement>('link[rel="manifest"]')?.getAttribute("href"))
+      .toBe("%BASE_URL%manifest-fr.webmanifest");
   });
 
-  it("décrit prudemment l'application sans métrique ni état de validation", () => {
+  it("publie un JSON-LD français cohérent avec la canonique", () => {
     const script = document.querySelector<HTMLScriptElement>('script[type="application/ld+json"]');
     const structuredData = JSON.parse(script?.textContent ?? "null");
 
@@ -36,13 +56,28 @@ describe("métadonnées publiques", () => {
       "@context": "https://schema.org",
       "@type": "WebApplication",
       name: "Parkventory",
-      url: "https://parkventory.com/",
-      image: "https://parkventory.com/parkventory-social-card.png",
-      description:
-        "Parkventory permet aux collègues de partager et réserver les places de parking disponibles dans leur entreprise.",
+      url: frenchHomeUrl,
+      image: frenchSocialImage,
+      description: frenchDescription,
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web",
-      inLanguage: "fr-FR",
+      inLanguage: "fr-LU",
     });
+  });
+});
+
+describe("métadonnées client localisées", () => {
+  it.each(supportedLocales)("utilise une description sociale dédiée en %s", (locale) => {
+    globalThis.document.head.innerHTML = "";
+    applyClientMetadata(locale, "home");
+    const metadata = seoMetadata(locale, "home");
+
+    expect(
+      globalThis.document.querySelector<HTMLMetaElement>('meta[property="og:image:alt"]')?.content,
+    ).toBe(metadata.socialImageAlt);
+    expect(
+      globalThis.document.querySelector<HTMLMetaElement>('meta[name="twitter:image:alt"]')?.content,
+    ).toBe(metadata.socialImageAlt);
+    expect(metadata.socialImageAlt).not.toBe(metadata.title);
   });
 });

@@ -1,9 +1,14 @@
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { AdminActivityItem } from "../../types";
+import { I18nProvider } from "../../i18n/I18n";
 import { AdminActivityList } from "./AdminActivityList";
 
 afterEach(cleanup);
+beforeEach(() => {
+  window.localStorage.clear();
+  window.history.replaceState({}, "", "/fr/");
+});
 
 function activity(type: string): AdminActivityItem {
   return {
@@ -27,17 +32,27 @@ function activity(type: string): AdminActivityItem {
 
 describe("AdminActivityList", () => {
   it("traduit les événements réellement émis et affiche les identités humaines", () => {
-    render(<AdminActivityList items={[
+    render(<I18nProvider><AdminActivityList items={[
       activity("MEMBER_REGISTERED"),
       activity("SESSION_STARTED"),
       activity("GODMODE_ACCESS_DENIED"),
       activity("INCIDENT_RECORDED"),
-    ]} />);
+      activity("TENANT_ADMIN_ACCESS_DENIED"),
+      activity("TENANT_BRANDING_UPDATED"),
+      activity("TENANT_ADMIN_GRANTED"),
+      activity("TENANT_ADMIN_REVOKED"),
+      activity("TENANT_MEMBER_EMAIL_ERASED"),
+    ]} /></I18nProvider>);
 
     expect(screen.getByText("Membre inscrit")).toBeInTheDocument();
     expect(screen.getByText("Session ouverte")).toBeInTheDocument();
     expect(screen.getByText("Accès opérateur refusé")).toBeInTheDocument();
     expect(screen.getByText("Incident enregistré")).toBeInTheDocument();
-    expect(screen.getAllByText(/Alex Martin · Acme/)).toHaveLength(4);
+    expect(screen.getByText("Accès administrateur refusé")).toBeInTheDocument();
+    expect(screen.getByText("Identité visuelle actualisée")).toBeInTheDocument();
+    expect(screen.getByText("Administrateur nommé")).toBeInTheDocument();
+    expect(screen.getByText("Rôle d’administrateur retiré")).toBeInTheDocument();
+    expect(screen.getByText("Adresse e-mail du membre effacée")).toBeInTheDocument();
+    expect(screen.getAllByText(/Alex Martin · Acme/)).toHaveLength(9);
   });
 });

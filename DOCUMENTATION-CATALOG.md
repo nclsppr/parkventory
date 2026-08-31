@@ -80,6 +80,7 @@ pas une exécution de `scripts/documentation_catalog.py`, absent du candidat.
 - [docs/decisions/adr-0016-registre-canonique-secrets-atlas.md](docs/decisions/adr-0016-registre-canonique-secrets-atlas.md)
 - [docs/decisions/adr-0017-cloudflare-native.md](docs/decisions/adr-0017-cloudflare-native.md)
 - [docs/decisions/adr-0018-godmode-global-observation.md](docs/decisions/adr-0018-godmode-global-observation.md)
+- [docs/decisions/adr-0019-urls-localisees-et-negociation-langue.md](docs/decisions/adr-0019-urls-localisees-et-negociation-langue.md)
 
 ## Références visuelles
 

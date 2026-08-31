@@ -1,45 +1,58 @@
 import type { ReactNode } from "react";
 import { ArrowLeft, ExternalLink } from "lucide-react";
+import { publicContactEmail } from "../../../shared/site";
 import { AppLink } from "../components/AppLink";
+import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { Logo } from "../components/Logo";
 import { ThemeToggle } from "../components/Theme";
-import { homeUrl, legalUrl, privacyUrl } from "../config";
-
-const contactEmail = import.meta.env.VITE_CONTACT_EMAIL?.trim() || "nicolas@pieper.fr";
+import { localizedUrls } from "../config";
+import { commonMessages } from "../i18n/common";
+import { useI18n } from "../i18n/I18n";
+import { legalMessages } from "../i18n/legal";
 
 function LegalLayout({
   children,
   current,
+  showLanguageSwitcher,
   title,
 }: {
   children: ReactNode;
   current: "legal" | "privacy";
+  showLanguageSwitcher: boolean;
   title: string;
 }) {
+  const { locale } = useI18n();
+  const copy = legalMessages[locale].layout;
+  const common = commonMessages[locale];
+  const { homeUrl, legalUrl, privacyUrl } = localizedUrls(locale);
+
   return (
     <div className="legal-page">
-      <a className="skip-link" href="#legal-content">Aller au contenu</a>
+      <a className="skip-link" href="#legal-content">{common.skipToContent}</a>
       <header className="legal-header">
-        <AppLink href={homeUrl} aria-label="Revenir à l’accueil Parkventory">
+        <AppLink href={homeUrl} aria-label={copy.brandHomeLabel}>
           <Logo />
         </AppLink>
-        <ThemeToggle />
+        <div className="legal-preferences">
+          {showLanguageSwitcher && <LanguageSwitcher />}
+          <ThemeToggle />
+        </div>
       </header>
       <main id="legal-content" className="legal-main">
         <AppLink className="legal-back" href={homeUrl}>
-          <ArrowLeft aria-hidden="true" /> Accueil
+          <ArrowLeft aria-hidden="true" /> {copy.backHome}
         </AppLink>
-        <p className="section-kicker">Bêta publique · mise à jour le 24 août 2026</p>
+        <p className="section-kicker">{copy.updatedAt}</p>
         <h1>{title}</h1>
         {children}
       </main>
       <footer className="legal-footer">
-        <nav aria-label="Informations légales">
+        <nav aria-label={copy.navigationLabel}>
           <AppLink aria-current={current === "privacy" ? "page" : undefined} href={privacyUrl}>
-            Confidentialité
+            {copy.privacyLink}
           </AppLink>
           <AppLink aria-current={current === "legal" ? "page" : undefined} href={legalUrl}>
-            Mentions légales
+            {copy.legalNoticeLink}
           </AppLink>
         </nav>
         <p>© 2026 Nicolas Pieper</p>
@@ -48,118 +61,103 @@ function LegalLayout({
   );
 }
 
-export function PrivacyPage() {
+export function PrivacyPage({
+  showLanguageSwitcher = true,
+}: {
+  showLanguageSwitcher?: boolean;
+}) {
+  const { locale } = useI18n();
+  const copy = legalMessages[locale].privacy;
+
   return (
-    <LegalLayout current="privacy" title="Confidentialité">
-      <p className="legal-lead">
-        Parkventory collecte uniquement ce qui est nécessaire pour partager et réserver une place
-        entre collègues. Aucun outil publicitaire ou de mesure d’audience n’est chargé dans l’application.
-      </p>
+    <LegalLayout
+      current="privacy"
+      showLanguageSwitcher={showLanguageSwitcher}
+      title={copy.title}
+    >
+      <p className="legal-lead">{copy.lead}</p>
 
       <section>
-        <h2>Responsable et contact</h2>
+        <h2>{copy.controllerTitle}</h2>
         <p>
-          Parkventory est édité par Nicolas Pieper au Luxembourg. Pour exercer un droit,
-          signaler un problème de confidentialité ou demander les coordonnées postales de
-          l’éditeur, écrivez à <a href={`mailto:${contactEmail}`}>{contactEmail}</a>.
+          {copy.controllerText}{" "}
+          <a href={`mailto:${publicContactEmail}`}>{publicContactEmail}</a>.
         </p>
       </section>
 
       <section>
-        <h2>Données utilisées avec un compte</h2>
+        <h2>{copy.dataTitle}</h2>
         <ul>
-          <li>adresse e-mail professionnelle et nom déduit de cette adresse ;</li>
-          <li>organisation et adhésion déduites du domaine professionnel ;</li>
-          <li>place déclarée, disponibilités et réservations ;</li>
-          <li>identifiants techniques de session, événements de sécurité et journaux bornés.</li>
+          {copy.dataItems.map((item) => <li key={item}>{item}</li>)}
         </ul>
-        <p>
-          Parkventory ne demande ni motif d’absence, ni plaque d’immatriculation, ni calendrier
-          personnel, ni géolocalisation continue.
-        </p>
+        <p>{copy.dataNotCollected}</p>
       </section>
 
       <section>
-        <h2>Pourquoi</h2>
-        <p>
-          Ces données servent à fournir le service demandé, empêcher les doubles réservations,
-          isoler les organisations, sécuriser les comptes, envoyer les notifications utiles et
-          diagnostiquer un incident. Elles ne sont ni vendues ni utilisées pour de la publicité.
-        </p>
+        <h2>{copy.purposeTitle}</h2>
+        <p>{copy.purposeText}</p>
       </section>
 
       <section>
-        <h2>Prestataires</h2>
-        <p>
-          Le prestataire d’hébergement fournit aussi la vérification de sécurité et l’envoi des
-          liens de connexion. Il traite les informations nécessaires à ces services ; Parkventory
-          limite les données à ce qui est utile au service.
-        </p>
+        <h2>{copy.providersTitle}</h2>
+        <p>{copy.providersText}</p>
       </section>
 
       <section>
-        <h2>Conservation pendant la bêta</h2>
+        <h2>{copy.retentionTitle}</h2>
         <ul>
-          <li>les liens de connexion expirent après 15 minutes et les sessions après 7 jours ;</li>
-          <li>le compte, l’adhésion et l’historique métier sont conservés pendant la bêta pour faire fonctionner et sécuriser le service ;</li>
-          <li>les journaux techniques et sauvegardes suivent les limites configurées par l’hébergeur et ne sont pas conservés au-delà du besoin d’exploitation.</li>
+          {copy.retentionItems.map((item) => <li key={item}>{item}</li>)}
         </ul>
+        <p>{copy.retentionText}</p>
+      </section>
+
+      <section>
+        <h2>{copy.rightsTitle}</h2>
+        <p>{copy.tenantAdminErasureText}</p>
         <p>
-          Un administrateur de votre organisation peut effacer l’adresse e-mail d’un compte
-          membre et révoquer ses sessions ; l’historique de partage et de réservation reste alors
-          conservé sans afficher cette adresse. Les demandes d’accès, d’export et de suppression
-          complète restent traitées manuellement. Aucune purge automatique des faits métier
-          n’est présentée comme active à ce stade.
+          {copy.rightsText}{" "}
+          <a href={`mailto:${publicContactEmail}`}>{publicContactEmail}</a>. {copy.rightsAuthority}
         </p>
       </section>
 
       <section>
-        <h2>Vos choix et vos droits</h2>
-        <p>
-          Vous pouvez demander l’accès, la correction, l’export ou la suppression de vos données,
-          ainsi que vous opposer à un traitement lorsque le droit le permet. La demande est
-          traitée manuellement pendant la bêta via <a href={`mailto:${contactEmail}`}>{contactEmail}</a>.
-          Vous pouvez également introduire une réclamation auprès de votre autorité de contrôle.
-        </p>
-      </section>
-
-      <section>
-        <h2>Cookies</h2>
-        <p>
-          Parkventory utilise seulement les cookies techniques nécessaires à la connexion et au
-          maintien de la session. Le choix du thème est conservé dans votre navigateur. Aucun
-          cookie publicitaire n’est utilisé.
-        </p>
+        <h2>{copy.cookiesTitle}</h2>
+        <p>{copy.cookiesText}</p>
       </section>
     </LegalLayout>
   );
 }
 
-export function LegalNoticePage() {
+export function LegalNoticePage({
+  showLanguageSwitcher = true,
+}: {
+  showLanguageSwitcher?: boolean;
+}) {
+  const { locale } = useI18n();
+  const copy = legalMessages[locale].legalNotice;
+
   return (
-    <LegalLayout current="legal" title="Mentions légales">
-      <p className="legal-lead">
-        Parkventory est une bêta publique indépendante de partage de places de parking entre
-        collègues.
-      </p>
+    <LegalLayout
+      current="legal"
+      showLanguageSwitcher={showLanguageSwitcher}
+      title={copy.title}
+    >
+      <p className="legal-lead">{copy.lead}</p>
 
       <section>
-        <h2>Édition et publication</h2>
+        <h2>{copy.publishingTitle}</h2>
         <dl className="legal-details">
-          <div><dt>Éditeur et directeur de publication</dt><dd>Nicolas Pieper</dd></div>
-          <div><dt>Établissement</dt><dd>Luxembourg</dd></div>
-          <div><dt>Contact</dt><dd><a href={`mailto:${contactEmail}`}>{contactEmail}</a></dd></div>
+          <div><dt>{copy.publisherLabel}</dt><dd>{copy.publisherName}</dd></div>
+          <div><dt>{copy.establishmentLabel}</dt><dd>{copy.establishmentValue}</dd></div>
+          <div><dt>{copy.contactLabel}</dt><dd><a href={`mailto:${publicContactEmail}`}>{publicContactEmail}</a></dd></div>
         </dl>
-        <p>
-          L’adresse postale complète est communiquée sur demande pendant la bêta et sera ajoutée
-          ici avec la forme juridique définitive du service.
-        </p>
+        <p>{copy.postalAddress}</p>
       </section>
 
       <section>
-        <h2>Hébergement</h2>
+        <h2>{copy.hostingTitle}</h2>
         <p>
-          Le service Parkventory est hébergé sur le réseau Cloudflare —
+          {copy.hostingBeforeLink}
           {" "}<a href="https://www.cloudflare.com/" rel="noreferrer" target="_blank">
             cloudflare.com <ExternalLink aria-hidden="true" />
           </a>.
@@ -167,20 +165,15 @@ export function LegalNoticePage() {
       </section>
 
       <section>
-        <h2>Disponibilité de la bêta</h2>
-        <p>
-          Le service peut évoluer rapidement ou connaître de courtes interruptions annoncées.
-          Une place reste régie par les règles de l’entreprise ou du site concerné ; Parkventory
-          ne garantit pas un droit de stationnement indépendant de ces règles.
-        </p>
+        <h2>{copy.betaTitle}</h2>
+        <p>{copy.betaText}</p>
       </section>
 
       <section>
-        <h2>Contenus et signalement</h2>
+        <h2>{copy.contentTitle}</h2>
         <p>
-          Le nom, le logo, l’interface et les contenus Parkventory sont protégés par leurs droits
-          respectifs. Pour signaler un contenu, une place contestée ou un usage abusif, contactez
-          {" "}<a href={`mailto:${contactEmail}`}>{contactEmail}</a>.
+          {copy.contentText} {copy.reportLabel}{" "}
+          <a href={`mailto:${publicContactEmail}`}>{publicContactEmail}</a>.
         </p>
       </section>
     </LegalLayout>
