@@ -132,10 +132,15 @@ contient que des chemins, un rectangle, un groupe et un `clipPath` : aucun
 script, handler, lien ou chargement externe. Elle reste intacte ; le symbole
 Parkventory est superposé par le composant React et ne modifie pas le SVG.
 
-Les couleurs du thème (`#003595`, `#E31C79`, `#01E1FF`) proviennent de la CSS
-officielle `https://www.victorbuckservices.com/wp-content/themes/vbs/css/build/app.css?ver=1.1`.
-Le bleu du logo est rendu sur une plaque blanche afin de rester lisible sur les
-deux thèmes, sans recoloration.
+La CSS officielle
+`https://www.victorbuckservices.com/wp-content/themes/vbs/css/build/app.css?ver=1.1`
+contient notamment le magenta `#E31C79`. Le logo fournit directement les bleus
+`#00537F` et `#0D92D2`. La palette applicative co-marquée retient le bleu
+lumineux `#0D92D2` pour l'action et le magenta `#E31C79` pour la disponibilité,
+avec des encres dérivées et contrôlées pour chaque thème. Le turquoise
+`#01E1FF` et le bleu `#003595`, présents dans la première proposition, ne sont
+plus employés comme accents dominants. Le logo reste rendu sur une plaque
+blanche afin d'être lisible dans les deux thèmes, sans recoloration.
 
 Le disclaimer public de Victor Buck Services n'accorde aucune licence générale
 de réutilisation. Avant la publication du 2026-08-26, le demandeur a confirmé

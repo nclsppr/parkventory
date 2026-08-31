@@ -1,7 +1,7 @@
 /// <reference types="@cloudflare/vitest-pool-workers/types" />
 
 import { applyD1Migrations, env, SELF } from "cloudflare:test";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { loadOrganizationBranding } from "../src/branding";
 import { magicLinkEmail } from "../src/email";
 import type { OrganizationBranding } from "../src/types";
@@ -20,39 +20,41 @@ const victorBuckBranding: OrganizationBranding = {
   companyName: "Victor Buck Services",
   logoUrl: "/brands/victor-buck-services/logo.svg",
   colors: {
-    actionFill: "#003595",
-    onAction: "#FFFFFF",
-    availableFill: "#01E1FF",
-    onAvailable: "#00222A",
+    actionFill: "#0D92D2",
+    onAction: "#030504",
+    availableFill: "#E31C79",
+    onAvailable: "#030504",
     highlight: "#E31C79",
     dark: {
-      actionInk: "#7FAAFF",
-      availableInk: "#01E1FF",
+      actionInk: "#0D92D2",
+      availableInk: "#E31C79",
     },
     light: {
-      actionInk: "#003595",
-      availableInk: "#00616E",
+      actionInk: "#00537F",
+      availableInk: "#C31465",
     },
   },
 };
 
-beforeEach(async () => {
+beforeAll(async () => {
   await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
+});
+
+afterEach(async () => {
   await env.DB.prepare(`
     UPDATE organization_branding
     SET
       enabled = 1,
-      company_name = 'Victor Buck Services',
-      logo_url = '/brands/victor-buck-services/logo.svg',
-      action_fill = '#003595',
-      on_action = '#FFFFFF',
-      available_fill = '#01E1FF',
-      on_available = '#00222A',
+      action_fill = '#0D92D2',
+      on_action = '#030504',
+      available_fill = '#E31C79',
+      on_available = '#030504',
       highlight = '#E31C79',
-      dark_action_ink = '#7FAAFF',
-      dark_available_ink = '#01E1FF',
-      light_action_ink = '#003595',
-      light_available_ink = '#00616E'
+      dark_action_ink = '#0D92D2',
+      dark_available_ink = '#E31C79',
+      light_action_ink = '#00537F',
+      light_available_ink = '#C31465',
+      updated_at = unixepoch()
     WHERE normalized_domain = 'victorbuckservices.com'
   `).run();
 });
@@ -84,14 +86,15 @@ async function verifyMember(domain: string) {
 describe("branding d’organisation", () => {
   it("compose l’e-mail avec la palette exacte du domaine", async () => {
     const branding = await loadOrganizationBranding(env.DB, "victorbuckservices.com");
+    expect(branding).toEqual(victorBuckBranding);
     const email = magicLinkEmail(
       "https://parkventory.test/auth/callback?token=test-token",
       branding?.colors,
     );
 
-    expect(email.html).toContain('bgcolor="#003595"');
-    expect(email.html).toContain("color:#FFFFFF");
-    expect(email.html).toContain('bgcolor="#01E1FF"');
+    expect(email.html).toContain('bgcolor="#0D92D2"');
+    expect(email.html).toContain("color:#030504");
+    expect(email.html).toContain('bgcolor="#E31C79"');
   });
 
   it("active automatiquement Victor Buck Services à la première connexion", async () => {

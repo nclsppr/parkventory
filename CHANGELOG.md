@@ -28,6 +28,9 @@ la source du diff technique et les ADR expliquent les décisions importantes.
   superposé et repli Parkventory si la configuration ou l’image est invalide ;
 - jetons d’action et de disponibilité débarrassés des halos codés en dur afin
   que les états, focus, boutons et sélections suivent réellement la co-marque ;
+- palette Victor Buck Services recentrée sur le bleu lumineux du logo pour les
+  actions et sur le rose magenta pour la disponibilité et la sélection, sans
+  turquoise concurrent ni domination du bleu nuit ;
 - migration D1 `0002` appliquée et vérifiée sur les bases de préversion et de
   production avant le Worker, puis activation publique de la version et de
   l'asset VBS contrôlée séparément.

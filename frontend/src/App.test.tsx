@@ -24,13 +24,13 @@ const victorBuckBranding: OrganizationBranding = {
   companyName: "Victor Buck Services",
   logoUrl: "/brands/victor-buck-services/logo.svg",
   colors: {
-    actionFill: "#003595",
-    onAction: "#FFFFFF",
-    availableFill: "#01E1FF",
-    onAvailable: "#00222A",
+    actionFill: "#0D92D2",
+    onAction: "#030504",
+    availableFill: "#E31C79",
+    onAvailable: "#030504",
     highlight: "#E31C79",
-    dark: { actionInk: "#7FAAFF", availableInk: "#01E1FF" },
-    light: { actionInk: "#003595", availableInk: "#00616E" },
+    dark: { actionInk: "#0D92D2", availableInk: "#E31C79" },
+    light: { actionInk: "#00537F", availableInk: "#C31465" },
   },
 };
 
@@ -198,7 +198,7 @@ describe("Parkventory", () => {
 
     const scope = container.querySelector<HTMLElement>(".organization-brand-scope");
     expect(scope).toHaveAttribute("data-organization-branding", "active");
-    expect(scope?.style.getPropertyValue("--organization-action-fill")).toBe("#003595");
+    expect(scope?.style.getPropertyValue("--organization-action-fill")).toBe("#0D92D2");
     expect(scope?.style.getPropertyValue("--organization-highlight")).toBe("#E31C79");
   });
 
