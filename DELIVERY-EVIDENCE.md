@@ -984,8 +984,42 @@ anglais de la date luxembourgeoise dans une distribution Chrome sans ICU
 `lb-LU`, une zone interactive de sélecteur réduite par ses bordures de 44 à
 42 px, et des grilles allemandes dépassant de 3 à 8 px à la largeur minimale.
 Safari, Firefox, Edge, le zoom à 200 % et un iPhone réel restent les contrôles
-perceptifs exigés avant pilote. La production publique observée reste celle
-décrite dans `STATUS.md`, sans ces changements.
+perceptifs exigés avant pilote. À l’instant de cette revue locale, la production
+publique observée était encore celle décrite dans le snapshot alors courant de
+`STATUS.md`, sans ces changements.
+
+### Publication post-release vérifiée le 2026-08-31
+
+La PR #29 a repris `origin/main@45796acab60dbae79f406994074d3e8d8fab8824`,
+internationalisé les surfaces godmode et administration d’organisation ajoutées
+depuis le candidat initial, puis a été fusionnée au SHA
+`0d991742bf42dc9fc5d4ced0a0cedbb3652f10d7`.
+
+| Preuve | Résultat observé | Frontière de preuve |
+| --- | --- | --- |
+| Gate locale finale | 6 tests de marque, 1 test de migration, 191 tests Worker/D1 et 148 tests frontend, typechecks, build Vite, types Cloudflare et dry-runs préversion/production | Candidat exact avant push |
+| Gate de PR | Run `33404908642`, job `99529969658`, réussi sur `1a07c1b99169ab31205c5532a52c2978122b3a8e` | Candidat de la PR |
+| Gate post-fusion | Run `33405080390`, job `99530541022`, réussi sur `0d991742bf42dc9fc5d4ced0a0cedbb3652f10d7` | SHA exact de `main` |
+| D1 préversion puis production | `0006_user_locale.sql` appliquée et journalisée après `0001` à `0005`; aucune migration restante; colonne et contrainte `fr`/`en`/`de`/`lb` relues | Deux bases distantes, sans lecture de donnée personnelle |
+| Conservation production | Deux comptes existants, deux préférences encore nulles et zéro préférence invalide après migration | Agrégats uniquement ; aucune identité consultée |
+| Déploiement Cloudflare | Déploiement `3264784b-09af-47d9-8782-6d68c5388a2f`, version `1f17485d-4a69-4b30-a96a-f28cf54ff061` à 100 % | Observation ponctuelle du contrôleur de déploiement |
+| Contrat public | Santé `200`; 12 pages publiques; 7 routes privées `noindex`; sitemap de 12 URLs; vraie `404`; `www` en `308`; négociation navigateur et cookie | Sondes HTTP sans session |
+
+Les assets publics correspondent octet pour octet au build validé :
+
+- `index-Ch7HtZQl.js` :
+  `69a5f5e77dc136512c3240931faac8c475305cd903c2016aec3a5a106bf5cae0` ;
+- `index-CFGKB3TW.css` :
+  `66efbd9e5f82ba402ed5865143789af88894d9e044953d3e93f38fdbc847e744` ;
+- bundle d’administration :
+  `2b8afbb7131310bdb806926b619ec11e089024c32e8151618aeaa2c39c96197a`.
+
+Le sélecteur public avant connexion et le sélecteur unique du profil après
+connexion restent prouvés par les tests DOM et la matrice Chrome locale. Aucun
+e-mail réel, lien magique ou parcours authentifié de production n’a été lancé
+pendant cette livraison. Le navigateur intégré est toujours bloqué par la
+politique administrateur ; cette politique n’a pas été contournée.
+
 ## Extension : administration générale et administration de tenant du 2026-08-31
 
 Cette extension consigne la livraison de la palette Victor Buck Services, du
