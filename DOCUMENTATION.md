@@ -33,26 +33,41 @@ collection `product`, classée `public`, à l'adresse
 
 ## Commandes
 
+Le contrat historique référence les commandes suivantes :
+
 ```bash
 python3 scripts/documentation_catalog.py --write
 ./scripts/verify.sh
 npm run pages:build
 ```
 
+Dans le checkout Cloudflare actuel, `scripts/documentation_catalog.py` et
+`scripts/verify.sh` sont absents, et le `package.json` racine ne déclare pas
+`pages:build`. Le catalogue du candidat godmode a donc été réconcilié
+manuellement avec `documentation.json` ; il ne faut pas présenter cette opération
+comme une génération ou une gate Foundation réussie. L’entrypoint Nimbus
+`npm run check`, lancé depuis `docs-nimbus`, exécute ses tests puis reste lui
+aussi bloqué lors du sync sur le générateur absent. La restauration ou le
+remplacement des trois entrypoints historiques reste un drift documentaire
+distinct.
+
 Nimbus 0.8.2 est épinglé dans `docs-nimbus/package.json`. La collection générée
-et `docs-nimbus/dist/` restent ignorés par Git. `npm run pages:build` construit
-le corpus public avec l'allowlist `product`, le chemin de base
-`/parkventory/docs/`, puis le copie sous `frontend/dist/docs/` dans l'unique
-artefact GitHub Pages. Le build échoue si une collection absente ou non publique
-est demandée, si une source publique utilise un lien Markdown relatif direct
-vers un fichier `.md` classé mais exclu ou si une route interne apparaît dans la
+et `docs-nimbus/dist/` restent ignorés par Git. Le pipeline historique
+`npm run pages:build` construisait le corpus public avec l'allowlist `product`,
+le chemin de base `/parkventory/docs/`, puis le copiait sous
+`frontend/dist/docs/` dans l'unique artefact GitHub Pages. Ce script racine
+n’existe plus dans le candidat actuel. Le build Nimbus refuse une collection
+absente ou non publique, une source publique qui utilise un lien Markdown direct
+vers un fichier `.md` classé mais exclu, ainsi que toute route interne dans la
 sortie. Le lint Nimbus contrôle en plus les routes internes du corpus retenu.
 
 ## Ajouter un document
 
 1. Créer le fichier dans sa source canonique.
 2. Ajouter ou réutiliser un seul glob dans `documentation.json`.
-3. Régénérer le catalogue.
+3. Régénérer le catalogue si le générateur est disponible ; sinon le réconcilier
+   manuellement et signaler explicitement cette limite.
 4. Relire visibilité, liens et navigation.
-5. Exécuter `./scripts/verify.sh`.
+5. Exécuter les contrôles disponibles sans prétendre que le script absent
+   `./scripts/verify.sh` a réussi.
 6. Vérifier le rendu local si le contenu ou la navigation change.

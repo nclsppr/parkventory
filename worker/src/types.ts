@@ -8,7 +8,7 @@ export type Bindings = Omit<Env, "APP_ENV" | "EMAIL"> & {
 export interface OrganizationBranding {
   enabled: true;
   companyName: string;
-  logoUrl: string;
+  logoUrl: string | null;
   colors: {
     actionFill: string;
     onAction: string;
@@ -30,17 +30,20 @@ export interface AuthenticatedMember {
   sessionId: string;
   membershipId: string;
   organizationId: string;
+  organizationKind: "TENANT" | "SYSTEM";
   organizationName: string;
   userId: string;
   email: string;
   displayName: string;
   preferredLocale: Locale | null;
   role: "MEMBER" | "ADMIN";
+  godmode: boolean;
   branding: OrganizationBranding | null;
 }
 
 export interface Variables {
   member: AuthenticatedMember;
+  requestId: string;
 }
 
 export type AppEnvironment = {

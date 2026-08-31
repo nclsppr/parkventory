@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { AlertTriangle, LoaderCircle } from "lucide-react";
 import {
   AppShell,
+  tenantAdminNavigation,
   type ApplicationRoute,
   type NoticeTone,
 } from "../components/AppShell";
@@ -20,11 +21,13 @@ import type { OrganizationBranding } from "../types";
 import { DashboardPage } from "./DashboardPage";
 import { FindPage } from "./FindPage";
 import { SharePage } from "./SharePage";
+import { TenantAdminPage } from "./TenantAdminPage";
 
 interface ApplicationPageProps {
   route: ApplicationRoute;
   initialBranding: OrganizationBranding | null;
   onLocalePersisted: (locale: Locale) => void;
+  isTenantAdmin: boolean;
   onSessionExpired: () => void;
 }
 
@@ -32,6 +35,7 @@ export function ApplicationPage({
   route,
   initialBranding,
   onLocalePersisted,
+  isTenantAdmin,
   onSessionExpired,
 }: ApplicationPageProps) {
   const { locale } = useI18n();
@@ -87,7 +91,12 @@ export function ApplicationPage({
     <OrganizationBrandingProvider branding={effectiveBranding}>
       <AppShell
         activeRoute={route}
-        data={data}
+        navigationItems={isTenantAdmin ? tenantAdminNavigation(locale) : undefined}
+        profile={{
+          initials: data.user.initials,
+          primary: data.user.fullName,
+          secondary: data.organization.name,
+        }}
         loading={loading}
         loadError={loadError}
         onNotify={notify}
@@ -103,11 +112,18 @@ export function ApplicationPage({
             onRefresh={refreshDashboard}
             onSessionExpired={onSessionExpired}
           />
-        ) : (
+        ) : route === "find" ? (
           <FindPage
             data={data}
             onRefresh={refreshDashboard}
             onSessionExpired={onSessionExpired}
+          />
+        ) : (
+          <TenantAdminPage
+            organizationName={data.organization.name}
+            onNotify={notify}
+            onSessionExpired={onSessionExpired}
+            onRefreshDashboard={refreshDashboard}
           />
         )}
       </AppShell>

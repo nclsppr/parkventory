@@ -13,6 +13,7 @@ export default defineConfig({
           APP_ENV: "development",
           APP_SECRET: "worker-test-secret",
           TURNSTILE_SECRET_KEY: "turnstile-test-secret",
+          GODMODE_ADMIN_EMAIL_SHA256: "3fa6de1b3659ea48fcefef2a0d499ca28b419298022c40c7b4862bf3c00671e6",
           TEST_MIGRATIONS: migrations,
         },
       },

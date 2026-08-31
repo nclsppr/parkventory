@@ -16,7 +16,7 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 - conservation du sélecteur sur les surfaces déconnectées, déplacement de son
   unique instance connectée dans le profil — y compris lorsqu’un membre revient
   sur une page publique —, et persistance de la préférence
-  `fr`, `en`, `de` ou `lb` sur `user_account` via la migration D1 `0004` et une
+  `fr`, `en`, `de` ou `lb` sur `user_account` via la migration D1 `0006` et une
   mutation authentifiée de même origine ; la session restaure ensuite la route
   équivalente sans ajouter d’entrée artificielle à l’historique ;
 - ajout de canoniques auto-référents, groupes `hreflang` réciproques,
@@ -50,6 +50,68 @@ la source du diff technique et les ADR expliquent les décisions importantes.
   mobile et bureau, avec menus mobiles et parcours luxembourgeois dédiés ; le
   profil linguistique a aussi été contrôlé à 1 440 × 900, 390 × 844 et
   320 × 568, avec écriture D1 et restauration de session.
+### Administration du tenant
+
+- ajout de `/app/admin` pour les membres `ADMIN` d’une organisation `TENANT`,
+  avec statistiques strictement limitées au tenant de la session, série d’usage
+  à 30 jours et liste paginée de ses seuls membres ;
+- choix borné de deux couleurs de marque, dérivation serveur des contrastes
+  accessibles, activation réversible de la co-marque et option d’utilisation
+  d’un logo déjà autorisé par Parkventory, sans téléversement ni URL libre ;
+- effacement en deux étapes de l’adresse d’un membre simple : révocation des
+  sessions et magic links, pseudonymisation irréversible de l’e-mail et
+  conservation de l’historique métier ; les administrateurs, le compte courant
+  et les comptes multi-tenants sont refusés ;
+- ajout de la mutation godmode qui nomme ou révoque un administrateur du tenant,
+  journalisée uniquement avec des identifiants internes ;
+- migration additive `0005_tenant_administration.sql`, gardes Worker dédiées et
+  réactivation sûre du même compte lors d’une future connexion vérifiée.
+
+### Administration globale — publiée
+
+- publication d’une console `/admin` avec synthèse à 30 jours,
+  tenants, comptes enregistrés, activité paginée et diagnostics, sans donnée de
+  démonstration ni action de correction ;
+- séparation de l’opérateur global et des administrateurs de tenants : accès
+  conditionné à une session valide, au digest secret exact, à l’organisation
+  `SYSTEM` et au rôle `ADMIN`, tandis que les routes métier exigent `TENANT` ;
+- séparation des demandes de connexion `admin` et `tenant` : une adresse non
+  autorisée saisie dans la console garde une réponse non énumérante, sans e-mail,
+  demande D1 ni création accidentelle de tenant ;
+- application atomique dans D1 des plafonds horaires de magic links, y compris
+  sous rafale concurrente ;
+- ajout candidat de la migration D1 `0004_godmode_admin.sql`, avec
+  `organization.kind`, organisation système, index de lecture, registre
+  `activity_event`, backfill explicitement dérivé et triggers atomiques ;
+- journal d’activité limité aux identifiants internes et codes classifiés, sans
+  adresse, token, cookie, hash d’authentification, IP, corps ou erreur brute ;
+- journalisation dédupliquée des conflits métier `409` avec acteur, tenant,
+  entité déjà résolue et code, puis empreinte causale stable des erreurs `500`
+  et conservation côté client de leur seul UUID sûr ;
+- recherche exacte d’incident, requête ou entité, références métier visibles et
+  liens depuis les diagnostics, avec déduplication sur cinq minutes des refus
+  godmode identiques ;
+- ajout d’un détail paginé pour chacun des neuf contrôles d’intégrité, limité aux
+  identifiants internes et relié aux tenants et au journal, ainsi que d’un filtre
+  exact par code d’erreur pour regrouper les occurrences d’une même cause ;
+- distinction stricte entre contraintes D1 métier attendues et erreurs
+  inattendues : seules les premières deviennent un `409`, les secondes conservent
+  un incident `500` corrélé ; les réservations concurrentes portant la même clé
+  d’idempotence convergent vers un unique succès ;
+- renforcement D1 des frontières métier : les triggers refusent les écritures dans
+  `SYSTEM` et les discordances tenant/membre/place/offre/réservation ;
+- déplacement du jeton de connexion vers le fragment URL, invisible pour la
+  requête de navigation et nettoyé immédiatement par la SPA, puis désactivation
+  des logs d’invocation Cloudflare ; les logs applicatifs structurés continuent de
+  journaliser uniquement une route canonique, et le traitement D1/e-mail admin
+  sort du chemin de réponse pour supprimer aussi l’oracle de panne ou de latence ;
+- définition des métriques, de la pagination et des gates dans l’ADR-0018 et le
+  runbook ; migrations `0003` et `0004`, secret digest et Worker ont été activés
+  en préversion puis en production, sans envoi de magic link réel pendant la livraison ;
+- extension de la gate CI aux types Wrangler et aux deux dry-runs, afin qu’un
+  candidat ne puisse plus valider uniquement la configuration de préversion ;
+- exclusion Git de toutes les variantes racine `.env*` et `.dev.vars*`, tout en
+  conservant les fichiers d’exemple versionnés.
 
 ### Indexation publique
 
@@ -74,6 +136,9 @@ la source du diff technique et les ADR expliquent les décisions importantes.
   superposé et repli Parkventory si la configuration ou l’image est invalide ;
 - jetons d’action et de disponibilité débarrassés des halos codés en dur afin
   que les états, focus, boutons et sélections suivent réellement la co-marque ;
+- palette Victor Buck Services recentrée sur le bleu lumineux du logo pour les
+  actions et sur le rose magenta pour la disponibilité et la sélection, sans
+  turquoise concurrent ni domination du bleu nuit ;
 - migration D1 `0002` appliquée et vérifiée sur les bases de préversion et de
   production avant le Worker, puis activation publique de la version et de
   l'asset VBS contrôlée séparément.

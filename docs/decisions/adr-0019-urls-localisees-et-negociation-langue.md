@@ -1,4 +1,4 @@
-# ADR-0018 — URLs localisées et négociation de langue
+# ADR-0019 — URLs localisées et négociation de langue
 
 - Statut : accepté
 - Statut d’implémentation : candidat vérifié localement, non fusionné et non déployé

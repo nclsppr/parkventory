@@ -53,6 +53,23 @@ describe("production error boundary", () => {
     });
   });
 
+  it("conserve uniquement une référence d’incident 500 au format sûr", async () => {
+    const incidentId = "01234567-89ab-4def-8123-456789abcdef";
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({
+        status: 500,
+        detail: `Le service rencontre un problème. Référence : ${incidentId}`,
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    )));
+    const { loadDashboard } = await import("./client");
+
+    await expect(loadDashboard()).rejects.toMatchObject({
+      message: expect.stringContaining(incidentId),
+      status: 500,
+    });
+  });
+
   it("uses the caller idempotency key for a reservation retry", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(
       JSON.stringify({ accepted: true, message: "Réservation confirmée." }),
@@ -96,6 +113,134 @@ describe("production error boundary", () => {
           "X-Parkventory-Locale": "en",
         }),
       }),
+    );
+  });
+
+  it("serializes opaque admin cursors and search filters without empty values", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ items: [], page: { nextCursor: null } }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ));
+    vi.stubGlobal("fetch", fetchMock);
+    const { loadAdminTenants } = await import("./client");
+
+    await loadAdminTenants({ cursor: "opaque_-cursor", q: "Victor Buck & Co" });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/admin/tenants?limit=25&cursor=opaque_-cursor&q=Victor+Buck+%26+Co",
+      expect.objectContaining({ credentials: "include" }),
+    );
+  });
+
+  it("encodes a tenant identifier as one path segment", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ tenant: {}, stats: {}, recentActivity: [], recentMembers: [], recentSpots: [], links: {} }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ));
+    vi.stubGlobal("fetch", fetchMock);
+    const { loadAdminTenant } = await import("./client");
+
+    await loadAdminTenant("org/with slash");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/admin/tenants/org%2Fwith%20slash",
+      expect.objectContaining({ credentials: "include" }),
+    );
+  });
+
+  it("sends all activity filters using the backend camelCase contract", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ items: [], page: { nextCursor: null } }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ));
+    vi.stubGlobal("fetch", fetchMock);
+    const { loadAdminActivity } = await import("./client");
+
+    await loadAdminActivity({
+      tenantId: "org_1",
+      userId: "usr_1",
+      type: "ACCESS_DENIED",
+      severity: "ERROR",
+      errorCode: "TENANT_BOUNDARY_MISMATCH",
+      reference: "incident_1",
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/admin/activity?limit=50&tenantId=org_1&userId=usr_1&type=ACCESS_DENIED&severity=ERROR&errorCode=TENANT_BOUNDARY_MISMATCH&reference=incident_1",
+      expect.objectContaining({ credentials: "include" }),
+    );
+  });
+
+  it("loads one integrity check with its opaque pagination cursor", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ check: "active_offer_overlap", items: [], page: { nextCursor: null } }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ));
+    vi.stubGlobal("fetch", fetchMock);
+    const { loadAdminDiagnosticsIntegrity } = await import("./client");
+
+    await loadAdminDiagnosticsIntegrity({
+      check: "active_offer_overlap",
+      cursor: "opaque_integrity_cursor",
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/admin/diagnostics/integrity?check=active_offer_overlap&limit=25&cursor=opaque_integrity_cursor",
+      expect.objectContaining({ credentials: "include" }),
+    );
+  });
+
+  it("encodes both identifiers when the godmode changes a tenant role", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ accepted: true, role: "ADMIN", message: "Rôle mis à jour." }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ));
+    vi.stubGlobal("fetch", fetchMock);
+    const { updateAdminTenantMemberRole } = await import("./client");
+
+    await updateAdminTenantMemberRole("org/tenant", "mem/member", "ADMIN");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/admin/tenants/org%2Ftenant/members/mem%2Fmember/role",
+      expect.objectContaining({ method: "PATCH", body: JSON.stringify({ role: "ADMIN" }) }),
+    );
+  });
+
+  it("sends only the bounded tenant branding contract", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ accepted: true, message: "Identité mise à jour." }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ));
+    vi.stubGlobal("fetch", fetchMock);
+    const { updateTenantAdminBranding } = await import("./client");
+    const payload = {
+      enabled: true,
+      logoEnabled: false,
+      actionColor: "#0D92D2",
+      availableColor: "#E31C79",
+    };
+
+    await updateTenantAdminBranding(payload);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/tenant-admin/branding",
+      expect.objectContaining({ method: "PUT", body: JSON.stringify(payload) }),
+    );
+  });
+
+  it("requires the explicit erase confirmation in the tenant member request", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ accepted: true, message: "E-mail effacé." }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ));
+    vi.stubGlobal("fetch", fetchMock);
+    const { eraseTenantMemberEmail } = await import("./client");
+
+    await eraseTenantMemberEmail("mem/target");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/tenant-admin/members/mem%2Ftarget/email",
+      expect.objectContaining({ method: "DELETE", body: JSON.stringify({ confirmation: "EFFACER" }) }),
     );
   });
 });

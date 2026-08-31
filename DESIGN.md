@@ -129,6 +129,12 @@ l'identité par défaut. Les variantes clair et sombre portent des encres
 distinctes afin qu'une couleur de marque prévue pour un aplat ne soit jamais
 réutilisée comme petit texte sans contraste mesuré.
 
+Pour Victor Buck Services, l'action est bleue et la disponibilité est magenta.
+Le turquoise n'appartient plus à la palette applicative co-marquée : le bleu
+lumineux structure les actions principales, tandis que le magenta identifie la
+sélection et les places disponibles. Les bleus profonds restent des encres de
+contraste en thème clair, jamais la couleur dominante de l'interface.
+
 En clair, les aplats acide et glacier restent réservés aux remplissages avec
 texte sombre. Les libellés, icônes, focus et frontières fonctionnelles emploient
 leurs encres foncées. Le symbole SVG original n'est ni recoloré ni redessiné :

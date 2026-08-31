@@ -3,13 +3,13 @@ import { magicLinkEmail } from "../src/email";
 import type { OrganizationBranding } from "../src/types";
 
 const victorBuckColors: OrganizationBranding["colors"] = {
-  actionFill: "#003595",
-  onAction: "#FFFFFF",
-  availableFill: "#01E1FF",
-  onAvailable: "#00222A",
+  actionFill: "#0D92D2",
+  onAction: "#030504",
+  availableFill: "#E31C79",
+  onAvailable: "#030504",
   highlight: "#E31C79",
-  dark: { actionInk: "#7FAAFF", availableInk: "#01E1FF" },
-  light: { actionInk: "#003595", availableInk: "#00616E" },
+  dark: { actionInk: "#0D92D2", availableInk: "#E31C79" },
+  light: { actionInk: "#00537F", availableInk: "#C31465" },
 };
 
 describe("e-mail de connexion Parkventory", () => {
@@ -52,11 +52,11 @@ describe("e-mail de connexion Parkventory", () => {
       victorBuckColors,
     );
 
-    expect(email.html).toContain('bgcolor="#003595"');
-    expect(email.html).toContain("background-color:#003595");
-    expect(email.html).toContain("color:#FFFFFF");
-    expect(email.html).toContain('bgcolor="#01E1FF"');
-    expect(email.html).toContain("border-left:4px solid #01E1FF");
+    expect(email.html).toContain('bgcolor="#0D92D2"');
+    expect(email.html).toContain("background-color:#0D92D2");
+    expect(email.html).toContain("color:#030504");
+    expect(email.html).toContain('bgcolor="#E31C79"');
+    expect(email.html).toContain("border-left:4px solid #E31C79");
   });
 
   it("revient à Parkventory lorsque la palette contient du CSS", () => {

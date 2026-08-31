@@ -9,12 +9,12 @@ function migrationSource(name) {
   return readFileSync(new URL(name, migrationsDirectory), "utf8");
 }
 
-test("0004 conserve les comptes existants et contraint la préférence de langue", () => {
+test("0006 conserve les comptes existants après 0001-0005 et contraint la préférence de langue", () => {
   const database = new DatabaseSync(":memory:");
   const migrationNames = readdirSync(migrationsDirectory)
     .filter((name) => /^\d{4}_.+\.sql$/.test(name))
     .sort();
-  const localeMigration = "0004_user_locale.sql";
+  const localeMigration = "0006_user_locale.sql";
 
   try {
     for (const name of migrationNames.filter((migration) => migration < localeMigration)) {

@@ -42,9 +42,11 @@ interface ApplicationMessages {
       dashboard: string;
       share: string;
       find: string;
+      tenantAdmin: string;
       dashboardShort: string;
       shareShort: string;
       findShort: string;
+      tenantAdminShort: string;
     };
   };
   dashboard: {
@@ -170,6 +172,7 @@ interface ApplicationMessages {
     rateLimited: (seconds: string) => string;
     rateLimitedGeneric: string;
     serviceProblem: string;
+    serviceProblemWithReference: (reference: string) => string;
   };
 }
 
@@ -216,9 +219,11 @@ export const applicationMessages = {
         dashboard: "Accueil",
         share: "Partager ma place",
         find: "Trouver une place",
+        tenantAdmin: "Administration de l’organisation",
         dashboardShort: "Accueil",
         shareShort: "Partager",
         findShort: "Trouver",
+        tenantAdminShort: "Admin",
       },
     },
     dashboard: {
@@ -350,6 +355,7 @@ export const applicationMessages = {
       rateLimited: (seconds) => `Trop de demandes. Réessayez dans ${seconds} secondes.`,
       rateLimitedGeneric: "Trop de demandes. Patientez avant de réessayer.",
       serviceProblem: "Le service rencontre un problème. Réessayez dans un instant.",
+      serviceProblemWithReference: (reference) => `Le service rencontre un problème. Référence : ${reference}.`,
     },
   },
   en: {
@@ -394,9 +400,11 @@ export const applicationMessages = {
         dashboard: "Home",
         share: "Share my space",
         find: "Find a space",
+        tenantAdmin: "Organisation administration",
         dashboardShort: "Home",
         shareShort: "Share",
         findShort: "Find",
+        tenantAdminShort: "Admin",
       },
     },
     dashboard: {
@@ -528,6 +536,7 @@ export const applicationMessages = {
       rateLimited: (seconds) => `Too many requests. Try again in ${seconds} seconds.`,
       rateLimitedGeneric: "Too many requests. Wait before trying again.",
       serviceProblem: "The service is experiencing a problem. Try again in a moment.",
+      serviceProblemWithReference: (reference) => `The service is experiencing a problem. Reference: ${reference}.`,
     },
   },
   de: {
@@ -572,9 +581,11 @@ export const applicationMessages = {
         dashboard: "Start",
         share: "Meinen Parkplatz teilen",
         find: "Parkplatz finden",
+        tenantAdmin: "Organisationsverwaltung",
         dashboardShort: "Start",
         shareShort: "Teilen",
         findShort: "Suchen",
+        tenantAdminShort: "Admin",
       },
     },
     dashboard: {
@@ -706,6 +717,7 @@ export const applicationMessages = {
       rateLimited: (seconds) => `Zu viele Anfragen. Versuchen Sie es in ${seconds} Sekunden erneut.`,
       rateLimitedGeneric: "Zu viele Anfragen. Warten Sie, bevor Sie es erneut versuchen.",
       serviceProblem: "Beim Dienst ist ein Problem aufgetreten. Versuchen Sie es in Kürze erneut.",
+      serviceProblemWithReference: (reference) => `Beim Dienst ist ein Problem aufgetreten. Referenz: ${reference}.`,
     },
   },
   lb: {
@@ -750,9 +762,11 @@ export const applicationMessages = {
         dashboard: "Start",
         share: "Meng Parkplaz deelen",
         find: "Parkplaz fannen",
+        tenantAdmin: "Administratioun vun der Organisatioun",
         dashboardShort: "Start",
         shareShort: "Deelen",
         findShort: "Fannen",
+        tenantAdminShort: "Admin",
       },
     },
     dashboard: {
@@ -884,6 +898,7 @@ export const applicationMessages = {
       rateLimited: (seconds) => `Ze vill Ufroen. Probéiert et an ${seconds} Sekonnen nach eng Kéier.`,
       rateLimitedGeneric: "Ze vill Ufroen. Waart, ier Dir et nach eng Kéier probéiert.",
       serviceProblem: "Beim Service ass e Problem opgetrueden. Probéiert et gläich nach eng Kéier.",
+      serviceProblemWithReference: (reference) => `Beim Service ass e Problem opgetrueden. Referenz: ${reference}.`,
     },
   },
 } as const satisfies Record<Locale, ApplicationMessages>;

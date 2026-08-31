@@ -948,7 +948,7 @@ sont prouvés ici.
 | Pages publiques | Douze variantes passent par le binding Assets avec canonical, `hreflang`, contenu initial localisé, `HEAD`, validateurs et vraies 404 | Contrat Worker et HTML ; ne prouve ni crawl ni indexation |
 | Régression `lb-LU` | Date et heure luxembourgeoises déterministes ; absence de nom de fuseau anglais lorsque Chrome ne fournit pas cette locale | Données lexicales issues d’Unicode CLDR ; les autres moteurs restent à contrôler |
 | Responsive | La cible réelle du sélecteur couvre 44 px ; les grilles allemandes restent dans 320 px | Tests CSS et mesure dans Chrome, pas appareil tactile réel |
-| Préférence connectée | Migration `0004` appliquée sur une D1 locale isolée, mutation `fr` vers `de`, lecture directe `preferred_locale = de`, puis restauration de `/fr/app` vers `/de/app` | Base locale temporaire uniquement ; aucune migration distante |
+| Préférence connectée | Migration `0006` appliquée sur une D1 locale isolée, mutation `fr` vers `de`, lecture directe `preferred_locale = de`, puis restauration de `/fr/app` vers `/de/app` | Base locale temporaire uniquement ; aucune migration distante |
 | Visibilité selon la session | Landing, page légale, callback et 404 testés avec session reconnue ; aucun sélecteur public, préférence profil appliquée par `replaceState`, callback plus récent prioritaire | Tests DOM React ; le contrôle visuel ciblé du navigateur intégré reste bloqué par sa politique administrateur |
 
 ### Matrice visuelle locale
@@ -986,3 +986,74 @@ anglais de la date luxembourgeoise dans une distribution Chrome sans ICU
 Safari, Firefox, Edge, le zoom à 200 % et un iPhone réel restent les contrôles
 perceptifs exigés avant pilote. La production publique observée reste celle
 décrite dans `STATUS.md`, sans ces changements.
+## Extension : administration générale et administration de tenant du 2026-08-31
+
+Cette extension consigne la livraison de la palette Victor Buck Services, du
+godmode et de l'administration strictement limitée au tenant. Elle ne prétend
+pas qu'un compte VBS réel a été promu ni qu'une adresse réelle a été effacée.
+
+### Source, gates et publication
+
+| Preuve | Résultat observé | Frontière de preuve |
+| --- | --- | --- |
+| Palette VBS | PR #28 fusionnée au SHA `e0a95b3074c09710f5d0ec374ba0dc71beb53a68` | Couleurs et logo approuvé par correspondance exacte de domaine |
+| Godmode | PR #30 fusionnée au SHA `0201cc48e4624dad41e83dd9cbf700f536fb747c` | Accès lié au digest secret de l'adresse autorisée ; aucun lien magique réel envoyé pendant cette tranche |
+| Admin de tenant | [PR #31](https://github.com/nclsppr/parkventory/pull/31) fusionnée au SHA `28b6561c175d1e7334ddc6ea3a23b43377e104b7` | Le rôle `ADMIN` reste une appartenance à une seule organisation ; il ne donne aucun accès godmode |
+| Gate de PR | Run `33354127675`, job `99372920226`, réussi | Candidat de la PR |
+| Gate post-merge | [Run 33354231242](https://github.com/nclsppr/parkventory/actions/runs/33354231242), réussi | SHA exact de `origin/main` |
+| Déploiement Cloudflare | Déploiement `607fb4f9-9c83-49b7-8a0e-6bad45b485bd`, version `53f53692-3483-49ae-b6c2-200cc167858a` à 100 % | Observation ponctuelle du contrôleur de déploiement |
+
+### Contrat d'autorisation et de données
+
+| Surface | Contrat livré et vérifié |
+| --- | --- |
+| Attribution du rôle | Seul le godmode peut promouvoir ou rétrograder un membre du tenant entre `ADMIN` et `MEMBER`, avec confirmation en deux temps et contrôle de concurrence |
+| Portée tenant | Les quatre routes `/api/v1/tenant-admin/*` tirent l'organisation de la session ; aucun identifiant de tenant n'est accepté depuis le client |
+| Statistiques | Agrégats, série d'usage et membres sont filtrés par l'organisation de la session |
+| Marque | L'admin choisit deux couleurs ; le serveur dérive les encres accessibles. Il peut seulement activer un logo préapprouvé et de même origine, sans téléversement ni URL libre |
+| Effacement d'e-mail | Confirmation explicite `EFFACER`, refus de soi-même, d'un autre admin, d'un compte déjà effacé ou multi-tenant ; sessions et liens magiques supprimés atomiquement |
+| Conservation | L'adresse est remplacée par un identifiant interne sous `.invalid`, le nom devient `Compte supprimé`, l'historique métier et l'appartenance sont conservés |
+| Réactivation | Une nouvelle connexion vérifiée avec l'adresse professionnelle réactive le même compte déterministe et la même appartenance |
+| Journalisation | Les événements d'administration ne contiennent que des identifiants, jamais l'adresse effacée |
+
+### Base D1 et validation
+
+La migration `0005_tenant_administration.sql` a été appliquée d'abord à
+`parkventory-preview`, puis à `parkventory-production`, avant le déploiement du
+Worker. Les deux listes de migrations indiquaient ensuite qu'aucune migration
+ne restait à appliquer. Les vérifications distantes ciblées ont retrouvé :
+
+- `organization_branding.logo_enabled` et
+  `organization_branding.updated_by_membership_id` ;
+- `user_account.email_erased_at` ;
+- les index `membership_org_role_created_idx` et
+  `user_account_email_erased_idx` ;
+- les triggers `user_account_email_erasure_guard`,
+  `organization_branding_tenant_admin_insert` et
+  `organization_branding_tenant_admin_update`.
+
+Aucune adresse utilisateur n'a été lue pendant ces contrôles. Le replay local
+des migrations `0001` à `0005` avait réussi avant la mutation distante.
+
+`npm run verify` a réussi sur le commit candidat `b5486e2` : 2 tests de marque,
+50 tests Worker/D1 et 76 tests React, soit 128 tests, puis typecheck Worker,
+build frontend, contrôle des types Cloudflare et dry-runs préversion et
+production. La QA navigateur locale sur de fausses données VBS a couvert 1440
+et 320 px, thèmes clair et sombre, absence de débordement, dialogue scrollable,
+focus initial sûr, piège à focus et fermeture Escape. La confirmation finale
+d'effacement n'a pas été actionnée.
+
+### Probes publiques et limites
+
+| Probe | Résultat observé le 2026-08-31 |
+| --- | --- |
+| `GET /api/v1/health` | HTTP 200, `application/json`, corps `{"status":"ok"}` |
+| `GET /api/v1/tenant-admin/overview` sans session | HTTP 401, ce qui prouve la présence de la route et sa protection |
+| `GET /app/admin` | HTTP 200, `text/html`, `X-Robots-Tag: noindex, nofollow` |
+| Asset JavaScript | `index-Uq2c5rPJ.js`, HTTP 200 `text/javascript`, SHA-256 `13ca6d8c2094545fc09491b4c25c51b837f7259c47e80f2b00f206c1b876816a` ; routes tenant-admin présentes |
+| Asset CSS | `index-DbzKT7VO.css`, HTTP 200 `text/css`, SHA-256 `259db7d3ede54e09dc50ef98be1216303011eba8b0dcb46b84b33313bcb220ec` ; styles tenant-admin présents |
+
+Restent non prouvés en production : connexion d'un admin VBS réel, observation
+authentifiée du cloisonnement avec deux tenants réels et effacement d'une
+adresse réelle. Un envoi de lien magique reste soumis à une confirmation
+explicite au moment de l'action ; cette livraison n'en a envoyé aucun.

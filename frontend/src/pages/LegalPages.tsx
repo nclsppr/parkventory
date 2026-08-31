@@ -113,6 +113,7 @@ export function PrivacyPage({
 
       <section>
         <h2>{copy.rightsTitle}</h2>
+        <p>{copy.tenantAdminErasureText}</p>
         <p>
           {copy.rightsText}{" "}
           <a href={`mailto:${publicContactEmail}`}>{publicContactEmail}</a>. {copy.rightsAuthority}

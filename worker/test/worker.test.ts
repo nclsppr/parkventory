@@ -2,7 +2,12 @@
 
 import { applyD1Migrations, env, SELF } from "cloudflare:test";
 import { beforeEach, describe, expect, it } from "vitest";
-import { localizedPath, supportedLocales, type Locale } from "../../shared/i18n";
+import {
+  localizedAdminTenantPath,
+  localizedPath,
+  supportedLocales,
+  type Locale,
+} from "../../shared/i18n";
 import { publicContactEmail } from "../../shared/site";
 import { displayName, organizationName, zonedDateTimeToEpoch } from "../src/domain";
 import { isShareDateWithinSiteWindow } from "../src/index";
@@ -38,7 +43,10 @@ async function seedMember({
   const sessionId = `session-${crypto.randomUUID()}`;
   const sessionToken = `${token}-${crypto.randomUUID()}`;
   await testEnv.DB.batch([
-    testEnv.DB.prepare("INSERT OR IGNORE INTO organization VALUES (?1, ?2, ?3, ?4)")
+    testEnv.DB.prepare(`
+      INSERT OR IGNORE INTO organization (id, normalized_domain, display_name, created_at)
+      VALUES (?1, ?2, ?3, ?4)
+    `)
       .bind(orgId, domain, organizationName(domain), now),
     testEnv.DB.prepare(`
       INSERT INTO user_account (
@@ -202,6 +210,95 @@ describe("contrat Cloudflare MVP", () => {
     expect(await missingAsset.text()).toBe("");
   });
 
+  it("sert les routes privées localisées avec un canonical et un noindex cohérents", async () => {
+    const routes = [
+      ["fr", "tenantAdmin"],
+      ["en", "adminOverview"],
+      ["de", "adminTenants"],
+      ["lb", "adminUsers"],
+      ["fr", "adminOperations"],
+    ] as const;
+
+    for (const [locale, route] of routes) {
+      const path = localizedPath(locale, route);
+      const response = await SELF.fetch(`https://parkventory.com${path}`);
+      const html = await response.text();
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("Content-Language")).toBe(locale);
+      expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+      expect(html).toContain('name="robots" content="noindex, nofollow"');
+      expect(html).toContain(`rel="canonical" href="https://parkventory.com${path}"`);
+      expect(html).not.toContain('rel="alternate"');
+      expect(html).not.toContain('application/ld+json');
+    }
+  });
+
+  it("sert directement le détail tenant encodé avec son canonical exact", async () => {
+    const tenantId = "org:acme_2026.08-31";
+    const path = localizedAdminTenantPath("de", tenantId);
+    const response = await SELF.fetch(`https://parkventory.com${path}?tab=members`);
+    const html = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Language")).toBe("de");
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+    expect(html).toContain(`rel="canonical" href="https://parkventory.com${path}"`);
+    expect(html).toContain("Organisation — Parkventory-Administration");
+    expect(html).not.toContain('rel="alternate"');
+
+    const head = await SELF.fetch(`https://parkventory.com${path}`, { method: "HEAD" });
+    expect(head.status).toBe(200);
+    expect(head.headers.get("Content-Language")).toBe("de");
+    expect(head.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+    expect(await head.text()).toBe("");
+  });
+
+  it("canonicalise le détail tenant et négocie sa route historique sans perdre la requête", async () => {
+    const tenantId = "org:acme_2026.08-31";
+    const canonicalPath = localizedAdminTenantPath("de", tenantId);
+    const trailingSlash = await SELF.fetch(
+      `https://parkventory.com${canonicalPath}/?tab=members`,
+      { redirect: "manual" },
+    );
+
+    expect(trailingSlash.status).toBe(308);
+    expect(trailingSlash.headers.get("Location")).toBe(
+      `https://parkventory.com${canonicalPath}?tab=members`,
+    );
+
+    const legacy = await SELF.fetch(
+      "https://parkventory.com/admin/tenants/org%3Aacme_2026.08-31?tab=members",
+      {
+        headers: { "Accept-Language": "de-DE,de;q=0.9" },
+        redirect: "manual",
+      },
+    );
+
+    expect(legacy.status).toBe(302);
+    expect(legacy.headers.get("Location")).toBe(
+      `https://parkventory.com${canonicalPath}?tab=members`,
+    );
+    expect(legacy.headers.get("Vary")).toBe("Accept-Language, Cookie");
+  });
+
+  it("garde les détails tenant invalides et leurs sous-routes en vraie 404", async () => {
+    const paths = [
+      "/de/admin/tenants/%E0%A4%A",
+      "/de/admin/tenants/org%2Facme",
+      "/de/admin/tenants/org-acme/members",
+    ];
+
+    for (const path of paths) {
+      const response = await SELF.fetch(`https://parkventory.com${path}`);
+      const html = await response.text();
+
+      expect(response.status).toBe(404);
+      expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+      expect(html).not.toContain('rel="canonical"');
+    }
+  });
+
   it("ne réutilise pas le validateur du shell entre deux 404 négociées", async () => {
     const response = await SELF.fetch("https://parkventory.com/unknown", {
       headers: {
@@ -250,6 +347,9 @@ describe("contrat Cloudflare MVP", () => {
 
     expect(response.status).toBe(401);
     expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+    expect(response.headers.get("X-Request-ID")).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(body.code).toBe("SESSION_EXPIRED");
     expect(body.detail).toContain("Ihre Sitzung ist abgelaufen");
@@ -366,11 +466,15 @@ describe("contrat Cloudflare MVP", () => {
       email: string;
       organizationName: string;
       locale: Locale;
+      role: "MEMBER" | "ADMIN";
+      godmode: boolean;
     }>();
     expect(session).toMatchObject({
       email: "alex@session.test",
       organizationName: "Session",
       locale: "de",
+      role: "MEMBER",
+      godmode: false,
     });
     const account = await testEnv.DB.prepare(`
       SELECT preferred_locale FROM user_account WHERE normalized_email = 'alex@session.test'
@@ -527,6 +631,152 @@ describe("contrat Cloudflare MVP", () => {
       WHERE availability_offer_id = ?1 AND status = 'CONFIRMED'
     `).bind(offerId).first<{ count: number }>();
     expect(row?.count).toBe(1);
+    const conflict = await testEnv.DB.prepare(`
+      SELECT
+        severity, outcome, organization_id, user_id, membership_id,
+        entity_type, entity_id, route, error_code
+      FROM activity_event
+      WHERE event_type = 'BUSINESS_RULE_REJECTED'
+        AND membership_id = ?1
+        AND route = '/api/v1/availability/:id/reservations'
+      ORDER BY occurred_at DESC, id DESC
+      LIMIT 1
+    `).bind(reserver.membershipId).first<Record<string, unknown>>();
+    expect(conflict).toMatchObject({
+      severity: "WARNING",
+      outcome: "DENIED",
+      organization_id: reserver.orgId,
+      user_id: reserver.userId,
+      membership_id: reserver.membershipId,
+      entity_type: "AVAILABILITY_OFFER",
+      route: "/api/v1/availability/:id/reservations",
+      error_code: expect.stringMatching(/^RESERVATION_(UNAVAILABLE|WRITE_CONFLICT)$/),
+    });
+    expect(conflict?.entity_id).toBe(
+      conflict?.error_code === "RESERVATION_WRITE_CONFLICT" ? offerId : null,
+    );
+
+    for (const attemptedId of [`token-${crypto.randomUUID()}`, `secret-${crypto.randomUUID()}`]) {
+      const rejected = await SELF.fetch(`https://parkventory.test/api/v1/reservations/${attemptedId}`, {
+        method: "DELETE",
+        headers,
+      });
+      expect(rejected.status).toBe(409);
+    }
+    const rejectedCancellation = await testEnv.DB.prepare(`
+      SELECT COUNT(*) AS count, MAX(entity_id) AS entity_id
+      FROM activity_event
+      WHERE event_type = 'BUSINESS_RULE_REJECTED'
+        AND membership_id = ?1
+        AND error_code = 'RESERVATION_CANCELLATION_REJECTED'
+    `).bind(reserver.membershipId).first<{ count: number; entity_id: string | null }>();
+    expect(rejectedCancellation).toEqual({ count: 1, entity_id: null });
+  });
+
+  it("conserve l’idempotence sous concurrence pour une même tentative", async () => {
+    const owner = await seedMember({
+      domain: "idempotent.test",
+      email: "owner@idempotent.test",
+      token: "owner-token",
+    });
+    const reserver = await seedMember({
+      domain: "idempotent.test",
+      email: "guest@idempotent.test",
+      token: "guest-token",
+    });
+    const { offerId } = await seedOffer(owner.orgId, owner.membershipId);
+    const idempotencyKey = crypto.randomUUID();
+    const reserve = () => SELF.fetch(
+      `https://parkventory.test/api/v1/availability/${offerId}/reservations`,
+      {
+        method: "POST",
+        headers: {
+          ...cookie(reserver.token),
+          Origin: "https://parkventory.test",
+          "Sec-Fetch-Site": "same-origin",
+          "Idempotency-Key": idempotencyKey,
+        },
+      },
+    );
+
+    const responses = await Promise.all([reserve(), reserve()]);
+    expect(responses.map((response) => response.status)).toEqual([200, 200]);
+    const reservations = await testEnv.DB.prepare(`
+      SELECT COUNT(*) AS count
+      FROM reservation
+      WHERE organization_id = ?1
+        AND reserver_membership_id = ?2
+        AND idempotency_key = ?3
+    `).bind(reserver.orgId, reserver.membershipId, idempotencyKey)
+      .first<{ count: number }>();
+    expect(reservations?.count).toBe(1);
+    const rejected = await testEnv.DB.prepare(`
+      SELECT COUNT(*) AS count
+      FROM activity_event
+      WHERE event_type = 'BUSINESS_RULE_REJECTED'
+        AND membership_id = ?1
+        AND route = '/api/v1/availability/:id/reservations'
+    `).bind(reserver.membershipId).first<{ count: number }>();
+    expect(rejected?.count).toBe(0);
+  });
+
+  it("classe seulement les contraintes métier de place dupliquée en 409", async () => {
+    const owner = await seedMember({
+      domain: "spot-conflict.test",
+      email: "owner@spot-conflict.test",
+      token: "owner-token",
+    });
+    const colleague = await seedMember({
+      domain: "spot-conflict.test",
+      email: "colleague@spot-conflict.test",
+      token: "colleague-token",
+    });
+    const { spotId } = await seedOffer(owner.orgId, owner.membershipId);
+    const ownerResponse = await SELF.fetch("https://parkventory.test/api/v1/spots", {
+      method: "POST",
+      headers: {
+        ...cookie(owner.token),
+        Origin: "https://parkventory.test",
+        "Sec-Fetch-Site": "same-origin",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ label: "B-42", level: "Niveau B" }),
+    });
+    const labelResponse = await SELF.fetch("https://parkventory.test/api/v1/spots", {
+      method: "POST",
+      headers: {
+        ...cookie(colleague.token),
+        Origin: "https://parkventory.test",
+        "Sec-Fetch-Site": "same-origin",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ label: "A-24", level: "Niveau A" }),
+    });
+
+    expect(ownerResponse.status).toBe(409);
+    expect(labelResponse.status).toBe(409);
+    const conflicts = await testEnv.DB.prepare(`
+      SELECT event_type, error_code, entity_type, entity_id
+      FROM activity_event
+      WHERE membership_id IN (?1, ?2)
+        AND error_code = 'SPOT_ALREADY_DECLARED'
+      ORDER BY membership_id
+    `).bind(owner.membershipId, colleague.membershipId).all<Record<string, unknown>>();
+    expect(conflicts.results).toHaveLength(2);
+    expect(conflicts.results).toEqual(expect.arrayContaining([
+      {
+        event_type: "BUSINESS_RULE_REJECTED",
+        error_code: "SPOT_ALREADY_DECLARED",
+        entity_type: "PARKING_SPOT",
+        entity_id: spotId,
+      },
+      {
+        event_type: "BUSINESS_RULE_REJECTED",
+        error_code: "SPOT_ALREADY_DECLARED",
+        entity_type: "PARKING_SPOT",
+        entity_id: spotId,
+      },
+    ]));
   });
 
   it("refuse deux disponibilités qui se chevauchent pour la même place", async () => {

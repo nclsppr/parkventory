@@ -20,15 +20,21 @@ import type { SessionData } from "../types";
 const personalDomains = ["gmail.com", "outlook.com", "hotmail.com", "yahoo.com", "icloud.com"];
 const verificationRequests = new Map<string, Promise<SessionData>>();
 
+type SignInMode = "application" | "admin";
 type SignInFeedbackKey =
+  | "invalidEmail"
   | "invalidProfessionalEmail"
   | "securityRequired"
   | "linkSent"
   | "requestRateLimited"
   | "requestUnavailable"
   | "requestFailed";
-
 type SignInFeedback = { key: SignInFeedbackKey } | { text: string } | null;
+
+export function sessionLandingUrl(session: Pick<SessionData, "godmode" | "locale">) {
+  const urls = localizedUrls(session.locale);
+  return session.godmode ? urls.adminUrl : urls.appUrl;
+}
 
 function verifyMagicLinkOnce(token: string): Promise<SessionData> {
   const existingRequest = verificationRequests.get(token);
@@ -41,9 +47,16 @@ function verifyMagicLinkOnce(token: string): Promise<SessionData> {
   return request;
 }
 
-export function SignInPage({ reason }: { reason?: string }) {
+export function SignInPage({
+  reason,
+  mode = "application",
+}: {
+  reason?: string;
+  mode?: SignInMode;
+}) {
   const { locale } = useI18n();
   const copy = authMessages[locale];
+  const modeCopy = mode === "admin" ? copy.admin : null;
   const { homeUrl } = localizedUrls(locale);
   const [email, setEmail] = useState("");
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -60,9 +73,11 @@ export function SignInPage({ reason }: { reason?: string }) {
   }, [reason]);
 
   const message = feedback
-    ? "key" in feedback
-      ? copy[feedback.key]
-      : feedback.text
+    ? "text" in feedback
+      ? feedback.text
+      : feedback.key === "invalidEmail"
+        ? copy.admin.invalidEmail
+        : copy[feedback.key]
     : null;
   const sent = feedback !== null && "key" in feedback && feedback.key === "linkSent";
 
@@ -70,7 +85,12 @@ export function SignInPage({ reason }: { reason?: string }) {
     event.preventDefault();
     const normalized = email.trim().toLowerCase();
     const domain = normalized.split("@")[1];
-    if (!domain || personalDomains.includes(domain)) {
+    const validFormat = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized);
+    if (!validFormat) {
+      setFeedback({ key: mode === "admin" ? "invalidEmail" : "invalidProfessionalEmail" });
+      return;
+    }
+    if (mode === "application" && (!domain || personalDomains.includes(domain))) {
       setFeedback({ key: "invalidProfessionalEmail" });
       return;
     }
@@ -82,7 +102,7 @@ export function SignInPage({ reason }: { reason?: string }) {
     setBusy(true);
     setFeedback(null);
     try {
-      await requestMagicLink(normalized, turnstileToken);
+      await requestMagicLink(normalized, turnstileToken, mode === "admin" ? "admin" : "tenant");
       setFeedback({ key: "linkSent" });
     } catch (error) {
       if (error instanceof ApiError && error.status === 429) {
@@ -99,7 +119,7 @@ export function SignInPage({ reason }: { reason?: string }) {
   };
 
   return (
-    <main className="auth-page">
+    <main className={`auth-page ${mode === "admin" ? "auth-page-admin" : ""}`.trim()}>
       <div className="auth-backdrop" aria-hidden="true" />
       <a className="auth-brand" href={homeUrl} aria-label={copy.brandHomeLabel}>
         <Logo />
@@ -110,16 +130,16 @@ export function SignInPage({ reason }: { reason?: string }) {
       </div>
       <section className="auth-panel" aria-labelledby="auth-title">
         <div className="auth-icon"><Mail aria-hidden="true" /></div>
-        <p className="section-index">{copy.accessKicker}</p>
-        <h1 id="auth-title">{copy.signInTitle}</h1>
-        <p className="auth-intro">{copy.signInIntro}</p>
+        <p className="section-index">{modeCopy?.accessKicker ?? copy.accessKicker}</p>
+        <h1 id="auth-title">{modeCopy?.signInTitle ?? copy.signInTitle}</h1>
+        <p className="auth-intro">{modeCopy?.signInIntro ?? copy.signInIntro}</p>
         <form onSubmit={submit} noValidate>
-          <label htmlFor="signin-email">{copy.emailLabel}</label>
+          <label htmlFor="signin-email">{modeCopy?.emailLabel ?? copy.emailLabel}</label>
           <input
             id="signin-email"
             type="email"
             autoComplete="email"
-            placeholder={copy.emailPlaceholder}
+            placeholder={modeCopy?.emailPlaceholder ?? copy.emailPlaceholder}
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             aria-describedby="signin-message"
@@ -141,7 +161,7 @@ export function SignInPage({ reason }: { reason?: string }) {
         </div>
         <p className="auth-trust">
           <ShieldCheck aria-hidden="true" />
-          {copy.trust}
+          {modeCopy?.trust ?? copy.trust}
         </p>
       </section>
       <a className="auth-home-link" href={homeUrl}>
@@ -162,16 +182,22 @@ export function AuthCallbackPage({
   const copy = authMessages[locale];
   const localeRef = useRef(locale);
   localeRef.current = locale;
-  const { appUrl, homeUrl } = localizedUrls(locale);
-  const [token] = useState(() => new URLSearchParams(window.location.search).get("token"));
+  const { adminUrl, appUrl, homeUrl } = localizedUrls(locale);
+  const [token] = useState(() => {
+    const fragmentToken = new URLSearchParams(window.location.hash.replace(/^#/, "")).get("token");
+    return fragmentToken ?? new URLSearchParams(window.location.search).get("token");
+  });
   const [state, setState] = useState<"verifying" | "success" | "error">("verifying");
   const [displayName, setDisplayName] = useState("");
+  const [operatorDestination, setOperatorDestination] = useState(false);
   const [errorKind, setErrorKind] = useState<"incomplete" | "expired" | "failed" | null>(null);
 
   const message = state === "verifying"
     ? copy.callbackVerifyingMessage
     : state === "success"
-      ? copy.callbackWelcome(displayName)
+      ? operatorDestination
+        ? copy.callbackOperatorWelcome(displayName)
+        : copy.callbackWelcome(displayName)
       : errorKind === "incomplete"
         ? copy.callbackIncomplete
         : errorKind === "expired"
@@ -181,8 +207,8 @@ export function AuthCallbackPage({
   useEffect(() => {
     let active = true;
     let redirectTimer: number | undefined;
+    window.history.replaceState({}, "", localizedUrls(localeRef.current).authCallbackUrl);
     if (!token) {
-      window.history.replaceState({}, "", localizedUrls(localeRef.current).authCallbackUrl);
       setState("error");
       setErrorKind("incomplete");
       return () => undefined;
@@ -195,9 +221,10 @@ export function AuthCallbackPage({
         window.history.replaceState({}, "", localizedUrls(session.locale).authCallbackUrl);
         window.dispatchEvent(new PopStateEvent("popstate"));
         setDisplayName(session.displayName);
+        setOperatorDestination(session.godmode);
         setState("success");
         redirectTimer = window.setTimeout(
-          () => window.location.replace(localizedUrls(session.locale).appUrl),
+          () => window.location.replace(sessionLandingUrl(session)),
           700,
         );
       })
@@ -242,9 +269,14 @@ export function AuthCallbackPage({
         </h1>
         <p className="auth-intro" role="status">{message}</p>
         {state === "error" && (
-          <a className="button button-primary" href={appUrl}>
-            {copy.requestNewLink} <ArrowRight aria-hidden="true" />
-          </a>
+          <div className="auth-callback-actions">
+            <a className="button button-primary" href={appUrl}>
+              {copy.applicationAccess} <ArrowRight aria-hidden="true" />
+            </a>
+            <a className="button button-secondary" href={adminUrl}>
+              {copy.operatorAccess} <ArrowRight aria-hidden="true" />
+            </a>
+          </div>
         )}
       </section>
     </main>

@@ -23,6 +23,11 @@ export const routeIds = [
   "app",
   "share",
   "find",
+  "tenantAdmin",
+  "adminOverview",
+  "adminTenants",
+  "adminUsers",
+  "adminOperations",
   "authCallback",
   "privacy",
   "legal",
@@ -42,6 +47,11 @@ export const localizedRoutePaths: Record<Locale, LocalizedRoutePaths> = {
     app: "/fr/app",
     share: "/fr/app/partager",
     find: "/fr/app/trouver",
+    tenantAdmin: "/fr/app/admin",
+    adminOverview: "/fr/admin",
+    adminTenants: "/fr/admin/tenants",
+    adminUsers: "/fr/admin/users",
+    adminOperations: "/fr/admin/operations",
     authCallback: "/fr/auth/callback",
     privacy: "/fr/confidentialite",
     legal: "/fr/mentions-legales",
@@ -51,6 +61,11 @@ export const localizedRoutePaths: Record<Locale, LocalizedRoutePaths> = {
     app: "/en/app",
     share: "/en/app/share",
     find: "/en/app/find",
+    tenantAdmin: "/en/app/admin",
+    adminOverview: "/en/admin",
+    adminTenants: "/en/admin/tenants",
+    adminUsers: "/en/admin/users",
+    adminOperations: "/en/admin/operations",
     authCallback: "/en/auth/callback",
     privacy: "/en/privacy",
     legal: "/en/legal-notice",
@@ -60,6 +75,11 @@ export const localizedRoutePaths: Record<Locale, LocalizedRoutePaths> = {
     app: "/de/app",
     share: "/de/app/teilen",
     find: "/de/app/suchen",
+    tenantAdmin: "/de/app/admin",
+    adminOverview: "/de/admin",
+    adminTenants: "/de/admin/tenants",
+    adminUsers: "/de/admin/users",
+    adminOperations: "/de/admin/operations",
     authCallback: "/de/auth/callback",
     privacy: "/de/datenschutz",
     legal: "/de/impressum",
@@ -69,6 +89,11 @@ export const localizedRoutePaths: Record<Locale, LocalizedRoutePaths> = {
     app: "/lb/app",
     share: "/lb/app/deelen",
     find: "/lb/app/fannen",
+    tenantAdmin: "/lb/app/admin",
+    adminOverview: "/lb/admin",
+    adminTenants: "/lb/admin/tenants",
+    adminUsers: "/lb/admin/users",
+    adminOperations: "/lb/admin/operations",
     authCallback: "/lb/auth/callback",
     privacy: "/lb/dateschutz",
     legal: "/lb/impressum",
@@ -80,6 +105,11 @@ const legacyRoutes: Record<string, Exclude<RouteId, "notFound">> = {
   "/app": "app",
   "/app/partager": "share",
   "/app/trouver": "find",
+  "/app/admin": "tenantAdmin",
+  "/admin": "adminOverview",
+  "/admin/tenants": "adminTenants",
+  "/admin/users": "adminUsers",
+  "/admin/operations": "adminOperations",
   "/auth/callback": "authCallback",
   "/confidentialite": "privacy",
   "/mentions-legales": "legal",
@@ -88,6 +118,30 @@ const legacyRoutes: Record<string, Exclude<RouteId, "notFound">> = {
 function normalizedPathname(pathname: string): string {
   const withLeadingSlash = pathname.startsWith("/") ? pathname : `/${pathname}`;
   return withLeadingSlash === "/" ? "/" : withLeadingSlash.replace(/\/+$/, "");
+}
+
+const adminTenantIdPattern = /^[A-Za-z0-9._:-]{1,160}$/;
+
+function validAdminTenantId(tenantId: string): boolean {
+  return adminTenantIdPattern.test(tenantId) && tenantId !== "." && tenantId !== "..";
+}
+
+function decodedAdminTenantId(segment: string): string | null {
+  try {
+    const tenantId = decodeURIComponent(segment);
+    return validAdminTenantId(tenantId) ? tenantId : null;
+  } catch {
+    return null;
+  }
+}
+
+function adminTenantIdFromBasePath(pathname: string, basePath: string): string | null {
+  const normalized = normalizedPathname(pathname);
+  const prefix = `${basePath}/`;
+  if (!normalized.startsWith(prefix)) return null;
+  const segment = normalized.slice(prefix.length);
+  if (!segment || segment.includes("/")) return null;
+  return decodedAdminTenantId(segment);
 }
 
 const localizedRouteEntries = supportedLocales.flatMap((locale) =>
@@ -160,6 +214,31 @@ export function localizedPath(
   return localizedRoutePaths[locale][route];
 }
 
+export function localizedAdminTenantPath(locale: Locale, tenantId: string): string {
+  if (!validAdminTenantId(tenantId)) {
+    throw new TypeError("tenantId must be a valid Parkventory identifier");
+  }
+  return `${localizedPath(locale, "adminTenants")}/${encodeURIComponent(tenantId)}`;
+}
+
+export function localizedAdminTenantRouteFromPathname(pathname: string): {
+  locale: Locale;
+  tenantId: string;
+} | null {
+  for (const locale of supportedLocales) {
+    const tenantId = adminTenantIdFromBasePath(
+      pathname,
+      localizedPath(locale, "adminTenants"),
+    );
+    if (tenantId) return { locale, tenantId };
+  }
+  return null;
+}
+
+export function legacyAdminTenantIdFromPathname(pathname: string): string | null {
+  return adminTenantIdFromBasePath(pathname, "/admin/tenants");
+}
+
 export function isPublicRoute(route: RouteId): route is PublicRouteId {
   return publicRouteIds.includes(route as PublicRouteId);
 }
@@ -183,6 +262,26 @@ const seoCopy = {
     find: {
       title: "Trouver une place — Parkventory",
       description: "Application Parkventory privée de votre organisation pour trouver et réserver une place disponible.",
+    },
+    tenantAdmin: {
+      title: "Administration de l’organisation — Parkventory",
+      description: "Espace Parkventory privé réservé aux administrateurs de l’organisation pour gérer ses membres et sa personnalisation.",
+    },
+    adminOverview: {
+      title: "Vue d’ensemble — Administration Parkventory",
+      description: "Console privée d’exploitation Parkventory pour superviser les organisations et leur activité.",
+    },
+    adminTenants: {
+      title: "Organisations — Administration Parkventory",
+      description: "Console privée Parkventory pour consulter les organisations clientes.",
+    },
+    adminUsers: {
+      title: "Utilisateurs — Administration Parkventory",
+      description: "Console privée Parkventory pour consulter les comptes utilisateurs.",
+    },
+    adminOperations: {
+      title: "Opérations — Administration Parkventory",
+      description: "Console privée Parkventory pour suivre l’activité, les diagnostics et les incidents.",
     },
     authCallback: {
       title: "Connexion — Parkventory",
@@ -218,6 +317,26 @@ const seoCopy = {
       title: "Find a space — Parkventory",
       description: "Your organisation’s private Parkventory application for finding and booking an available parking space.",
     },
+    tenantAdmin: {
+      title: "Organisation administration — Parkventory",
+      description: "A private Parkventory area for organisation administrators to manage members and customisation.",
+    },
+    adminOverview: {
+      title: "Overview — Parkventory administration",
+      description: "Parkventory’s private operations console for monitoring organisations and their activity.",
+    },
+    adminTenants: {
+      title: "Organisations — Parkventory administration",
+      description: "Parkventory’s private console for viewing customer organisations.",
+    },
+    adminUsers: {
+      title: "Users — Parkventory administration",
+      description: "Parkventory’s private console for viewing user accounts.",
+    },
+    adminOperations: {
+      title: "Operations — Parkventory administration",
+      description: "Parkventory’s private console for monitoring activity, diagnostics and incidents.",
+    },
     authCallback: {
       title: "Sign in — Parkventory",
       description: "Secure validation of your Parkventory sign-in link.",
@@ -251,6 +370,26 @@ const seoCopy = {
     find: {
       title: "Parkplatz finden — Parkventory",
       description: "Die private Parkventory-Anwendung Ihrer Organisation, um einen verfügbaren Parkplatz zu finden und zu reservieren.",
+    },
+    tenantAdmin: {
+      title: "Organisationsverwaltung — Parkventory",
+      description: "Ein privater Parkventory-Bereich für die Verwaltung von Mitgliedern und Anpassungen Ihrer Organisation.",
+    },
+    adminOverview: {
+      title: "Übersicht — Parkventory-Administration",
+      description: "Die private Parkventory-Betriebskonsole zur Überwachung von Organisationen und deren Aktivitäten.",
+    },
+    adminTenants: {
+      title: "Organisationen — Parkventory-Administration",
+      description: "Die private Parkventory-Konsole zur Ansicht von Kundenorganisationen.",
+    },
+    adminUsers: {
+      title: "Benutzer — Parkventory-Administration",
+      description: "Die private Parkventory-Konsole zur Ansicht von Benutzerkonten.",
+    },
+    adminOperations: {
+      title: "Betrieb — Parkventory-Administration",
+      description: "Die private Parkventory-Konsole zur Überwachung von Aktivitäten, Diagnosen und Vorfällen.",
     },
     authCallback: {
       title: "Anmeldung — Parkventory",
@@ -286,6 +425,26 @@ const seoCopy = {
       title: "Eng Parkplaz fannen — Parkventory",
       description: "Déi privat Parkventory-Applikatioun vun Ärer Organisatioun, fir eng fräi Parkplaz ze fannen an ze reservéieren.",
     },
+    tenantAdmin: {
+      title: "Administratioun vun der Organisatioun — Parkventory",
+      description: "E private Parkventory-Beräich fir Administrateure vun der Organisatioun, fir Memberen an Upassungen ze verwalten.",
+    },
+    adminOverview: {
+      title: "Iwwersiicht — Parkventory-Administratioun",
+      description: "Déi privat Parkventory-Betribskonsol fir Organisatiounen an hir Aktivitéit ze iwwerwaachen.",
+    },
+    adminTenants: {
+      title: "Organisatiounen — Parkventory-Administratioun",
+      description: "Déi privat Parkventory-Konsol fir Client-Organisatiounen unzekucken.",
+    },
+    adminUsers: {
+      title: "Benotzer — Parkventory-Administratioun",
+      description: "Déi privat Parkventory-Konsol fir Benotzerkonten unzekucken.",
+    },
+    adminOperations: {
+      title: "Operatiounen — Parkventory-Administratioun",
+      description: "Déi privat Parkventory-Konsol fir Aktivitéit, Diagnosen an Incidenten ze iwwerwaachen.",
+    },
     authCallback: {
       title: "Umellen — Parkventory",
       description: "Sécher Bestätegung vun Ärem Parkventory-Umeldungslink.",
@@ -304,6 +463,25 @@ const seoCopy = {
     },
   },
 } as const satisfies Record<Locale, SeoCopy>;
+
+const adminTenantSeoCopy = {
+  fr: {
+    title: "Organisation — Administration Parkventory",
+    description: "Console privée Parkventory pour consulter cette organisation et ses membres.",
+  },
+  en: {
+    title: "Organisation — Parkventory administration",
+    description: "Parkventory’s private console for viewing this organisation and its members.",
+  },
+  de: {
+    title: "Organisation — Parkventory-Administration",
+    description: "Die private Parkventory-Konsole zur Ansicht dieser Organisation und ihrer Mitglieder.",
+  },
+  lb: {
+    title: "Organisatioun — Parkventory-Administratioun",
+    description: "Déi privat Parkventory-Konsol fir dës Organisatioun an hir Memberen unzekucken.",
+  },
+} as const satisfies Record<Locale, { title: string; description: string }>;
 
 const socialImageAltCopy = {
   fr: "Carte sociale Parkventory avec le symbole canonique et un parcours entre une place partagée et une place sélectionnée.",
@@ -352,6 +530,21 @@ export function seoMetadata(locale: Locale, route: RouteId): SeoMetadata {
     canonicalUrl,
     indexable,
     alternates: indexable ? alternateLinks(route) : [],
+    ogLocale: localeConfig[locale].ogLocale,
+    ogLocaleAlternates: supportedLocales
+      .filter((alternate) => alternate !== locale)
+      .map((alternate) => localeConfig[alternate].ogLocale),
+    inLanguage: localeConfig[locale].intlLocale,
+  };
+}
+
+export function adminTenantSeoMetadata(locale: Locale, tenantId: string): SeoMetadata {
+  return {
+    ...adminTenantSeoCopy[locale],
+    socialImageAlt: socialImageAltCopy[locale],
+    canonicalUrl: `${siteOrigin}${localizedAdminTenantPath(locale, tenantId)}`,
+    indexable: false,
+    alternates: [],
     ogLocale: localeConfig[locale].ogLocale,
     ogLocaleAlternates: supportedLocales
       .filter((alternate) => alternate !== locale)

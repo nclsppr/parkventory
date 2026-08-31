@@ -18,7 +18,7 @@
 - Le sélecteur reste disponible sur la landing et les autres surfaces avant
   connexion. Une session reconnue le retire aussi de ces surfaces ; dans le
   shell authentifié, il a été retiré de la topbar et apparaît uniquement dans
-  le profil. La migration additive `0004_user_locale.sql` et
+  le profil. La migration additive `0006_user_locale.sql` et
   la mutation de profil sont vérifiées localement ; aucune base D1 distante n’a
   été migrée et la migration doit précéder tout Worker qui lit la colonne.
 - La fenêtre de partage et la date proposée utilisent le fuseau du parking. Les
@@ -44,10 +44,9 @@
   légales, le callback et une 404 : aucun sélecteur public n’y subsiste, la
   locale du profil remplace l’URL sans entrée d’historique supplémentaire et
   une session créée par callback ne peut pas être écrasée par le contrôle initial.
-- La PR #28 de palette VBS reste ouverte et verte sur le même `origin/main`.
-  Elle réserve déjà la migration `0003`; la préférence utilisateur utilise donc
-  `0004`. Si la PR #28 fusionne avant ce candidat, il faudra tout de même rebaser
-  et résoudre ses fichiers communs avant toute fusion.
+- Les migrations d’administration désormais présentes sur `main` occupent
+  `0003` à `0005`; la préférence utilisateur utilise donc `0006` et doit être
+  appliquée après elles.
 
 ## Production publique observée le 31 août 2026
 
@@ -60,18 +59,21 @@
 
 ## Production Cloudflare active — snapshot historique du 26 août 2026
 
-- La réécriture Cloudflare-native est sur `origin/main` depuis la PR #13,
-  fusionnée au SHA `bd95f98ab73d7644fcc20a2f8d717ca16c3c8ff0`.
+- La réécriture Cloudflare-native et les interfaces d'administration générale
+  et de tenant sont sur `origin/main`. La PR #31 est fusionnée au SHA
+  `28b6561c175d1e7334ddc6ea3a23b43377e104b7`.
 - La base D1 `parkventory-production` est créée en juridiction UE sous
   l’identifiant `07118826-b935-4f87-9fca-a5d1e6a01218` ; la migration
-  `0001_cloudflare_mvp.sql` et la migration additive
-  `0002_organization_branding.sql` sont appliquées. Cette dernière a été
-  vérifiée d'abord en préversion puis en production avant le déploiement du
-  Worker qui la consomme. Un bookmark Time Travel de production a été relevé
-  sans exécuter de restauration.
+  `0001_cloudflare_mvp.sql` à `0005_tenant_administration.sql` sont appliquées.
+  Les migrations additives `0003`, `0004` et `0005` ont été vérifiées d'abord
+  en préversion puis en production avant les Workers qui les consomment. Les
+  colonnes, index et triggers de `0005` ont été relus sans consulter de donnée
+  personnelle. Un bookmark Time Travel de production a été relevé sans
+  exécuter de restauration.
 - Le Worker `parkventory-production` est déployé avec D1, les assets React,
-  Email Service et les deux secrets requis. La version active est
-  `be066191-cc08-4bd3-ac0f-e9b7ff59b08a`, à 100 % du trafic.
+  Email Service et les secrets requis. La version active est
+  `53f53692-3483-49ae-b6c2-200cc167858a`, à 100 % du trafic, via le déploiement
+  `607fb4f9-9c83-49b7-8a0e-6bad45b485bd`.
 - Workers Builds suit `nclsppr/parkventory` sur `main`, avec cache de build et
   déploiement `--env production`. Le merge de la PR #19 au SHA
   `a59c990fdc948acb7fbb4fd5debe27be099d4f8b` a déclenché le build
@@ -86,10 +88,13 @@
   aux Markdown sont exclus des builds. La PR #25, fusionnée au SHA
   `5e5fa96c69b9bf8a54157c89019f331ac1f0a427`, a passé la gate post-merge ; le
   build Workers Builds `821fcbe9-c4c9-49a7-886a-5267d4fec98e` a déployé la
-  version 13 automatiquement.
-- La production sert les assets `index-F71pvGtu.css` et `index-CkISoqqV.js` ;
-  le JavaScript est byte-identique au build vérifié, avec le SHA-256
-  `8ae8173be9d482732ccbc3089a9fd168549336920294e0a5f1eb087d2880253f`.
+  version 13 automatiquement. Les PR #28, #30 et #31 ont ensuite livré la
+  palette VBS, le godmode puis l'administration limitée au tenant. La gate
+  post-merge de la PR #31, run `33354231242`, est verte sur le SHA exact.
+- La production sert les assets `index-DbzKT7VO.css` et `index-Uq2c5rPJ.js` ;
+  leurs SHA-256 publics sont respectivement
+  `259db7d3ede54e09dc50ef98be1216303011eba8b0dcb46b84b33313bcb220ec` et
+  `13ca6d8c2094545fc09491b4c25c51b837f7259c47e80f2b00f206c1b876816a`.
   Le logo Victor Buck Services répond en
   `image/svg+xml`, sur 12 978 octets, avec le SHA-256
   `396e6f894adc6eac6a6b9318a42ad13b216536b51320f94d88c7f7736b1dfc89`.
@@ -98,7 +103,10 @@
   connexion quand leur contraste est sûr, avec retour atomique à la palette
   Parkventory sinon. Le rendu connecté a été contrôlé localement à 1440, 390 et
   320 px et l'e-mail à 1280 et 390 px, mais pas encore au moyen d'une session VBS
-  réelle en production.
+  réelle en production. Un ADMIN de tenant peut désormais consulter uniquement
+  ses statistiques et membres, régler la palette et l'usage du logo déjà
+  approuvé, et effacer l'adresse d'un membre sous les gardes documentées. Seul
+  le godmode peut attribuer ou révoquer ce rôle.
 - Turnstile est configuré en mode géré pour l’apex, `www` et l’adresse
   `workers.dev`. Sa clé publique est versionnée ; sa clé privée reste un secret
   Worker.
@@ -115,8 +123,9 @@
   `/confidentialite` et `/mentions-legales`. Le `robots.txt` servi par
   Cloudflare conserve ses règles gérées et annonce
   `https://parkventory.com/sitemap.xml`.
-- 20 tests Worker/D1, 47 tests React, le typecheck Worker, le build et le dry-run
-  Wrangler de la gate réussissent. Le test de régression du callback vérifie que
+- 50 tests Worker/D1, 76 tests React, 2 tests de marque, le typecheck Worker, le
+  build et les dry-runs Wrangler préversion/production réussissent, soit 128
+  tests. Le test de régression du callback vérifie que
   l'API de vérification n'est appelée qu'une fois, que le token disparaît de
   l'URL et que l'écran de succès ne rebascule pas vers « lien incomplet ».
 
@@ -143,6 +152,8 @@
 - parcours authentifié à deux membres, partage puis réservation non vérifié ;
 - rendu co-marqué vérifié sur le candidat exact et les assets publics, mais pas
   encore observé dans une session VBS réelle en production ;
+- nomination d'un admin VBS, parcours authentifié `/app/admin` et effacement
+  d'une adresse non exercés sur des comptes réels en production ;
 - exercice réel de restauration D1 et réactivation DNSSEC Cloudflare non
   prouvés.
 

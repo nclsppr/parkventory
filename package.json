@@ -20,13 +20,16 @@
     "test:migrations": "node --test scripts/migrations.test.mjs",
     "typecheck:worker": "tsc -p worker/tsconfig.json",
     "test": "npm run test:brand && npm run test:migrations && npm run build && vitest run --config worker/vitest.config.ts && npm run test --workspace @parkventory/frontend",
-    "verify": "npm run brand:check && npm run test && npm run typecheck:worker && wrangler deploy --env=\"\" --dry-run",
+    "verify": "npm run brand:check && npm run test && npm run typecheck:worker && npm run cf:types:check && npm run dry-run:preview && npm run dry-run:production",
+    "dry-run:preview": "wrangler deploy --env=\"\" --dry-run",
+    "dry-run:production": "wrangler deploy --env production --dry-run",
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
     "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
     "db:migrate:production": "wrangler d1 migrations apply DB --env production --remote",
     "deploy": "npm run build && wrangler deploy",
     "deploy:production": "npm run build && wrangler deploy --env production",
-    "cf:types": "wrangler types --env production worker/worker-configuration.d.ts --include-runtime false"
+    "cf:types": "wrangler types --env production worker/worker-configuration.d.ts --include-runtime false",
+    "cf:types:check": "wrangler types --env production worker/worker-configuration.d.ts --include-runtime false --check"
   },
   "dependencies": {
     "hono": "4.13.4"

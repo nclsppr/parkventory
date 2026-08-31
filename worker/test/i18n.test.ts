@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
+  adminTenantSeoMetadata,
   alternateLinks,
   defaultLocale,
+  legacyAdminTenantIdFromPathname,
+  legacyRouteFromPathname,
   localeConfig,
   localeFromLanguagePreferences,
   localeFromLanguageTag,
   localeFromPathname,
   localizedManifestPath,
+  localizedAdminTenantPath,
+  localizedAdminTenantRouteFromPathname,
   localizedPath,
   localizedRouteFromPathname,
   localizedRoutePaths,
@@ -26,6 +31,11 @@ const localizedRouteIds: readonly LocalizedRouteId[] = [
   "app",
   "share",
   "find",
+  "tenantAdmin",
+  "adminOverview",
+  "adminTenants",
+  "adminUsers",
+  "adminOperations",
   "authCallback",
   "privacy",
   "legal",
@@ -37,6 +47,11 @@ const expectedPaths = {
     app: "/fr/app",
     share: "/fr/app/partager",
     find: "/fr/app/trouver",
+    tenantAdmin: "/fr/app/admin",
+    adminOverview: "/fr/admin",
+    adminTenants: "/fr/admin/tenants",
+    adminUsers: "/fr/admin/users",
+    adminOperations: "/fr/admin/operations",
     authCallback: "/fr/auth/callback",
     privacy: "/fr/confidentialite",
     legal: "/fr/mentions-legales",
@@ -46,6 +61,11 @@ const expectedPaths = {
     app: "/en/app",
     share: "/en/app/share",
     find: "/en/app/find",
+    tenantAdmin: "/en/app/admin",
+    adminOverview: "/en/admin",
+    adminTenants: "/en/admin/tenants",
+    adminUsers: "/en/admin/users",
+    adminOperations: "/en/admin/operations",
     authCallback: "/en/auth/callback",
     privacy: "/en/privacy",
     legal: "/en/legal-notice",
@@ -55,6 +75,11 @@ const expectedPaths = {
     app: "/de/app",
     share: "/de/app/teilen",
     find: "/de/app/suchen",
+    tenantAdmin: "/de/app/admin",
+    adminOverview: "/de/admin",
+    adminTenants: "/de/admin/tenants",
+    adminUsers: "/de/admin/users",
+    adminOperations: "/de/admin/operations",
     authCallback: "/de/auth/callback",
     privacy: "/de/datenschutz",
     legal: "/de/impressum",
@@ -64,6 +89,11 @@ const expectedPaths = {
     app: "/lb/app",
     share: "/lb/app/deelen",
     find: "/lb/app/fannen",
+    tenantAdmin: "/lb/app/admin",
+    adminOverview: "/lb/admin",
+    adminTenants: "/lb/admin/tenants",
+    adminUsers: "/lb/admin/users",
+    adminOperations: "/lb/admin/operations",
     authCallback: "/lb/auth/callback",
     privacy: "/lb/dateschutz",
     legal: "/lb/impressum",
@@ -87,7 +117,17 @@ const publicPageCases = supportedLocales.flatMap((locale) =>
   publicRouteIds.map((route) => ({ locale, route })),
 );
 
-const privateRouteIds = ["app", "share", "find", "authCallback"] as const;
+const privateRouteIds = [
+  "app",
+  "share",
+  "find",
+  "tenantAdmin",
+  "adminOverview",
+  "adminTenants",
+  "adminUsers",
+  "adminOperations",
+  "authCallback",
+] as const;
 const privatePageCases = supportedLocales.flatMap((locale) =>
   privateRouteIds.map((route) => ({ locale, route })),
 );
@@ -145,6 +185,61 @@ describe("routes localisées", () => {
     expect(localeFromPathname("/nl/app")).toBeNull();
     expect(localizedRouteFromPathname("/fr/app/inconnue")).toBeNull();
     expect(localizedRouteFromPathname("/lb/confidentialite")).toBeNull();
+  });
+
+  it("reconnaît les anciens chemins privés sans les confondre avec un détail tenant", () => {
+    expect(legacyRouteFromPathname("/app/admin")).toBe("tenantAdmin");
+    expect(legacyRouteFromPathname("/admin")).toBe("adminOverview");
+    expect(legacyRouteFromPathname("/admin/tenants")).toBe("adminTenants");
+    expect(legacyRouteFromPathname("/admin/users")).toBe("adminUsers");
+    expect(legacyRouteFromPathname("/admin/operations")).toBe("adminOperations");
+    expect(legacyRouteFromPathname("/admin/tenants/org_acme")).toBeNull();
+  });
+});
+
+describe("détail admin tenant localisé", () => {
+  it.each(supportedLocales)("encode et relit un identifiant sûr en %s", (locale) => {
+    const tenantId = "org:acme_2026.08-31";
+    const pathname = localizedAdminTenantPath(locale, tenantId);
+
+    expect(pathname).toBe(`${expectedPaths[locale].adminTenants}/org%3Aacme_2026.08-31`);
+    expect(localizedAdminTenantRouteFromPathname(pathname)).toEqual({ locale, tenantId });
+    expect(localizedAdminTenantRouteFromPathname(`${pathname}/`)).toEqual({ locale, tenantId });
+  });
+
+  it("relit le détail historique pour permettre sa redirection", () => {
+    expect(legacyAdminTenantIdFromPathname("/admin/tenants/org%3Aacme_2026.08-31"))
+      .toBe("org:acme_2026.08-31");
+  });
+
+  it.each([
+    "",
+    ".",
+    "..",
+    "org/acme",
+    "org acme",
+    "x".repeat(161),
+  ])("refuse l’identifiant non canonique %j dans le builder", (tenantId) => {
+    expect(() => localizedAdminTenantPath("fr", tenantId)).toThrow(TypeError);
+  });
+
+  it.each([
+    "/fr/admin/tenants/%E0%A4%A",
+    "/fr/admin/tenants/org%2Facme",
+    "/fr/admin/tenants/%2E%2E",
+    "/fr/admin/tenants/org_acme/members",
+    "/fr-FR/admin/tenants/org_acme",
+    "/nl/admin/tenants/org_acme",
+  ])("rend null pour un détail invalide afin que le routeur produise une 404: %s", (pathname) => {
+    expect(localizedAdminTenantRouteFromPathname(pathname)).toBeNull();
+  });
+
+  it("produit une canonique privée exacte sans hreflang", () => {
+    const metadata = adminTenantSeoMetadata("de", "org:acme");
+
+    expect(metadata.canonicalUrl).toBe("https://parkventory.com/de/admin/tenants/org%3Aacme");
+    expect(metadata.indexable).toBe(false);
+    expect(metadata.alternates).toEqual([]);
   });
 });
 

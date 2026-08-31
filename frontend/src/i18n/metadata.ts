@@ -1,4 +1,5 @@
 import {
+  adminTenantSeoMetadata,
   localizedManifestPath,
   seoMetadata,
   socialImageUrl,
@@ -25,10 +26,16 @@ function link(rel: string, href: string, hrefLang?: string) {
   return element;
 }
 
-export function applyClientMetadata(locale: Locale, route: RouteId) {
+export function applyClientMetadata(
+  locale: Locale,
+  route: RouteId | "adminTenant",
+  tenantId?: string,
+) {
   document.head.querySelectorAll(`[${managedAttribute}="true"]`).forEach((element) => element.remove());
 
-  const seo = seoMetadata(locale, route);
+  const seo = route === "adminTenant" && tenantId
+    ? adminTenantSeoMetadata(locale, tenantId)
+    : seoMetadata(locale, route === "adminTenant" ? "notFound" : route);
   const indexable = seo.indexable && window.location.hostname === "parkventory.com";
   document.title = seo.title;
   const elements: HTMLElement[] = [

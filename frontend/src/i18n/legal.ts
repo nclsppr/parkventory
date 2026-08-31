@@ -25,6 +25,7 @@ interface PrivacyMessages {
   retentionItems: readonly string[];
   retentionText: string;
   rightsTitle: string;
+  tenantAdminErasureText: string;
   rightsText: string;
   rightsAuthority: string;
   cookiesTitle: string;
@@ -98,6 +99,8 @@ export const legalMessages = {
       retentionText:
         "Les demandes d’accès, d’export et de suppression sont traitées manuellement. Aucune purge automatique n’est présentée comme active à ce stade ; des durées plus précises seront publiées avec son automatisation.",
       rightsTitle: "Vos choix et vos droits",
+      tenantAdminErasureText:
+        "Un administrateur de votre organisation peut effacer l’adresse e-mail d’un compte membre et révoquer ses sessions ; l’historique de partage et de réservation reste alors conservé sans afficher cette adresse.",
       rightsText:
         "Vous pouvez demander l’accès, la correction, l’export ou la suppression de vos données, ainsi que vous opposer à un traitement lorsque le droit le permet. La demande est traitée manuellement pendant la bêta via",
       rightsAuthority:
@@ -171,6 +174,8 @@ export const legalMessages = {
       retentionText:
         "Requests for access, export and deletion are handled manually. No automatic purge is presented as active at this stage; more precise periods will be published when it is automated.",
       rightsTitle: "Your choices and rights",
+      tenantAdminErasureText:
+        "An administrator in your organisation can erase a member account’s email address and revoke its sessions; sharing and booking history is then retained without displaying that address.",
       rightsText:
         "You can request access to, correction, export or deletion of your data, and object to processing where the law permits. Requests are handled manually during the beta via",
       rightsAuthority:
@@ -243,6 +248,8 @@ export const legalMessages = {
       retentionText:
         "Anträge auf Auskunft, Export und Löschung werden manuell bearbeitet. Eine automatische Löschung wird derzeit nicht als aktiv dargestellt; genauere Fristen werden mit ihrer Automatisierung veröffentlicht.",
       rightsTitle: "Ihre Wahlmöglichkeiten und Rechte",
+      tenantAdminErasureText:
+        "Eine Administration Ihrer Organisation kann die E-Mail-Adresse eines Mitgliedskontos löschen und dessen Sitzungen widerrufen; der Verlauf von Freigaben und Buchungen bleibt anschließend ohne Anzeige dieser Adresse erhalten.",
       rightsText:
         "Sie können Auskunft, Berichtigung, Export oder Löschung Ihrer Daten verlangen und der Verarbeitung widersprechen, soweit das Recht dies zulässt. Anträge werden während der Beta manuell bearbeitet über",
       rightsAuthority:
@@ -315,6 +322,8 @@ export const legalMessages = {
       retentionText:
         "Ufroe fir Zougang, Export a Läschung gi manuell behandelt. Eng automatesch Läschung gëtt an dësem Stadium net als aktiv duergestallt; méi genee Friste gi mat hirer Automatiséierung verëffentlecht.",
       rightsTitle: "Är Choixen a Rechter",
+      tenantAdminErasureText:
+        "Eng Administratioun vun Ärer Organisatioun kann d’E-Mail-Adress vun engem Memberskonto läschen a seng Sessiounen zréckruffen; d’Historik vun Deelen a Reservatioune bleift dono erhalen, ouni dës Adress unzeweisen.",
       rightsText:
         "Dir kënnt Zougang, Korrektur, Export oder Läschung vun Ären Donnéeë froen an enger Veraarbechtung widderspriechen, wann d’Recht dat erlaabt. D’Ufro gëtt wärend der Beta manuell behandelt iwwer",
       rightsAuthority:
