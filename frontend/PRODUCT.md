@@ -14,6 +14,9 @@ web
   et chaque compte enregistré, puis rassemble les faits nécessaires à
   l'investigation d'un incident. Son identité exacte reste une configuration
   privée du Worker et n'est jamais versionnée dans le frontend.
+- Un administrateur de tenant règle l’identité visuelle, consulte uniquement
+  l’usage et les membres de son organisation et peut effacer l’adresse d’un
+  membre selon un parcours de confidentialité borné.
 
 ## Product Purpose
 
@@ -49,9 +52,9 @@ les occurrences de la même cause.
   l'opérateur. Le rôle `ADMIN` d'un tenant ne suffit jamais.
 - La console affiche uniquement des données réelles de D1 et des diagnostics
   reproductibles. Elle n'invente ni activité, ni client, ni état de santé.
-- La première livraison est une surface d'observation et d'investigation. Toute
-  action correctrice sur les comptes ou les données reste une décision ouverte à
-  spécifier, autoriser et auditer séparément.
+- Le godmode peut nommer un administrateur de tenant. Celui-ci peut modifier les
+  couleurs, activer un logo déjà autorisé et effacer l’e-mail d’un membre simple ;
+  toute autre correction de compte ou de donnée métier reste hors surface.
 - Les magic links restent à usage unique et les sessions restent serveur.
 
 ## Brand Commitments

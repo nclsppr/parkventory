@@ -58,6 +58,12 @@ Workers Builds n'applique pas les migrations D1. Toute migration créant une
 table utilisée par le Worker doit donc être appliquée et vérifiée dans
 l'environnement ciblé avant la fusion sur `main`, qui déclenche le déploiement.
 
+La migration `0005_tenant_administration.sql` doit être appliquée avant tout
+Worker qui lit `logo_enabled` ou `email_erased_at`. Elle ajoute uniquement des
+colonnes, index et triggers ; vérifier `membership_org_role_created_idx`,
+`user_account_email_erased_idx`, `user_account_email_erasure_guard` et les deux
+triggers `organization_branding_tenant_admin_*` en préversion puis en production.
+
 ## Préparer le candidat godmode
 
 `GODMODE_ADMIN_EMAIL_SHA256` contient uniquement le SHA-256 hexadécimal de
@@ -107,7 +113,7 @@ et incidents classifiés écrits par le Worker portent `WORKER`.
 ## Vérifications après déploiement
 
 1. `GET /api/v1/health` répond `200` avec `{"status":"ok"}`.
-2. Les routes `/`, `/app`, `/app/partager`, `/app/trouver`, `/admin` et
+2. Les routes `/`, `/app`, `/app/partager`, `/app/trouver`, `/app/admin`, `/admin` et
    `/auth/callback` répondent directement ; ce seul statut ne prouve pas
    l’autorisation godmode.
 3. Un magic link réel arrive, ne fonctionne qu’une fois et expire après 15 min.
@@ -141,6 +147,13 @@ et incidents classifiés écrits par le Worker portent `WORKER`.
     Les logs applicatifs structurés n’exposent que la route canonique et les logs
     d’invocation Cloudflare restent désactivés. Tester aussi la compatibilité
     transitoire avec un ancien lien query sans en recopier la valeur.
+11. Sans session, `GET /api/v1/tenant-admin/overview` répond `401`; un membre
+    simple reçoit `403`. Après nomination godmode, l’admin tenant reçoit `200`,
+    ne voit que son domaine et ne peut fournir aucun autre tenant à l’API.
+12. Sur des comptes de test uniquement, vérifier la modification des deux
+    couleurs, l’opt-out du logo, puis l’effacement en deux étapes d’un membre :
+    sessions et demandes de lien absentes, e-mail public `null`, adhésion et faits
+    métier conservés. Ne jamais effectuer ce smoke sur une identité réelle.
 
 ## Investigation godmode
 
@@ -160,7 +173,8 @@ ouvrir « Voir les lignes », puis suivre le tenant ou une référence interne v
 le journal. Un résultat `MISSING` décrit l’absence d’un état système attendu et
 ne fabrique donc aucun identifiant cible.
 
-La console est en lecture seule. Une correction D1 suit une procédure séparée
+Hormis la nomination bornée d’un administrateur de tenant, les données métier de
+la console sont en lecture seule. Une correction D1 suit une procédure séparée
 avec export ou bookmark Time Travel, requête bornée, contrôle avant/après et plan
 de retour arrière. Ne jamais improviser une modification depuis le navigateur.
 

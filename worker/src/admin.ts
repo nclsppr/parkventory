@@ -157,6 +157,16 @@ function escapeLike(value: string): string {
   return value.replace(/[\\%_]/g, (character) => `\\${character}`);
 }
 
+function readBody<T>(request: Request): Promise<T | null> {
+  return request.json<T>().catch(() => null);
+}
+
+function publicEmail(value: unknown, erasedAt?: unknown): string | null {
+  if (erasedAt !== undefined && erasedAt !== null) return null;
+  if (typeof value !== "string") return null;
+  return value.startsWith("erased_") && value.endsWith("@privacy.parkventory.invalid") ? null : value;
+}
+
 function activityView(row: ActivityRow) {
   return {
     id: row.id,
@@ -184,7 +194,7 @@ function activityView(row: ActivityRow) {
       : {
           id: row.user_id,
           displayName: row.actor_display_name,
-          email: row.actor_email,
+          email: publicEmail(row.actor_email),
         },
   };
 }
@@ -759,6 +769,70 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
     });
   });
 
+  app.patch("/api/v1/admin/tenants/:id/members/:membershipId/role", async (context) => {
+    const tenantId = context.req.param("id");
+    const membershipId = context.req.param("membershipId");
+    if (!validIdentifier(tenantId) || !validIdentifier(membershipId)) {
+      return problem(400, "Les identifiants du tenant ou du membre ne sont pas valides.");
+    }
+    const body = await readBody<{ role?: unknown }>(context.req.raw);
+    if (!body || (body.role !== "ADMIN" && body.role !== "MEMBER")) {
+      return problem(400, "Le rôle demandé n’est pas valide.");
+    }
+    const target = await context.env.DB.prepare(`
+      SELECT membership.id, membership.role, membership.user_id, user_account.email_erased_at
+      FROM membership
+      JOIN organization ON organization.id = membership.organization_id
+      JOIN user_account ON user_account.id = membership.user_id
+      WHERE membership.id = ?1
+        AND membership.organization_id = ?2
+        AND organization.kind = 'TENANT'
+    `).bind(membershipId, tenantId).first<{
+      id: string;
+      role: "MEMBER" | "ADMIN";
+      user_id: string;
+      email_erased_at: number | null;
+    }>();
+    if (!target) return problem(404, "Ce membre n’existe pas dans ce tenant.");
+    if (target.email_erased_at !== null && body.role === "ADMIN") {
+      return problem(409, "Un compte dont l’adresse a été effacée ne peut pas devenir administrateur.");
+    }
+    if (target.role !== body.role) {
+      const update = await context.env.DB.prepare(`
+        UPDATE membership SET role = ?1
+        WHERE id = ?2 AND organization_id = ?3 AND role = ?4
+      `).bind(body.role, membershipId, tenantId, target.role).run();
+      if ((update.meta.changes ?? 0) < 1) {
+        const current = await context.env.DB.prepare(`
+          SELECT role FROM membership WHERE id = ?1 AND organization_id = ?2
+        `).bind(membershipId, tenantId).first<{ role: "MEMBER" | "ADMIN" }>();
+        if (current?.role !== body.role) {
+          return problem(409, "Le rôle de ce membre vient de changer. Actualisez la page et réessayez.");
+        }
+      } else {
+        const actor = context.get("member");
+        await recordActivityEvent(context.env.DB, {
+          eventType: body.role === "ADMIN" ? "TENANT_ADMIN_GRANTED" : "TENANT_ADMIN_REVOKED",
+          occurredAt: nowSeconds(),
+          organizationId: tenantId,
+          userId: actor.userId,
+          membershipId: actor.membershipId,
+          entityType: "MEMBERSHIP",
+          entityId: membershipId,
+          requestId: context.get("requestId"),
+          route: "/api/v1/admin/tenants/:id/members/:membershipId/role",
+        });
+      }
+    }
+    return context.json({
+      accepted: true,
+      role: body.role,
+      message: body.role === "ADMIN"
+        ? "Le membre est maintenant administrateur du tenant."
+        : "Le membre est maintenant utilisateur du tenant.",
+    });
+  });
+
   app.get("/api/v1/admin/tenants/:id", async (context) => {
     const tenantId = context.req.param("id");
     if (!validIdentifier(tenantId)) return problem(400, "L’identifiant du tenant n’est pas valide.");
@@ -772,7 +846,8 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
           organization.created_at,
           branding.enabled AS branding_enabled,
           branding.company_name AS branding_company_name,
-          branding.logo_url AS branding_logo_url
+          branding.logo_url AS branding_logo_url,
+          branding.logo_enabled AS branding_logo_enabled
         FROM organization
         LEFT JOIN organization_branding branding
           ON branding.normalized_domain = organization.normalized_domain
@@ -814,6 +889,7 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
           user_account.id AS user_id,
           user_account.display_name,
           user_account.normalized_email,
+          user_account.email_erased_at,
           (SELECT COUNT(*) FROM app_session
             WHERE app_session.membership_id = membership.id
               AND app_session.revoked_at IS NULL
@@ -837,6 +913,7 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
           user_account.id AS owner_user_id,
           user_account.display_name AS owner_display_name,
           user_account.normalized_email AS owner_email,
+          user_account.email_erased_at AS owner_email_erased_at,
           (SELECT COUNT(*) FROM availability_offer
             WHERE availability_offer.parking_spot_id = parking_spot.id) AS shares,
           (SELECT COUNT(*) FROM reservation
@@ -865,7 +942,9 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
           : {
               enabled: Number(tenant.branding_enabled) === 1,
               companyName: String(tenant.branding_company_name),
-              logoUrl: String(tenant.branding_logo_url),
+              logoUrl: Number(tenant.branding_logo_enabled ?? 1) === 1
+                ? String(tenant.branding_logo_url)
+                : null,
             },
       },
       stats: {
@@ -882,7 +961,8 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
           membershipId: String(member.membership_id),
           userId: String(member.user_id),
           displayName: String(member.display_name),
-          email: String(member.normalized_email),
+          email: publicEmail(member.normalized_email, member.email_erased_at),
+          emailErasedAt: member.email_erased_at === null ? null : Number(member.email_erased_at),
           role: String(member.role),
           createdAt: Number(member.created_at),
           activeSessions: Number(member.active_sessions ?? 0),
@@ -901,7 +981,7 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
             membershipId: String(spot.owner_membership_id),
             userId: String(spot.owner_user_id),
             displayName: String(spot.owner_display_name),
-            email: String(spot.owner_email),
+            email: publicEmail(spot.owner_email, spot.owner_email_erased_at),
           },
           shares: Number(spot.shares ?? 0),
           reservations: Number(spot.reservations ?? 0),
@@ -933,7 +1013,8 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
     if (query) {
       bindings.push(`%${escapeLike(query.toLowerCase())}%`);
       clauses.push(`(
-        user_account.normalized_email LIKE ?${bindings.length} ESCAPE '\\'
+        (user_account.email_erased_at IS NULL
+          AND user_account.normalized_email LIKE ?${bindings.length} ESCAPE '\\')
         OR lower(user_account.display_name) LIKE ?${bindings.length} ESCAPE '\\'
       )`);
     }
@@ -954,6 +1035,7 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
       SELECT
         user_account.id,
         user_account.normalized_email,
+        user_account.email_erased_at,
         user_account.display_name,
         user_account.created_at,
         membership.id AS membership_id,
@@ -989,7 +1071,8 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
     const rows = result.results.slice(0, limit);
     const items = rows.map((row) => ({
       id: String(row.id),
-      email: String(row.normalized_email),
+      email: publicEmail(row.normalized_email, row.email_erased_at),
+      emailErasedAt: row.email_erased_at === null ? null : Number(row.email_erased_at),
       displayName: String(row.display_name),
       createdAt: Number(row.created_at),
       membershipId: String(row.membership_id),

@@ -6,11 +6,10 @@
 | Quel sous-domaine expéditeur utiliser pour les magic links ? | Onboarding Email Service |
 | Quelle procédure de sauvegarde/restauration D1 est suffisante pour la bêta ? | Cutover public |
 | Le denylist de domaines personnels doit-il devenir un dataset maintenu ? | Ouverture large |
-| Quand automatiser export et suppression des comptes ? | Premiers utilisateurs externes |
+| Quand automatiser l’export complet et la suppression des faits métier au-delà de l’effacement d’e-mail tenant ? | Premières demandes externes concernées |
 | Quelle durée et quelle purge automatique appliquer à `activity_event` ? | Avant que son volume rende la conservation indéfinie disproportionnée |
-| Quelles actions correctrices, confirmations et traces sont acceptables dans la console ? | Avant toute mutation godmode |
+| Quelles autres actions correctrices sont acceptables dans la console globale ? | Avant toute nouvelle mutation godmode |
 
-La console globale d’observation est décidée par l’ADR-0018 ; son activation reste
-conditionnée par la migration, le secret et un parcours réel vérifié.
-L’administration autonome des tenants, les invitations, les plans et les
-notifications métier restent explicitement différés.
+La console globale et l’administration bornée des tenants sont implémentées.
+Les invitations, les plans, l’export automatisé, la suppression complète des
+faits métier et les notifications métier restent explicitement différés.

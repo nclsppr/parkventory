@@ -773,6 +773,42 @@
   font-weight: 750;
 }
 
+.admin-role-action {
+  min-height: 36px;
+  display: block;
+  margin-top: 7px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--cyan);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-role-confirm {
+  display: flex;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.admin-role-confirm button {
+  min-height: 36px;
+  padding: 0 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.admin-role-confirm button:first-child {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
 .admin-pager {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;

@@ -5,6 +5,7 @@ import {
   LogOut,
   Menu,
   Search,
+  ShieldCheck,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -14,12 +15,13 @@ import {
   environmentLabel,
   findUrl,
   shareUrl,
+  tenantAdminUrl,
 } from "../config";
 import { AppLink } from "./AppLink";
 import { ApplicationBrand, useOrganizationBranding } from "./OrganizationBranding";
 import { ThemeToggle } from "./Theme";
 
-export type ApplicationRoute = "dashboard" | "share" | "find";
+export type ApplicationRoute = "dashboard" | "share" | "find" | "tenantAdmin";
 export type NoticeTone = "success" | "error";
 
 export interface ShellNavigationItem {
@@ -59,6 +61,11 @@ export const applicationNavigation: readonly ShellNavigationItem[] = [
   { route: "dashboard", label: "Accueil", mobileLabel: "Accueil", href: appUrl, icon: Home },
   { route: "share", label: "Partager ma place", mobileLabel: "Partager", href: shareUrl, icon: CalendarDays },
   { route: "find", label: "Trouver une place", mobileLabel: "Trouver", href: findUrl, icon: Search },
+];
+
+export const tenantAdminNavigation: readonly ShellNavigationItem[] = [
+  ...applicationNavigation,
+  { route: "tenantAdmin", label: "Administration du tenant", mobileLabel: "Admin", href: tenantAdminUrl, icon: ShieldCheck },
 ];
 
 export function EnvironmentStatus({ loading }: { loading: boolean }) {

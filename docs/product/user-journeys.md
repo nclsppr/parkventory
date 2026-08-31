@@ -38,10 +38,21 @@ elle n’est pas réservée.
 4. La console présente la synthèse globale, puis les listes paginées des tenants,
    des comptes et des événements ainsi que les diagnostics classifiés.
 5. L’opérateur remonte des faits et des identifiants internes pour investiguer ;
-   il ne modifie ni compte, ni adhésion, ni donnée métier depuis la console.
+   sa seule mutation bornée est de nommer ou révoquer un administrateur de tenant.
+
+## 6. Administrer son tenant
+
+1. L’opérateur nomme un membre `ADMIN` depuis le détail du tenant.
+2. Le membre voit une destination « Administration du tenant » dans son espace.
+3. Le Worker calcule les statistiques et la liste des membres en utilisant
+   exclusivement `organization_id` de la session.
+4. L’admin peut activer les couleurs du tenant et, s’il existe, son logo autorisé.
+5. Pour effacer un e-mail, il ouvre une confirmation qui explique la révocation
+   des sessions, l’anonymisation et la conservation de l’historique métier.
 
 ## Navigation
 
-Les seules destinations du membre restent Accueil, Partager et Trouver. La
+Les destinations du membre restent Accueil, Partager et Trouver ; une quatrième
+destination Administration apparaît uniquement pour un `ADMIN` de tenant. La
 navigation opérateur séparée contient Vue d’ensemble, Tenants, Utilisateurs et
 Opérations ; elle n’est jamais affichée aux membres.

@@ -24,6 +24,7 @@ const applicationRoutes: Record<string, ApplicationRoute> = {
   "/app": "dashboard",
   "/app/partager": "share",
   "/app/trouver": "find",
+  "/app/admin": "tenantAdmin",
 };
 
 function legacyIntentTarget() {
@@ -91,6 +92,7 @@ function AppContent() {
       "/app": "Accueil — Parkventory",
       "/app/partager": "Partager ma place — Parkventory",
       "/app/trouver": "Trouver une place — Parkventory",
+      "/app/admin": "Administration du tenant — Parkventory",
       "/admin": "Vue d’ensemble — Administration Parkventory",
       "/admin/tenants": "Tenants — Administration Parkventory",
       "/admin/users": "Utilisateurs — Administration Parkventory",
@@ -199,10 +201,12 @@ function AuthenticatedApplication({
     );
   }
   if (session?.godmode) return <NotFoundPage />;
+  if (route === "tenantAdmin" && session?.role !== "ADMIN") return <NotFoundPage />;
   return (
     <ApplicationPage
       route={route as ApplicationRoute}
       initialBranding={session?.branding ?? null}
+      isTenantAdmin={session?.role === "ADMIN"}
       onSessionExpired={handleSessionExpired}
     />
   );

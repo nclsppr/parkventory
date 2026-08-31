@@ -3,6 +3,7 @@ export const homeUrl = baseUrl;
 export const appUrl = `${baseUrl}app`;
 export const shareUrl = `${baseUrl}app/partager`;
 export const findUrl = `${baseUrl}app/trouver`;
+export const tenantAdminUrl = `${baseUrl}app/admin`;
 export const adminUrl = `${baseUrl}admin`;
 export const adminTenantsUrl = `${baseUrl}admin/tenants`;
 export const adminUsersUrl = `${baseUrl}admin/users`;

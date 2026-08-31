@@ -12,6 +12,8 @@ import type {
   SessionData,
   ShareRequest,
   SpotRequest,
+  TenantAdminMembersData,
+  TenantAdminOverviewData,
 } from "../types";
 
 const apiBase = import.meta.env.VITE_API_BASE_URL || "/api/v1";
@@ -132,6 +134,48 @@ export function loadAdminTenants({
 
 export function loadAdminTenant(id: string): Promise<AdminTenantDetailData> {
   return request<AdminTenantDetailData>(`/admin/tenants/${encodeURIComponent(id)}`);
+}
+
+export function updateAdminTenantMemberRole(
+  tenantId: string,
+  membershipId: string,
+  role: "MEMBER" | "ADMIN",
+): Promise<ActionResponse & { role: "MEMBER" | "ADMIN" }> {
+  return request<ActionResponse & { role: "MEMBER" | "ADMIN" }>(
+    `/admin/tenants/${encodeURIComponent(tenantId)}/members/${encodeURIComponent(membershipId)}/role`,
+    { method: "PATCH", body: JSON.stringify({ role }) },
+  );
+}
+
+export function loadTenantAdminOverview(): Promise<TenantAdminOverviewData> {
+  return request<TenantAdminOverviewData>("/tenant-admin/overview");
+}
+
+export function loadTenantAdminMembers({
+  limit = 25,
+  cursor,
+  q,
+}: { limit?: number; cursor?: string; q?: string } = {}): Promise<TenantAdminMembersData> {
+  return request<TenantAdminMembersData>(queryPath("/tenant-admin/members", { limit, cursor, q }));
+}
+
+export function updateTenantAdminBranding(payload: {
+  enabled: boolean;
+  logoEnabled: boolean;
+  actionColor: string;
+  availableColor: string;
+}): Promise<ActionResponse> {
+  return request<ActionResponse>("/tenant-admin/branding", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function eraseTenantMemberEmail(membershipId: string): Promise<ActionResponse> {
+  return request<ActionResponse>(`/tenant-admin/members/${encodeURIComponent(membershipId)}/email`, {
+    method: "DELETE",
+    body: JSON.stringify({ confirmation: "EFFACER" }),
+  });
 }
 
 export function loadAdminUsers({

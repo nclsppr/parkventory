@@ -203,6 +203,46 @@ describe("Parkventory", () => {
     expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining("/api/v1/admin/"), expect.anything());
   });
 
+  it("masque /app/admin à un membre simple sans charger les données tenant-admin", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(session));
+    vi.stubGlobal("fetch", fetchMock);
+    window.history.replaceState({}, "", "/app/admin");
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { name: "Cette place n’existe pas." })).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining("/tenant-admin/"), expect.anything());
+  });
+
+  it("ouvre l’administration bornée et sa quatrième destination à un ADMIN de tenant", async () => {
+    const tenantAdminSession = { ...session, role: "ADMIN" as const };
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/auth/session")) return jsonResponse(tenantAdminSession);
+      if (url.endsWith("/dashboard")) return jsonResponse(dashboard);
+      if (url.endsWith("/tenant-admin/overview")) return jsonResponse({
+        generatedAt: 1_777_000_000,
+        tenant: { id: "org-acme", name: "Acme", domain: "acme.test" },
+        totals: { users: 2, administrators: 1, parkingSpots: 1, shares: 2, reservations: 1, activeSessions: 1 },
+        period: { days: 30, from: 1_774_408_000, to: 1_777_000_000, shares: 2, reservations: 1, activeUsers: 2 },
+        series: [{ date: "2026-04-23", shares: 2, reservations: 1 }],
+        branding: { configured: false, enabled: false, actionColor: "#C8F913", availableColor: "#15C9D5", logoAvailable: false, logoEnabled: false, logoUrl: null, updatedAt: null },
+      });
+      if (url.endsWith("/tenant-admin/members?limit=25")) {
+        return jsonResponse({ items: [], page: { nextCursor: null } });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    window.history.replaceState({}, "", "/app/admin");
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { name: "Acme", level: 1 })).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "Administration du tenant" })[0]).toHaveAttribute("href", "/app/admin");
+    expect(screen.getByRole("region", { name: "Indicateurs du tenant" })).toHaveTextContent("Utilisateurs2");
+    expect(fetchMock).toHaveBeenCalledWith("/api/v1/tenant-admin/overview", expect.objectContaining({ credentials: "include" }));
+  });
+
   it("charge le shell Parkventory canonique et ses quatre destinations à 320 px", async () => {
     Object.defineProperty(window, "innerWidth", { configurable: true, value: 320 });
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
