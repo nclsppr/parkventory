@@ -2,6 +2,58 @@ import type { AvailabilityItem } from "../types";
 
 export const DEFAULT_SITE_TIME_ZONE = "Europe/Paris";
 
+// Unicode CLDR, locale lb, calendrier grégorien :
+// https://github.com/unicode-org/cldr/blob/84ce74bdf1207206a0d3c6f7224c036d75056771/common/main/lb.xml
+const LUXEMBOURGISH_MONTHS = [
+  "Januar",
+  "Februar",
+  "Mäerz",
+  "Abrëll",
+  "Mee",
+  "Juni",
+  "Juli",
+  "August",
+  "September",
+  "Oktober",
+  "November",
+  "Dezember",
+] as const;
+
+const LUXEMBOURGISH_WEEKDAYS = [
+  "Sonndeg",
+  "Méindeg",
+  "Dënschdeg",
+  "Mëttwoch",
+  "Donneschdeg",
+  "Freideg",
+  "Samschdeg",
+] as const;
+
+function localeLanguage(intlLocale: string) {
+  return intlLocale.split("-")[0].toLowerCase();
+}
+
+function timeZoneLocation(timeZone: string) {
+  return timeZone.split("/").at(-1)?.replaceAll("_", " ").trim();
+}
+
+function timeZoneIsValid(timeZone: string) {
+  try {
+    new Intl.DateTimeFormat("en", { timeZone });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function localeIsSupported(intlLocale: string) {
+  try {
+    return Intl.DateTimeFormat.supportedLocalesOf([intlLocale]).length > 0;
+  } catch {
+    return false;
+  }
+}
+
 function calendarParts(value: Date, timeZone: string) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone,
@@ -62,7 +114,8 @@ export function dateInputValue(
   timeZone = DEFAULT_SITE_TIME_ZONE,
   now = new Date(),
 ) {
-  const { year, month, day } = calendarParts(now, timeZone);
+  const safeTimeZone = timeZoneIsValid(timeZone) ? timeZone : DEFAULT_SITE_TIME_ZONE;
+  const { year, month, day } = calendarParts(now, safeTimeZone);
   const shiftedDate = new Date(Date.UTC(year, month - 1, day + daysFromToday));
   return shiftedDate.toISOString().slice(0, 10);
 }
@@ -74,6 +127,18 @@ export function formatInputDate(
 ) {
   const [year, month, day] = value.split("-").map(Number);
   if (!year || !month || !day) return fallback;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year
+    || date.getUTCMonth() !== month - 1
+    || date.getUTCDate() !== day
+  ) return fallback;
+  if (localeLanguage(intlLocale) === "lb") {
+    const monthLabel = LUXEMBOURGISH_MONTHS[month - 1];
+    const weekdayLabel = LUXEMBOURGISH_WEEKDAYS[date.getUTCDay()];
+    if (!monthLabel || !weekdayLabel) return fallback;
+    return `${weekdayLabel}, ${day}. ${monthLabel} ${year}`;
+  }
   return new Intl.DateTimeFormat(intlLocale, {
     weekday: "long",
     day: "numeric",
@@ -90,6 +155,9 @@ export function formatInputTime(
   const [hour, minute] = value.split(":").map(Number);
   if (!Number.isInteger(hour) || !Number.isInteger(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
     return fallback;
+  }
+  if (localeLanguage(intlLocale) === "lb") {
+    return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
   }
   return new Intl.DateTimeFormat(intlLocale, {
     hour: "2-digit",
@@ -121,7 +189,7 @@ export function formatTimeRangePhrase(
   const formattedTo = formatInputTime(to, intlLocale, fallback);
   if (formattedFrom === fallback || formattedTo === fallback) return fallback;
 
-  const language = intlLocale.split("-")[0].toLowerCase();
+  const language = localeLanguage(intlLocale);
   if (language === "de") return `von ${formattedFrom} bis ${formattedTo} Uhr`;
   if (language === "lb") return `vun ${formattedFrom} bis ${formattedTo} Auer`;
   return `${formattedFrom} – ${formattedTo}`;
@@ -170,16 +238,26 @@ export function formatTimeZone(
 ) {
   if (!intlLocale) {
     if (!timeZone) return missingLabel;
-    const location = timeZone.split("/").at(-1)?.replaceAll("_", " ").trim();
+    if (!timeZoneIsValid(timeZone)) return localTimeLabel;
+    const location = timeZoneLocation(timeZone);
     return location ? `Heure de ${location}` : localTimeLabel;
   }
   if (!timeZone) return missingLabel;
+  if (!timeZoneIsValid(timeZone)) return localTimeLabel;
+  const location = timeZoneLocation(timeZone);
   try {
+    if (!localeIsSupported(intlLocale)) return location || localTimeLabel;
     const instant = referenceInstant(referenceDate, timeZone);
-    const timeZoneName = new Intl.DateTimeFormat(intlLocale, {
+    const formatter = new Intl.DateTimeFormat(intlLocale, {
       timeZone,
       timeZoneName: "long",
-    }).formatToParts(instant).find((part) => part.type === "timeZoneName")?.value;
+    });
+    if (localeLanguage(formatter.resolvedOptions().locale) !== localeLanguage(intlLocale)) {
+      return location || localTimeLabel;
+    }
+    const timeZoneName = formatter
+      .formatToParts(instant)
+      .find((part) => part.type === "timeZoneName")?.value;
     return timeZoneName || localTimeLabel;
   } catch {
     return localTimeLabel;

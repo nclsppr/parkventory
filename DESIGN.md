@@ -64,8 +64,11 @@ financier. Elle reste humaine, rapide et utile avant d'être spectaculaire.
   « partager » dans les quatre langues ; disponibilité et créneau décrivent
   l’état métier, pas une action concurrente.
 - Dates, heures, nombres et pluriels utilisent `Intl` avec `fr-LU`, `en-GB`,
-  `de-LU` ou `lb-LU`. Les valeurs brutes restent disponibles pour éviter de
-  reformater un texte déjà localisé par le serveur.
+  `de-LU` ou `lb-LU`. Un repli déterministe issu d’Unicode CLDR maintient les
+  dates et heures en luxembourgeois lorsque le navigateur n’embarque pas cette
+  locale ; le fuseau emploie alors son lieu IANA plutôt qu’un nom anglais. Les
+  valeurs brutes restent disponibles pour éviter de reformater un texte déjà
+  localisé par le serveur.
 - Les compositions doivent accepter les longueurs allemandes et
   luxembourgeoises à 320 px, à 200 % de zoom et sans réduire le texte sous les
   tailles accessibles.

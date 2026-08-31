@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { localeConfig, supportedLocales } from "../../../shared/i18n";
 import {
   dateInputValue,
@@ -6,10 +6,15 @@ import {
   formatAvailabilityTime,
   formatAvailabilityTimePhrase,
   formatInputDate,
+  formatInputTime,
   formatTimeRange,
   formatTimeRangePhrase,
   formatTimeZone,
 } from "./dates";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("dateInputValue", () => {
   it("calcule aujourd’hui et demain dans le fuseau du parking", () => {
@@ -18,6 +23,7 @@ describe("dateInputValue", () => {
     expect(dateInputValue(0, "Europe/Paris", nearUtcMidnight)).toBe("2026-09-01");
     expect(dateInputValue(1, "Europe/Paris", nearUtcMidnight)).toBe("2026-09-02");
     expect(dateInputValue(0, "America/New_York", nearUtcMidnight)).toBe("2026-08-31");
+    expect(dateInputValue(0, "Invalid/Zone", nearUtcMidnight)).toBe("2026-09-01");
   });
 });
 
@@ -26,6 +32,7 @@ describe("formatTimeZone", () => {
     expect(formatTimeZone("Europe/Paris")).toBe("Heure de Paris");
     expect(formatTimeZone("America/New_York")).toBe("Heure de New York");
     expect(formatTimeZone(null)).toBe("Non renseignée");
+    expect(formatTimeZone("Invalid/Zone")).toBe("Heure locale");
   });
 
   it("calcule le libellé saisonnier pour la date du créneau", () => {
@@ -69,17 +76,37 @@ describe("formatTimeZone", () => {
     expect(afterChange).toMatch(/été|summer/i);
     expect(beforeChange).not.toBe(afterChange);
   });
+
+  it("évite un libellé anglais si les données de la locale manquent au navigateur", () => {
+    vi.spyOn(Intl.DateTimeFormat, "supportedLocalesOf").mockReturnValue([]);
+
+    expect(formatTimeZone(
+      "Europe/Paris",
+      "lb-LU",
+      "Zäitzon net uginn",
+      "Lokal Zäit",
+      "2026-09-01T08:00",
+    )).toBe("Paris");
+    expect(formatTimeZone(
+      "Invalid/Zone",
+      "lb-LU",
+      "Zäitzon net uginn",
+      "Lokal Zäit",
+    )).toBe("Lokal Zäit");
+  });
 });
 
 describe("dates localisées", () => {
   it.each(supportedLocales)("formate date et heure à partir des valeurs brutes en %s", (locale) => {
     const intlLocale = localeConfig[locale].intlLocale;
-    const expectedDate = new Intl.DateTimeFormat(intlLocale, {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    }).format(new Date(2026, 7, 25));
+    const expectedDate = locale === "lb"
+      ? "Dënschdeg, 25. August 2026"
+      : new Intl.DateTimeFormat(intlLocale, {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }).format(new Date(2026, 7, 25));
 
     expect(formatInputDate("2026-08-25", intlLocale, "missing")).toBe(expectedDate);
     expect(formatAvailabilityDate(
@@ -111,5 +138,18 @@ describe("dates localisées", () => {
       "de-DE",
       "missing",
     )).toBe("von 08:00 bis 18:00 Uhr");
+  });
+
+  it("conserve une date et une heure luxembourgeoises sans dépendre d’ICU", () => {
+    expect(formatInputDate("2026-09-01", "lb-LU", "missing"))
+      .toBe("Dënschdeg, 1. September 2026");
+    expect(formatInputTime("08:05", "lb-LU", "missing")).toBe("08:05");
+  });
+
+  it("rejette les dates calendaires impossibles dans toutes les langues", () => {
+    for (const locale of supportedLocales) {
+      expect(formatInputDate("2026-02-31", localeConfig[locale].intlLocale, "missing"))
+        .toBe("missing");
+    }
   });
 });

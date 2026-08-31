@@ -135,6 +135,9 @@ describe("branding d’organisation", () => {
   it("compacte le verrou de marque et les préférences dans le topbar étroit", () => {
     expect(styles).toMatch(/@media \(max-width: 560px\)[\s\S]*?\.mobile-organization-logo\s*\{\s*width: 72px;\s*height: 44px;/);
     expect(styles).toMatch(/@media \(max-width: 560px\)[\s\S]*?\.app-topbar-actions \.language-switcher\s*\{\s*min-width: 52px;\s*min-height: 44px;/);
+    expect(styles).toMatch(/\.language-switcher select\s*\{[\s\S]*?inset: -1px;[\s\S]*?width: calc\(100% \+ 2px\);[\s\S]*?height: calc\(100% \+ 2px\);/);
+    expect(styles).toMatch(/@media \(max-width: 820px\)[\s\S]*?\.app-page\s*\{[\s\S]*?grid-template-columns: minmax\(0, 1fr\);/);
+    expect(styles).toMatch(/@media \(max-width: 560px\)[\s\S]*?\.section-heading-compact\s*\{\s*align-items: flex-start;\s*flex-direction: column;\s*gap: var\(--space-2\);/);
     expect(styles).toMatch(/@media \(max-width: 560px\)[\s\S]*?\.app-topbar-actions \.theme-toggle\s*\{\s*grid-template-columns: repeat\(2, 44px\);/);
     expect(styles).toMatch(/@media \(max-width: 560px\)[\s\S]*?\.app-topbar-actions \.theme-toggle button\s*\{\s*width: 44px;\s*height: 44px;/);
     expect(styles).toMatch(/@media \(max-width: 560px\)[\s\S]*?\.availability-agenda-status\s*\{[\s\S]*?flex-direction: column;/);

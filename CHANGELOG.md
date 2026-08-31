@@ -30,12 +30,18 @@ la source du diff technique et les ADR expliquent les décisions importantes.
   carré, transfert de focus après navigation interne et compactage des longues
   traductions dans le shell connecté à 320 px ; le tiroir mobile ferme au
   passage en vue bureau, bloque le défilement arrière et conserve des cibles de
-  44 px ;
+  44 px ; la zone réelle du sélecteur couvre aussi ces 44 px et les grilles
+  allemandes ne débordent plus à la largeur minimale ;
 - centralisation du contact légal entre HTML initial et React, libellés de
   fuseau calculés à l’heure exacte du créneau lors des changements saisonniers,
-  et nom de secours membre indépendant de la langue de première connexion ;
+  nom de secours membre indépendant de la langue de première connexion, et
+  repli CLDR des dates et heures luxembourgeoises pour les navigateurs sans
+  données ICU `lb-LU` ;
 - suppression des promesses de notification, invitations et filtres multi-sites
-  qui ne correspondaient pas au périmètre MVP.
+  qui ne correspondaient pas au périmètre MVP ;
+- validation visuelle locale dans Chrome des douze pages publiques, des écrans
+  connectés, de la connexion, des callbacks et des pages introuvables, en vue
+  mobile et bureau, avec menus mobiles et parcours luxembourgeois dédiés.
 
 ### Indexation publique
 

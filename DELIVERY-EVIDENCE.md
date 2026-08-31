@@ -931,3 +931,44 @@ partagé avant toute migration ou activation Compose.
 - Un futur rollback applicatif doit utiliser une release descendante compatible
   avec le schéma. Le retour à la démo statique est un cutover plateforme
   exclusif, jamais l'activation simultanée des deux contrats.
+
+## Extension : candidat SEO/i18n et revue Chrome du 2026-08-31
+
+Cette extension consigne le candidat de la branche
+`codex/seo-i18n-four-locales`, ouvert dans la PR #29 sur
+`origin/main@938c3a40aef5e65affaf19d6a1c546cbfa5a78f1`. Elle décrit uniquement un
+candidat local et une CI de PR : ni fusion, ni déploiement, ni indexation ne
+sont prouvés ici.
+
+### Gate automatisée locale
+
+| Contrôle | Résultat observé | Frontière de preuve |
+| --- | --- | --- |
+| `npm run verify` | Succès : 6 tests de marque, 99 tests Worker/D1, 93 tests React, typechecks Worker et frontend, build Vite et dry-run Wrangler | Exécution locale sur le worktree exact ; aucun déploiement |
+| Pages publiques | Douze variantes passent par le binding Assets avec canonical, `hreflang`, contenu initial localisé, `HEAD`, validateurs et vraies 404 | Contrat Worker et HTML ; ne prouve ni crawl ni indexation |
+| Régression `lb-LU` | Date et heure luxembourgeoises déterministes ; absence de nom de fuseau anglais lorsque Chrome ne fournit pas cette locale | Données lexicales issues d’Unicode CLDR ; les autres moteurs restent à contrôler |
+| Responsive | La cible réelle du sélecteur couvre 44 px ; les grilles allemandes restent dans 320 px | Tests CSS et mesure dans Chrome, pas appareil tactile réel |
+
+### Matrice visuelle locale
+
+| Surface | États contrôlés | Viewports | Résultat |
+| --- | ---: | --- | --- |
+| Accueil, confidentialité et mentions légales, quatre langues | 24 | 320 × 568 et 1 440 × 900 | Un `h1`, bon `lang`, aucune image cassée, aucun débordement |
+| Tableau de bord, partage et recherche connectés, quatre langues | 24 | 320 × 568 et 1 440 × 900 | Même contrat ; aucune fuite anglaise dans le parcours luxembourgeois |
+| Connexion sans session, quatre langues | 8 | 320 × 568 et 1 440 × 900 | Formulaires visibles, contrôles au moins 44 px, aucune largeur excédentaire |
+| Callback sans jeton et page introuvable, quatre langues | 16 | 320 × 568 et 1 440 × 900 | Erreurs localisées, un `h1`, aucun débordement |
+| Menus publics, quatre langues | 4 | 320 × 568 | Ouverture réussie, sélecteur 72 × 50 px, aucune image cassée |
+
+Les 76 états ci-dessus ont été sondés par le protocole DevTools d’un Chrome
+local 151 ; les vues française, anglaise, allemande et luxembourgeoise ont aussi
+été inspectées sur captures, dont des compositions à 390 × 844. Le navigateur
+intégré restait bloqué par sa politique administrateur ; le contrôle a utilisé
+un processus Chrome local séparé, sans modifier ni contourner cette politique.
+
+La revue a découvert puis fait corriger trois écarts mesurables : le repli
+anglais de la date luxembourgeoise dans une distribution Chrome sans ICU
+`lb-LU`, une zone interactive de sélecteur réduite par ses bordures de 44 à
+42 px, et des grilles allemandes dépassant de 3 à 8 px à la largeur minimale.
+Safari, Firefox, Edge, le zoom à 200 % et un iPhone réel restent les contrôles
+perceptifs exigés avant pilote. La production publique observée reste celle
+décrite dans `STATUS.md`, sans ces changements.

@@ -16,14 +16,17 @@
   valeurs temporelles brutes restent dans le contrat API et les libellés sont
   formatés côté client avec `Intl`.
 - La gate `npm run verify` réussit avec 6 tests de marque, 99 tests Worker/D1,
-  90 tests React, le typecheck Worker, le build Vite et le dry-run Wrangler. La
+  93 tests React, le typecheck Worker, le build Vite et le dry-run Wrangler. La
   matrice Worker traverse réellement le binding Assets pour les douze pages,
   les `HEAD`, 404 conditionnelles, fichiers SEO, manifestes et images.
-- Les assets raster et le favicon carré ont été contrôlés. Le navigateur
-  intégré n’a pas pu ouvrir le serveur local parce que sa politique
-  administrateur était indisponible malgré trois tentatives ; les corrections
-  320 px sont donc couvertes par contraintes CSS et tests de régression, mais
-  une revue visuelle navigateur reste requise avant le pilote.
+- Les assets raster et le favicon carré ont été contrôlés. Une revue locale
+  dans Chrome a couvert les douze pages publiques, les écrans connectés, la
+  connexion, les callbacks, les pages introuvables et les menus mobiles à
+  320 × 568 et 1 440 × 900, complétée par des vues à 390 × 844. Elle a permis
+  de confirmer la correction du repli anglais observé sur les dates, heures et
+  fuseaux `lb-LU`, de deux débordements allemands et de la cible réelle de 42 px
+  du sélecteur. Safari, Firefox, Edge et un iPhone réel restent requis par la
+  matrice avant le pilote.
 - La PR #28 de palette VBS reste ouverte et verte sur le même `origin/main`.
   Si elle fusionne avant ce candidat, il faudra rebaser et résoudre ses fichiers
   communs avant toute fusion.
