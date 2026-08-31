@@ -1,3 +1,5 @@
+import type { Locale } from "../../shared/i18n";
+
 export type Bindings = Omit<Env, "APP_ENV" | "EMAIL"> & {
   APP_ENV: "development" | "preview" | "production";
   EMAIL?: Env["EMAIL"];
@@ -32,6 +34,7 @@ export interface AuthenticatedMember {
   userId: string;
   email: string;
   displayName: string;
+  preferredLocale: Locale | null;
   role: "MEMBER" | "ADMIN";
   branding: OrganizationBranding | null;
 }

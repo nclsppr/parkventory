@@ -240,6 +240,7 @@ const requireMember: MiddlewareHandler<AppEnvironment> = async (context, next) =
       user_account.id AS user_id,
       user_account.normalized_email AS email,
       user_account.display_name,
+      user_account.preferred_locale,
       membership.role,
       branding.enabled AS branding_enabled,
       branding.company_name AS branding_company_name,
@@ -270,6 +271,7 @@ const requireMember: MiddlewareHandler<AppEnvironment> = async (context, next) =
     user_id: string;
     email: string;
     display_name: string;
+    preferred_locale: string | null;
     role: "MEMBER" | "ADMIN";
   } & OrganizationBrandingRow>();
 
@@ -287,6 +289,7 @@ const requireMember: MiddlewareHandler<AppEnvironment> = async (context, next) =
     userId: member.user_id,
     email: member.email,
     displayName: member.display_name,
+    preferredLocale: isLocale(member.preferred_locale) ? member.preferred_locale : null,
     role: member.role,
     branding,
   });
@@ -295,6 +298,7 @@ const requireMember: MiddlewareHandler<AppEnvironment> = async (context, next) =
 
 for (const route of [
   "/api/v1/auth/session",
+  "/api/v1/profile",
   "/api/v1/dashboard",
   "/api/v1/spots",
   "/api/v1/shares",
@@ -434,9 +438,15 @@ app.post("/api/v1/auth/verify", async (context) => {
         VALUES (?1, ?2, ?3, ?4)
       `).bind(orgId, link.normalized_domain, organizationName(link.normalized_domain), now),
       context.env.DB.prepare(`
-        INSERT OR IGNORE INTO user_account (id, normalized_email, display_name, created_at)
-        VALUES (?1, ?2, ?3, ?4)
-      `).bind(userId, link.normalized_email, name, now),
+        INSERT OR IGNORE INTO user_account (
+          id, normalized_email, display_name, created_at, preferred_locale
+        ) VALUES (?1, ?2, ?3, ?4, ?5)
+      `).bind(userId, link.normalized_email, name, now, locale),
+      context.env.DB.prepare(`
+        UPDATE user_account
+        SET preferred_locale = COALESCE(preferred_locale, ?1)
+        WHERE id = ?2
+      `).bind(locale, userId),
       context.env.DB.prepare(`
         INSERT OR IGNORE INTO membership (id, organization_id, user_id, role, created_at)
         VALUES (?1, ?2, ?3, 'MEMBER', ?4)
@@ -453,6 +463,12 @@ app.post("/api/v1/auth/verify", async (context) => {
 
   context.header("Set-Cookie", sessionCookie(sessionToken, context.env.APP_ENV));
   const branding = await loadOrganizationBranding(context.env.DB, link.normalized_domain);
+  const accountLocale = await context.env.DB.prepare(`
+    SELECT preferred_locale FROM user_account WHERE id = ?1
+  `).bind(userId).first<{ preferred_locale: string | null }>();
+  const authenticatedLocale = isLocale(accountLocale?.preferred_locale)
+    ? accountLocale.preferred_locale
+    : locale;
   return context.json({
     authenticated: true,
     displayName: name,
@@ -460,6 +476,7 @@ app.post("/api/v1/auth/verify", async (context) => {
     organizationName: branding?.companyName ?? organizationName(link.normalized_domain),
     role: "MEMBER" as const,
     branding,
+    locale: authenticatedLocale,
   });
 });
 
@@ -472,7 +489,21 @@ app.get("/api/v1/auth/session", (context) => {
     organizationName: member.organizationName,
     role: member.role,
     branding: member.branding,
+    locale: member.preferredLocale ?? requestLocale(context.req.raw),
   });
+});
+
+app.patch("/api/v1/profile", async (context) => {
+  const body = await readBody<{ locale?: unknown }>(context.req.raw);
+  if (!body || typeof body.locale !== "string" || !isLocale(body.locale)) {
+    return localizedProblem(context.req.raw, 400, "invalidLocale");
+  }
+
+  const member = context.get("member");
+  await context.env.DB.prepare(`
+    UPDATE user_account SET preferred_locale = ?1 WHERE id = ?2
+  `).bind(body.locale, member.userId).run();
+  return context.json({ locale: body.locale });
 });
 
 app.delete("/api/v1/auth/session", async (context) => {

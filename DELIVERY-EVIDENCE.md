@@ -944,10 +944,12 @@ sont prouvés ici.
 
 | Contrôle | Résultat observé | Frontière de preuve |
 | --- | --- | --- |
-| `npm run verify` | Succès : 6 tests de marque, 99 tests Worker/D1, 93 tests React, typechecks Worker et frontend, build Vite et dry-run Wrangler | Exécution locale sur le worktree exact ; aucun déploiement |
+| `npm run verify` | Succès : 6 tests de marque, 1 test d’upgrade de migration, 102 tests Worker/D1, 100 tests React, typechecks Worker et frontend, build Vite et dry-run Wrangler | Exécution locale sur le worktree exact ; aucun déploiement |
 | Pages publiques | Douze variantes passent par le binding Assets avec canonical, `hreflang`, contenu initial localisé, `HEAD`, validateurs et vraies 404 | Contrat Worker et HTML ; ne prouve ni crawl ni indexation |
 | Régression `lb-LU` | Date et heure luxembourgeoises déterministes ; absence de nom de fuseau anglais lorsque Chrome ne fournit pas cette locale | Données lexicales issues d’Unicode CLDR ; les autres moteurs restent à contrôler |
 | Responsive | La cible réelle du sélecteur couvre 44 px ; les grilles allemandes restent dans 320 px | Tests CSS et mesure dans Chrome, pas appareil tactile réel |
+| Préférence connectée | Migration `0004` appliquée sur une D1 locale isolée, mutation `fr` vers `de`, lecture directe `preferred_locale = de`, puis restauration de `/fr/app` vers `/de/app` | Base locale temporaire uniquement ; aucune migration distante |
+| Visibilité selon la session | Landing, page légale, callback et 404 testés avec session reconnue ; aucun sélecteur public, préférence profil appliquée par `replaceState`, callback plus récent prioritaire | Tests DOM React ; le contrôle visuel ciblé du navigateur intégré reste bloqué par sa politique administrateur |
 
 ### Matrice visuelle locale
 
@@ -958,12 +960,24 @@ sont prouvés ici.
 | Connexion sans session, quatre langues | 8 | 320 × 568 et 1 440 × 900 | Formulaires visibles, contrôles au moins 44 px, aucune largeur excédentaire |
 | Callback sans jeton et page introuvable, quatre langues | 16 | 320 × 568 et 1 440 × 900 | Erreurs localisées, un `h1`, aucun débordement |
 | Menus publics, quatre langues | 4 | 320 × 568 | Ouverture réussie, sélecteur 72 × 50 px, aucune image cassée |
+| Profil connecté, français puis allemand | 5 | 320 × 568, 390 × 844 et 1 440 × 900 | Un seul sélecteur dans le profil, aucun dans la topbar, cible 64 × 44 px, restauration de session et aucun débordement |
 
-Les 76 états ci-dessus ont été sondés par le protocole DevTools d’un Chrome
+Les 81 états ci-dessus ont été sondés par le protocole DevTools d’un Chrome
 local 151 ; les vues française, anglaise, allemande et luxembourgeoise ont aussi
 été inspectées sur captures, dont des compositions à 390 × 844. Le navigateur
 intégré restait bloqué par sa politique administrateur ; le contrôle a utilisé
 un processus Chrome local séparé, sans modifier ni contourner cette politique.
+
+La passe profil a utilisé le même protocole sur un Worker et une D1 locaux
+isolés. Les trois viewports n’ont produit ni image cassée ni erreur console ; le
+sélecteur public de la landing est resté présent après suppression du cookie de
+session.
+
+Après centralisation de l’état de session, la distinction connecté/déconnecté a
+été rejouée par les tests DOM sur quatre familles de pages. Une nouvelle tentative
+dans le navigateur intégré a de nouveau été refusée par sa politique
+administrateur ; aucune preuve visuelle supplémentaire n’est revendiquée pour
+ce seul ajustement conditionnel.
 
 La revue a découvert puis fait corriger trois écarts mesurables : le repli
 anglais de la date luxembourgeoise dans une distribution Chrome sans ICU

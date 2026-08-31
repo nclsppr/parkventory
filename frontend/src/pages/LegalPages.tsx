@@ -13,10 +13,12 @@ import { legalMessages } from "../i18n/legal";
 function LegalLayout({
   children,
   current,
+  showLanguageSwitcher,
   title,
 }: {
   children: ReactNode;
   current: "legal" | "privacy";
+  showLanguageSwitcher: boolean;
   title: string;
 }) {
   const { locale } = useI18n();
@@ -32,7 +34,7 @@ function LegalLayout({
           <Logo />
         </AppLink>
         <div className="legal-preferences">
-          <LanguageSwitcher />
+          {showLanguageSwitcher && <LanguageSwitcher />}
           <ThemeToggle />
         </div>
       </header>
@@ -59,12 +61,20 @@ function LegalLayout({
   );
 }
 
-export function PrivacyPage() {
+export function PrivacyPage({
+  showLanguageSwitcher = true,
+}: {
+  showLanguageSwitcher?: boolean;
+}) {
   const { locale } = useI18n();
   const copy = legalMessages[locale].privacy;
 
   return (
-    <LegalLayout current="privacy" title={copy.title}>
+    <LegalLayout
+      current="privacy"
+      showLanguageSwitcher={showLanguageSwitcher}
+      title={copy.title}
+    >
       <p className="legal-lead">{copy.lead}</p>
 
       <section>
@@ -117,12 +127,20 @@ export function PrivacyPage() {
   );
 }
 
-export function LegalNoticePage() {
+export function LegalNoticePage({
+  showLanguageSwitcher = true,
+}: {
+  showLanguageSwitcher?: boolean;
+}) {
   const { locale } = useI18n();
   const copy = legalMessages[locale].legalNotice;
 
   return (
-    <LegalLayout current="legal" title={copy.title}>
+    <LegalLayout
+      current="legal"
+      showLanguageSwitcher={showLanguageSwitcher}
+      title={copy.title}
+    >
       <p className="legal-lead">{copy.lead}</p>
 
       <section>

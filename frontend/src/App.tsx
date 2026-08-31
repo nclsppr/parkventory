@@ -7,7 +7,6 @@ import {
 } from "../../shared/i18n";
 import { ApiError, loadSession } from "./api/client";
 import type { ApplicationRoute } from "./components/AppShell";
-import { LanguageSwitcher } from "./components/LanguageSwitcher";
 import { ThemeProvider, ThemeToggle } from "./components/Theme";
 import { relativePathname, routeUrl } from "./config";
 import { I18nProvider, useI18n } from "./i18n/I18n";
@@ -50,17 +49,70 @@ export default function App() {
 }
 
 function AppContent() {
-  const { locale } = useI18n();
+  const { locale, setLocale } = useI18n();
   const [path, setPath] = useState(currentPath);
+  const [sessionState, setSessionState] = useState<
+    | { status: "checking" }
+    | { status: "anonymous"; checkFailed: boolean }
+    | { status: "authenticated"; data: SessionData }
+  >({ status: "checking" });
   const localizedRoute = useMemo(() => localizedRouteFromPathname(path), [path]);
   const route = localizedRoute?.route ?? legacyIntentRoute(path) ?? "notFound";
   const routeLocale = localizedRoute?.locale ?? locale;
+  const authenticatedLocale = sessionState.status === "authenticated"
+    ? sessionState.data.locale
+    : null;
+  const showPublicLanguageSwitcher = sessionState.status === "anonymous";
 
   useEffect(() => {
     const onPopState = () => setPath(currentPath());
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    loadSession()
+      .then((loadedSession) => {
+        if (!active) return;
+        setSessionState((current) => current.status === "checking"
+          ? { status: "authenticated", data: loadedSession }
+          : current);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setSessionState((current) => current.status === "checking"
+          ? {
+            status: "anonymous",
+            checkFailed: !(error instanceof ApiError && error.status === 401),
+          }
+          : current);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (authenticatedLocale && authenticatedLocale !== locale) {
+      setLocale(authenticatedLocale, { replace: true });
+    }
+  }, [authenticatedLocale, locale, setLocale]);
+
+  const handleSessionExpired = useCallback(() => {
+    setSessionState({ status: "anonymous", checkFailed: false });
+  }, []);
+
+  const handleAuthenticatedSession = useCallback((authenticatedSession: SessionData) => {
+    setSessionState({ status: "authenticated", data: authenticatedSession });
+  }, []);
+
+  const handleProfileLocalePersisted = useCallback((nextLocale: Locale) => {
+    setSessionState((current) => current.status === "authenticated"
+      ? { ...current, data: { ...current.data, locale: nextLocale } }
+      : current);
+    setLocale(nextLocale);
+  }, [setLocale]);
 
   useEffect(() => {
     if (localizedRoute || route === "notFound") return;
@@ -77,61 +129,61 @@ function AppContent() {
     applyClientMetadata(routeLocale, route);
   }, [route, routeLocale]);
 
-  if (route === "home") return <LandingPage />;
-  if (route === "authCallback") return <AuthCallbackPage />;
-  if (route === "privacy") return <PrivacyPage />;
-  if (route === "legal") return <LegalNoticePage />;
+  if (route === "home") {
+    return <LandingPage showLanguageSwitcher={showPublicLanguageSwitcher} />;
+  }
+  if (route === "authCallback") {
+    return (
+      <AuthCallbackPage
+        onAuthenticated={handleAuthenticatedSession}
+        showLanguageSwitcher={showPublicLanguageSwitcher}
+      />
+    );
+  }
+  if (route === "privacy") {
+    return <PrivacyPage showLanguageSwitcher={showPublicLanguageSwitcher} />;
+  }
+  if (route === "legal") {
+    return <LegalNoticePage showLanguageSwitcher={showPublicLanguageSwitcher} />;
+  }
   const applicationRoute = applicationRoutes[route];
   if (applicationRoute) {
-    return <AuthenticatedApplication route={applicationRoute} locale={routeLocale} />;
+    return (
+      <AuthenticatedApplication
+        route={applicationRoute}
+        locale={routeLocale}
+        sessionState={sessionState}
+        onLocalePersisted={handleProfileLocalePersisted}
+        onSessionExpired={handleSessionExpired}
+      />
+    );
   }
-  return <NotFoundPage />;
+  return <NotFoundPage showLanguageSwitcher={showPublicLanguageSwitcher} />;
 }
 
 function AuthenticatedApplication({
   route,
   locale,
+  sessionState,
+  onLocalePersisted,
+  onSessionExpired,
 }: {
   route: ApplicationRoute;
   locale: Locale;
+  sessionState:
+    | { status: "checking" }
+    | { status: "anonymous"; checkFailed: boolean }
+    | { status: "authenticated"; data: SessionData };
+  onLocalePersisted: (locale: Locale) => void;
+  onSessionExpired: () => void;
 }) {
   const copy = systemMessages[locale];
-  const [state, setState] = useState<"checking" | "authenticated" | "anonymous">(
-    "checking",
-  );
-  const [session, setSession] = useState<SessionData | null>(null);
-  const [sessionCheckFailed, setSessionCheckFailed] = useState(false);
-  const handleSessionExpired = useCallback(() => {
-    setSession(null);
-    setState("anonymous");
-  }, []);
 
-  useEffect(() => {
-    let active = true;
-    loadSession()
-      .then((loadedSession) => {
-        if (!active) return;
-        setSession(loadedSession);
-        setSessionCheckFailed(false);
-        setState("authenticated");
-      })
-      .catch((error) => {
-        if (!active) return;
-        setSession(null);
-        setState("anonymous");
-        setSessionCheckFailed(!(error instanceof ApiError && error.status === 401));
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  if (state === "checking") {
+  if (sessionState.status === "checking") {
     return (
       <main className="auth-page">
         <div className="auth-backdrop" aria-hidden="true" />
         <div className="auth-preferences">
-          <LanguageSwitcher />
           <ThemeToggle />
         </div>
         <p className="auth-loading" role="status">
@@ -140,14 +192,15 @@ function AuthenticatedApplication({
       </main>
     );
   }
-  if (state === "anonymous") {
-    return <SignInPage reason={sessionCheckFailed ? copy.connectionCheckFailed : undefined} />;
+  if (sessionState.status === "anonymous") {
+    return <SignInPage reason={sessionState.checkFailed ? copy.connectionCheckFailed : undefined} />;
   }
   return (
     <ApplicationPage
       route={route}
-      initialBranding={session?.branding ?? null}
-      onSessionExpired={handleSessionExpired}
+      initialBranding={sessionState.data.branding}
+      onLocalePersisted={onLocalePersisted}
+      onSessionExpired={onSessionExpired}
     />
   );
 }

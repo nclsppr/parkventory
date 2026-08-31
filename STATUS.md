@@ -10,13 +10,23 @@
   alternates (`fr`, `en`, `de`, `lb`, `x-default`) et un contenu visible dans
   le HTML initial. Les routes privées et 404 restent hors index.
 - La racine négocie le cookie puis `Accept-Language`; un choix explicite dans
-  l’URL reste prioritaire. L’API, les erreurs, les dates, les e-mails et les
-  routes de callback suivent la locale choisie.
+  l’URL reste prioritaire avant connexion. Dès qu’une session connectée est
+  reconnue, la langue enregistrée dans le profil restaure la route équivalente,
+  y compris depuis une surface publique. L’API, les
+  erreurs, les dates, les e-mails et les routes de callback suivent la locale
+  choisie.
+- Le sélecteur reste disponible sur la landing et les autres surfaces avant
+  connexion. Une session reconnue le retire aussi de ces surfaces ; dans le
+  shell authentifié, il a été retiré de la topbar et apparaît uniquement dans
+  le profil. La migration additive `0004_user_locale.sql` et
+  la mutation de profil sont vérifiées localement ; aucune base D1 distante n’a
+  été migrée et la migration doit précéder tout Worker qui lit la colonne.
 - La fenêtre de partage et la date proposée utilisent le fuseau du parking. Les
   valeurs temporelles brutes restent dans le contrat API et les libellés sont
   formatés côté client avec `Intl`.
-- La gate `npm run verify` réussit avec 6 tests de marque, 99 tests Worker/D1,
-  93 tests React, le typecheck Worker, le build Vite et le dry-run Wrangler. La
+- La gate `npm run verify` réussit avec 6 tests de marque, 1 test d’upgrade de
+  migration, 102 tests Worker/D1, 100 tests React, le typecheck Worker, le build
+  Vite et le dry-run Wrangler. La
   matrice Worker traverse réellement le binding Assets pour les douze pages,
   les `HEAD`, 404 conditionnelles, fichiers SEO, manifestes et images.
 - Les assets raster et le favicon carré ont été contrôlés. Une revue locale
@@ -24,12 +34,20 @@
   connexion, les callbacks, les pages introuvables et les menus mobiles à
   320 × 568 et 1 440 × 900, complétée par des vues à 390 × 844. Elle a permis
   de confirmer la correction du repli anglais observé sur les dates, heures et
-  fuseaux `lb-LU`, de deux débordements allemands et de la cible réelle de 42 px
-  du sélecteur. Safari, Firefox, Edge et un iPhone réel restent requis par la
-  matrice avant le pilote.
+  fuseaux `lb-LU`, de deux débordements allemands et des cibles réelles d’au
+  moins 44 px. Une passe supplémentaire a vérifié le profil connecté à
+  1 440 × 900, 390 × 844 et 320 × 568 : un seul sélecteur 64 × 44 px dans le
+  profil, aucun dans la topbar, persistance D1 puis restauration de `de`, sans
+  débordement, image cassée ni erreur console. Safari, Firefox, Edge et un
+  iPhone réel restent requis par la matrice avant le pilote.
+- Les tests DOM couvrent aussi une session reconnue sur la landing, les pages
+  légales, le callback et une 404 : aucun sélecteur public n’y subsiste, la
+  locale du profil remplace l’URL sans entrée d’historique supplémentaire et
+  une session créée par callback ne peut pas être écrasée par le contrôle initial.
 - La PR #28 de palette VBS reste ouverte et verte sur le même `origin/main`.
-  Si elle fusionne avant ce candidat, il faudra rebaser et résoudre ses fichiers
-  communs avant toute fusion.
+  Elle réserve déjà la migration `0003`; la préférence utilisateur utilise donc
+  `0004`. Si la PR #28 fusionne avant ce candidat, il faudra tout de même rebaser
+  et résoudre ses fichiers communs avant toute fusion.
 
 ## Production publique observée le 31 août 2026
 

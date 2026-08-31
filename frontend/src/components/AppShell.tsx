@@ -7,7 +7,8 @@ import {
   Search,
   X,
 } from "lucide-react";
-import { ApiError, logout } from "../api/client";
+import type { Locale } from "../../../shared/i18n";
+import { ApiError, logout, updateProfileLocale } from "../api/client";
 import { localizedUrls } from "../config";
 import { applicationMessages } from "../i18n/application";
 import { commonMessages } from "../i18n/common";
@@ -27,6 +28,7 @@ interface AppShellProps {
   data: DashboardData;
   loading: boolean;
   loadError: string | null;
+  onLocalePersisted: (locale: Locale) => void;
   onNotify: (message: string, tone?: NoticeTone) => void;
   onRetry: () => void;
   onSessionExpired: () => void;
@@ -51,6 +53,7 @@ export function AppShell({
   data,
   loading,
   loadError,
+  onLocalePersisted,
   onNotify,
   onRetry,
   onSessionExpired,
@@ -84,6 +87,7 @@ export function AppShell({
   ];
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [logoutBusy, setLogoutBusy] = useState(false);
+  const [languageBusy, setLanguageBusy] = useState(false);
   const branding = useOrganizationBranding();
   const sidebar = useRef<HTMLElement>(null);
   const sidebarClose = useRef<HTMLButtonElement>(null);
@@ -125,7 +129,9 @@ export function AppShell({
       }
       if (event.key === "Tab") {
         const focusable = Array.from(
-          sidebar.current?.querySelectorAll<HTMLElement>("a[href], button:not([disabled])") ?? [],
+          sidebar.current?.querySelectorAll<HTMLElement>(
+            "a[href], button:not([disabled]), select:not([disabled])",
+          ) ?? [],
         ).filter((element) => element.offsetParent !== null || element === document.activeElement);
         const first = focusable[0];
         const last = focusable[focusable.length - 1];
@@ -161,6 +167,23 @@ export function AppShell({
       }
     } finally {
       setLogoutBusy(false);
+    }
+  };
+
+  const handleProfileLocaleChange = async (nextLocale: Locale) => {
+    if (languageBusy || nextLocale === locale) return;
+    setLanguageBusy(true);
+    try {
+      await updateProfileLocale(nextLocale);
+      onLocalePersisted(nextLocale);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        onSessionExpired();
+      } else {
+        onNotify(error instanceof Error ? error.message : copy.languageUpdateFailed, "error");
+      }
+    } finally {
+      setLanguageBusy(false);
     }
   };
 
@@ -213,10 +236,20 @@ export function AppShell({
         <button className="sidebar-logout" type="button" onClick={handleLogout} disabled={logoutBusy}>
           <LogOut aria-hidden="true" /> {logoutBusy ? copy.signingOut : copy.signOut}
         </button>
-        <div className="sidebar-profile">
-          <span className="avatar">{data.user.initials}</span>
-          <div><strong>{data.user.fullName}</strong><small>{data.organization.name}</small></div>
-        </div>
+        <section className="sidebar-profile" aria-label={copy.profile}>
+          <div className="sidebar-profile-identity">
+            <span className="avatar">{data.user.initials}</span>
+            <div><strong>{data.user.fullName}</strong><small>{data.organization.name}</small></div>
+          </div>
+          <div className="sidebar-profile-preference">
+            <span>{commonCopy.language}</span>
+            <LanguageSwitcher
+              className="sidebar-profile-language"
+              disabled={languageBusy}
+              onLocaleChange={handleProfileLocaleChange}
+            />
+          </div>
+        </section>
       </aside>
 
       {sidebarOpen && (
@@ -237,7 +270,6 @@ export function AppShell({
             <ApplicationBrand compact />
           </AppLink>
           <div className="app-topbar-actions">
-            <LanguageSwitcher />
             <ThemeToggle />
             <EnvironmentStatus loading={loading} />
           </div>

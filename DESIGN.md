@@ -52,11 +52,16 @@ financier. Elle reste humaine, rapide et utile avant d'être spectaculaire.
 
 - L’interface complète existe en français, anglais, allemand et
   luxembourgeois ; aucune surface produit ne mélange deux langues.
-- Une URL localisée est l’autorité. La langue du navigateur ne choisit une
-  version que sur une entrée neutre et ne remplace jamais un préfixe explicite.
+- Avant connexion, une URL localisée est l’autorité. La langue du navigateur ne
+  choisit une version que sur une entrée neutre et ne remplace jamais un préfixe
+  explicite. Dès qu’une session authentifiée est reconnue, la préférence du profil
+  devient l’autorité sur toute route client et conduit vers son équivalent
+  localisé.
 - Le sélecteur de langue reste visible sur les surfaces publiques,
-  l’authentification, les pages légales et le shell connecté. Il conserve la
-  destination courante et mémorise le choix sans bloquer la navigation.
+  l’authentification et les pages légales tant que le visiteur est déconnecté.
+  Une fois la session reconnue, ces instances disparaissent et le seul
+  sélecteur reste dans le bloc profil ; son choix est enregistré avec le compte,
+  puis répercuté dans l’URL, le stockage local et le cookie technique.
 - Les libellés visibles, alternatives, annonces, erreurs et intitulés de thème
   viennent des mêmes catalogues par domaine. Les identifiants techniques et
   fragments ne sont pas présentés comme du contenu.
@@ -206,7 +211,7 @@ essentiel ne descend sous 14 px ; les champs restent à 16 px sur mobile.
 | Toast ou annonce | Feedback non bloquant | succès, information, erreur | `aria-live` adapté, fermeture |
 | Dialogue | Confirmation sensible | annulation, promotion admin | focus piégé, retour focus, erreur |
 | Navigation | Sections du produit | desktop, mobile | route active, focus, badge réel |
-| Sélecteur de langue | Toutes les surfaces | FR, EN, DE, LB | valeur active, focus, changement de route |
+| Sélecteur de langue | Surfaces publiques déconnectées et profil connecté | FR, EN, DE, LB | valeur active, focus, persistance du profil, changement de route |
 
 ## Interaction et mouvement
 

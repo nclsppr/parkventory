@@ -1,9 +1,11 @@
 import {
+  useCallback,
   createContext,
   useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -25,7 +27,7 @@ const storageKey = "parkventory:locale:v1";
 interface I18nContextValue {
   locale: Locale;
   intlLocale: string;
-  setLocale: (locale: Locale) => void;
+  setLocale: (locale: Locale, options?: { replace?: boolean }) => void;
 }
 
 const I18nContext = createContext<I18nContextValue | null>(null);
@@ -64,6 +66,8 @@ function targetForLocale(locale: Locale): string {
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(initialLocale);
+  const localeRef = useRef(locale);
+  localeRef.current = locale;
 
   useLayoutEffect(() => {
     document.documentElement.lang = localeConfig[locale].htmlLang;
@@ -82,20 +86,28 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const syncLocaleFromPath = () => {
       const routeLocale = localeFromPathname(relativePathname(window.location.pathname));
-      if (routeLocale) setLocaleState(routeLocale);
+      if (routeLocale) {
+        localeRef.current = routeLocale;
+        setLocaleState(routeLocale);
+      }
     };
     window.addEventListener("popstate", syncLocaleFromPath);
     return () => window.removeEventListener("popstate", syncLocaleFromPath);
   }, []);
 
-  const setLocale = (nextLocale: Locale) => {
-    if (nextLocale === locale) return;
+  const setLocale = useCallback((nextLocale: Locale, options?: { replace?: boolean }) => {
+    if (nextLocale === localeRef.current) return;
     const target = targetForLocale(nextLocale);
+    localeRef.current = nextLocale;
     setLocaleState(nextLocale);
     const nextUrl = `${target}${window.location.search}${window.location.hash}`;
-    window.history.pushState({}, "", nextUrl);
+    if (options?.replace) {
+      window.history.replaceState({}, "", nextUrl);
+    } else {
+      window.history.pushState({}, "", nextUrl);
+    }
     window.dispatchEvent(new PopStateEvent("popstate"));
-  };
+  }, []);
 
   const value = useMemo<I18nContextValue>(() => ({
     locale,

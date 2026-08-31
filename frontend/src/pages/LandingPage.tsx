@@ -22,7 +22,11 @@ import { commonMessages } from "../i18n/common";
 import { useI18n } from "../i18n/I18n";
 import { landingMessages } from "../i18n/landing";
 
-export function LandingPage() {
+export function LandingPage({
+  showLanguageSwitcher = true,
+}: {
+  showLanguageSwitcher?: boolean;
+}) {
   const landingRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -87,7 +91,7 @@ export function LandingPage() {
           <a href="#securite">{copy.header.security}</a>
         </nav>
         <div className="landing-actions">
-          <LanguageSwitcher />
+          {showLanguageSwitcher && <LanguageSwitcher />}
           <ThemeToggle />
           <a className="text-link" href={appUrl}>{copy.header.signIn}</a>
           <a className="button button-primary button-small" href="#commencer">
@@ -110,10 +114,12 @@ export function LandingPage() {
             <a href="#fonctionnement" onClick={() => closeMenuAtSection("fonctionnement")}>{copy.header.howItWorks}</a>
             <a href="#equipes" onClick={() => closeMenuAtSection("equipes")}>{copy.header.teams}</a>
             <a href="#securite" onClick={() => closeMenuAtSection("securite")}>{copy.header.security}</a>
-            <div className="mobile-theme-choice">
-              <span>{commonCopy.language}</span>
-              <LanguageSwitcher />
-            </div>
+            {showLanguageSwitcher && (
+              <div className="mobile-theme-choice">
+                <span>{commonCopy.language}</span>
+                <LanguageSwitcher />
+              </div>
+            )}
             <div className="mobile-theme-choice">
               <span>{commonCopy.appearance}</span>
               <ThemeToggle />

@@ -47,6 +47,7 @@ const session: SessionData = {
   organizationName: "Acme",
   role: "MEMBER",
   branding: null,
+  locale: "fr",
 };
 
 const dashboard: DashboardData = {
@@ -93,15 +94,21 @@ function stubAuthenticatedApi(
   loadedSession: SessionData = session,
   loadedDashboard: DashboardData = dashboard,
 ) {
-  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     if (url.endsWith("/auth/session") && init?.method === "DELETE") {
       return jsonResponse({ accepted: true, message: "Vous êtes déconnecté." });
     }
     if (url.endsWith("/auth/session")) return jsonResponse(loadedSession);
+    if (url.endsWith("/profile") && init?.method === "PATCH") {
+      const body = JSON.parse(String(init.body)) as { locale: SessionData["locale"] };
+      return jsonResponse({ locale: body.locale });
+    }
     if (url.endsWith("/dashboard")) return jsonResponse(loadedDashboard);
     throw new Error(`Unexpected request: ${url}`);
-  }));
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
 }
 
 describe("Parkventory", () => {
@@ -154,6 +161,14 @@ describe("Parkventory", () => {
     expect(await screen.findByRole("heading", { name: /Connectez-vous sans mot de passe/i })).toBeInTheDocument();
   });
 
+  it("ne montre pas la langue hors du profil pendant la vérification de session", () => {
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => undefined)));
+    window.history.replaceState({}, "", "/fr/app");
+    render(<App />);
+
+    expect(screen.queryByLabelText("Choisir la langue")).not.toBeInTheDocument();
+  });
+
   it("retraduit l’échec de contrôle de session après un changement de langue", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ detail: "Service indisponible." }, 503)));
     window.history.replaceState({}, "", "/fr/app");
@@ -172,8 +187,9 @@ describe("Parkventory", () => {
     window.history.replaceState({}, "", `/fr/auth/callback?token=${"a".repeat(43)}`);
     const { container } = render(<StrictMode><App /></StrictMode>);
     expect(await screen.findByRole("heading", { name: "Connexion réussie" })).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls.filter(([input]) => String(input).endsWith("/auth/verify"))).toHaveLength(1);
     expect(window.location.search).toBe("");
+    expect(screen.queryByLabelText("Choisir la langue")).not.toBeInTheDocument();
     expect(container.querySelector(".organization-brand-scope")).not.toBeInTheDocument();
     expect(container.querySelector(".organization-logo")).not.toBeInTheDocument();
     await act(async () => {
@@ -190,6 +206,95 @@ describe("Parkventory", () => {
     expect(screen.getByText("Disponibilités · 7 jours")).toBeInTheDocument();
     expect(screen.getByText("Version bêta")).toBeInTheDocument();
     expect(screen.queryByText(/Cloudflare|D1/i)).not.toBeInTheDocument();
+  });
+
+  it("conserve la langue sur la landing mais la place uniquement dans le profil connecté", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ detail: "Session expirée." }, 401)));
+    const landing = render(<App />);
+    expect((await screen.findAllByLabelText("Choisir la langue")).length).toBeGreaterThan(0);
+    landing.unmount();
+
+    const fetchMock = stubAuthenticatedApi();
+    window.history.replaceState({}, "", "/fr/app");
+    const { container } = render(<App />);
+    await screen.findByRole("heading", { name: "Bonjour, Alex" });
+
+    const profile = container.querySelector(".sidebar-profile");
+    const switcher = screen.getByLabelText("Choisir la langue");
+    expect(profile).toContainElement(switcher);
+    expect(container.querySelector(".app-topbar .language-switcher")).not.toBeInTheDocument();
+
+    fireEvent.change(switcher, { target: { value: "de" } });
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/profile",
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({ locale: "de" }),
+      }),
+    ));
+    await waitFor(() => expect(window.location.pathname).toBe("/de/app"));
+    expect(await screen.findByRole("heading", { name: "Guten Tag, Alex" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Sprache auswählen")).toHaveValue("de");
+  });
+
+  it("restaure la langue enregistrée du profil au chargement de la session", async () => {
+    stubAuthenticatedApi({ ...session, locale: "de" });
+    window.history.replaceState({}, "", "/fr/app");
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { name: "Guten Tag, Alex" })).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/de/app");
+    expect(screen.getByLabelText("Sprache auswählen")).toHaveValue("de");
+  });
+
+  it("retire les sélecteurs publics dès qu’une session est reconnue", async () => {
+    const paths = [
+      ["/fr/", "/de/"],
+      ["/fr/confidentialite", "/de/datenschutz"],
+      ["/fr/auth/callback", "/de/auth/callback"],
+      ["/fr/inconnue", "/de/inconnue"],
+    ];
+
+    for (const [path, expectedPath] of paths) {
+      stubAuthenticatedApi({ ...session, locale: "de" });
+      window.history.replaceState({}, "", path);
+      const view = render(<App />);
+      await waitFor(() => expect(window.location.pathname).toBe(expectedPath));
+      expect(screen.queryByLabelText("Sprache auswählen")).not.toBeInTheDocument();
+      view.unmount();
+    }
+  });
+
+  it("applique la préférence connectée aux pages publiques sans polluer l’historique", async () => {
+    stubAuthenticatedApi({ ...session, locale: "de" });
+    window.history.replaceState({ source: "test" }, "", "/fr/confidentialite");
+    const historyLength = window.history.length;
+    render(<App />);
+
+    await waitFor(() => expect(window.location.pathname).toBe("/de/datenschutz"));
+    expect(document.documentElement).toHaveAttribute("lang", "de");
+    expect(window.history.length).toBe(historyLength);
+    expect(screen.queryByLabelText("Sprache auswählen")).not.toBeInTheDocument();
+  });
+
+  it("remplace l’ancienne session par celle créée par le callback", async () => {
+    const previousSession = { ...session, displayName: "Mitglied A", locale: "de" as const };
+    const nextSession = { ...session, displayName: "Member B", locale: "en" as const };
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/auth/session")) return jsonResponse(previousSession);
+      if (url.endsWith("/auth/verify")) return jsonResponse(nextSession);
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    window.history.replaceState({}, "", `/de/auth/callback?token=${"b".repeat(43)}`);
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { name: "You’re signed in" })).toBeInTheDocument();
+    await waitFor(() => expect(window.location.pathname).toBe("/en/auth/callback"));
+    expect(document.documentElement).toHaveAttribute("lang", "en");
+    expect(screen.queryByLabelText("Choose language")).not.toBeInTheDocument();
   });
 
   it("garde les logos du shell connecté dans l’application", async () => {
@@ -297,14 +402,15 @@ describe("Parkventory", () => {
     expect(container.querySelector(".organization-logo")).not.toBeInTheDocument();
   });
 
-  it("rend une vraie page 404 sans appeler l’API", () => {
-    const fetchMock = vi.fn();
+  it("rend une vraie page 404 et vérifie seulement l’état de session", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ detail: "Session expirée." }, 401));
     vi.stubGlobal("fetch", fetchMock);
     window.history.replaceState({}, "", "/fr/app/inconnue");
     render(<App />);
     expect(screen.getByRole("heading", { name: "Cette place n’existe pas." })).toBeInTheDocument();
-    expect(screen.getByLabelText("Choisir la langue")).toHaveValue("fr");
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(await screen.findByLabelText("Choisir la langue")).toHaveValue("fr");
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe("/api/v1/auth/session");
   });
 
   it("transfère le focus vers le titre après une navigation légale interne", async () => {

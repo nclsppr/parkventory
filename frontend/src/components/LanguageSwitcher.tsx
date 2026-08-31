@@ -3,13 +3,27 @@ import { localeConfig, supportedLocales, type Locale } from "../../../shared/i18
 import { commonMessages } from "../i18n/common";
 import { useI18n } from "../i18n/I18n";
 
-export function LanguageSwitcher({ className }: { className?: string }) {
+interface LanguageSwitcherProps {
+  className?: string;
+  disabled?: boolean;
+  onLocaleChange?: (locale: Locale) => void | Promise<void>;
+}
+
+export function LanguageSwitcher({
+  className,
+  disabled = false,
+  onLocaleChange,
+}: LanguageSwitcherProps) {
   const { locale, setLocale } = useI18n();
   const copy = commonMessages[locale];
   const classes = ["language-switcher", className].filter(Boolean).join(" ");
 
   return (
-    <label className={classes} title={copy.chooseLanguage}>
+    <label
+      className={classes}
+      title={copy.chooseLanguage}
+      aria-disabled={disabled ? "true" : undefined}
+    >
       <Languages aria-hidden="true" />
       <span className="sr-only">{copy.language}</span>
       <span className="language-switcher-current" aria-hidden="true">
@@ -18,7 +32,11 @@ export function LanguageSwitcher({ className }: { className?: string }) {
       <select
         aria-label={copy.chooseLanguage}
         value={locale}
-        onChange={(event) => setLocale(event.target.value as Locale)}
+        disabled={disabled}
+        onChange={(event) => {
+          const nextLocale = event.target.value as Locale;
+          void (onLocaleChange ? onLocaleChange(nextLocale) : setLocale(nextLocale));
+        }}
       >
         {supportedLocales.map((option) => (
           <option key={option} value={option} lang={localeConfig[option].htmlLang}>

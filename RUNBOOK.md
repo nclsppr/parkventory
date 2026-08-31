@@ -54,6 +54,9 @@ déployée normalement.
 Workers Builds n'applique pas les migrations D1. Toute migration créant une
 table utilisée par le Worker doit donc être appliquée et vérifiée dans
 l'environnement ciblé avant la fusion sur `main`, qui déclenche le déploiement.
+Cela inclut la migration `0004_user_locale.sql` : vérifier la colonne
+`user_account.preferred_locale` sur la préversion puis la production avant que
+le Worker qui la lit soit publié.
 
 ## Vérifications après déploiement
 
@@ -74,6 +77,10 @@ l'environnement ciblé avant la fusion sur `main`, qui déclenche le déploiemen
 7. Deux membres du même domaine réalisent le parcours partage/réservation.
 8. Deux réservations concurrentes donnent un `200` et un `409`.
 9. Un membre d’un autre domaine ne voit aucune donnée du premier.
+10. Sur une session connectée, le sélecteur n’apparaît que dans le profil, y
+    compris après retour sur la landing, les pages légales ou une 404 ; un
+    changement persiste après reconnexion, tandis que ces mêmes surfaces
+    déconnectées conservent leur propre sélecteur.
 
 ## Bascule et retour arrière
 

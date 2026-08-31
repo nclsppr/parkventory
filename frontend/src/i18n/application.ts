@@ -36,6 +36,8 @@ interface ApplicationMessages {
     signingOut: string;
     signOut: string;
     logoutFailed: string;
+    profile: string;
+    languageUpdateFailed: string;
     navigation: {
       dashboard: string;
       share: string;
@@ -208,6 +210,8 @@ export const applicationMessages = {
       signingOut: "Déconnexion…",
       signOut: "Se déconnecter",
       logoutFailed: "La déconnexion a échoué. Réessayez.",
+      profile: "Profil",
+      languageUpdateFailed: "La langue du profil n’a pas pu être enregistrée. Réessayez.",
       navigation: {
         dashboard: "Accueil",
         share: "Partager ma place",
@@ -384,6 +388,8 @@ export const applicationMessages = {
       signingOut: "Signing out…",
       signOut: "Sign out",
       logoutFailed: "Unable to sign out. Try again.",
+      profile: "Profile",
+      languageUpdateFailed: "Your profile language could not be saved. Try again.",
       navigation: {
         dashboard: "Home",
         share: "Share my space",
@@ -560,6 +566,8 @@ export const applicationMessages = {
       signingOut: "Wird abgemeldet…",
       signOut: "Abmelden",
       logoutFailed: "Die Abmeldung ist fehlgeschlagen. Versuchen Sie es erneut.",
+      profile: "Profil",
+      languageUpdateFailed: "Die Spracheinstellung Ihres Profils konnte nicht gespeichert werden. Versuchen Sie es erneut.",
       navigation: {
         dashboard: "Start",
         share: "Meinen Parkplatz teilen",
@@ -736,6 +744,8 @@ export const applicationMessages = {
       signingOut: "Gëtt ofgemellt…",
       signOut: "Ofmellen",
       logoutFailed: "D’Ofmelle konnt net ofgeschloss ginn. Probéiert nach eng Kéier.",
+      profile: "Profil",
+      languageUpdateFailed: "D’Sproochastellung vun Ärem Profil konnt net gespäichert ginn. Probéiert nach eng Kéier.",
       navigation: {
         dashboard: "Start",
         share: "Meng Parkplaz deelen",

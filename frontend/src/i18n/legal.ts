@@ -77,6 +77,7 @@ export const legalMessages = {
       dataItems: [
         "Adresse e-mail professionnelle et nom déduit de cette adresse.",
         "Organisation et adhésion déduites du domaine professionnel.",
+        "Préférence de langue enregistrée automatiquement à la première connexion puis modifiable dans le profil.",
         "Place déclarée, disponibilités et réservations.",
         "Identifiants techniques de session, événements de sécurité et journaux bornés.",
       ],
@@ -103,7 +104,7 @@ export const legalMessages = {
         "Vous pouvez également introduire une réclamation auprès de votre autorité de contrôle.",
       cookiesTitle: "Cookies",
       cookiesText:
-        "Parkventory utilise seulement les cookies techniques nécessaires à la connexion et au maintien de la session. Le choix du thème est conservé dans le stockage local de votre navigateur. Le choix de la langue est conservé dans ce même stockage local ainsi que dans un cookie technique afin de l’appliquer lors de la prochaine visite. Aucun cookie publicitaire n’est utilisé.",
+        "Parkventory utilise seulement les cookies techniques nécessaires à la connexion et au maintien de la session. Le choix du thème est conservé dans le stockage local de votre navigateur. Avant connexion, le choix de la langue est conservé dans ce même stockage local ainsi que dans un cookie technique. Lors de la première connexion, la langue alors utilisée est automatiquement enregistrée dans votre compte ; vous pouvez ensuite la modifier dans votre profil pour les prochaines sessions. Aucun cookie publicitaire n’est utilisé.",
     },
     legalNotice: {
       title: "Mentions légales",
@@ -149,6 +150,7 @@ export const legalMessages = {
       dataItems: [
         "Work email address and name inferred from that address.",
         "Organisation and membership inferred from the work email domain.",
+        "Language preference saved automatically at first sign-in and changeable later in the profile.",
         "Declared parking space, availability and bookings.",
         "Technical session identifiers, security events and limited logs.",
       ],
@@ -175,7 +177,7 @@ export const legalMessages = {
         "You can also lodge a complaint with your supervisory authority.",
       cookiesTitle: "Cookies",
       cookiesText:
-        "Parkventory uses only the technical cookies required for sign-in and maintaining the session. Your theme choice is stored in your browser’s local storage. Your language choice is stored in the same local storage and in a technical cookie so it can be applied on your next visit. No advertising cookies are used.",
+        "Parkventory uses only the technical cookies required for sign-in and maintaining the session. Your theme choice is stored in your browser’s local storage. Before sign-in, your language choice is stored in the same local storage and in a technical cookie. At first sign-in, the language then in use is automatically saved to your account; you can change it later in your profile for future sessions. No advertising cookies are used.",
     },
     legalNotice: {
       title: "Legal notice",
@@ -220,6 +222,7 @@ export const legalMessages = {
       dataItems: [
         "Geschäftliche E-Mail-Adresse und aus dieser Adresse abgeleiteter Name.",
         "Organisation und Mitgliedschaft, die aus der geschäftlichen Domain abgeleitet werden.",
+        "Bei der ersten Anmeldung automatisch gespeicherte und anschließend im Profil änderbare Spracheinstellung.",
         "Gemeldeter Parkplatz, Verfügbarkeiten und Buchungen.",
         "Technische Sitzungskennungen, Sicherheitsereignisse und begrenzte Protokolle.",
       ],
@@ -246,7 +249,7 @@ export const legalMessages = {
         "Sie können außerdem eine Beschwerde bei Ihrer Aufsichtsbehörde einreichen.",
       cookiesTitle: "Cookies",
       cookiesText:
-        "Parkventory verwendet nur technische Cookies, die für die Anmeldung und Aufrechterhaltung der Sitzung erforderlich sind. Ihre Designauswahl wird im lokalen Speicher Ihres Browsers gespeichert. Ihre Sprachauswahl wird im selben lokalen Speicher und in einem technischen Cookie gespeichert, damit sie beim nächsten Besuch angewendet werden kann. Werbe-Cookies werden nicht verwendet.",
+        "Parkventory verwendet nur technische Cookies, die für die Anmeldung und Aufrechterhaltung der Sitzung erforderlich sind. Ihre Designauswahl wird im lokalen Speicher Ihres Browsers gespeichert. Vor der Anmeldung wird Ihre Sprachauswahl im selben lokalen Speicher und in einem technischen Cookie gespeichert. Bei der ersten Anmeldung wird die dann verwendete Sprache automatisch in Ihrem Konto gespeichert; Sie können sie später im Profil für künftige Sitzungen ändern. Werbe-Cookies werden nicht verwendet.",
     },
     legalNotice: {
       title: "Impressum",
@@ -291,6 +294,7 @@ export const legalMessages = {
       dataItems: [
         "Berufflech E-Mail-Adress an Numm, deen aus dëser Adress ofgeleet gëtt.",
         "Organisatioun a Memberschaft, déi aus dem berufflechen Domain ofgeleet ginn.",
+        "Sproochastellung, déi bei der éischter Umeldung automatesch gespäichert gëtt an duerno am Profil geännert ka ginn.",
         "Gemellte Parkplaz, Disponibilitéiten a Reservatiounen.",
         "Technesch Sessiounsidentifikatiounen, Sécherheetsevenementer a begrenzte Logbicher.",
       ],
@@ -317,7 +321,7 @@ export const legalMessages = {
         "Dir kënnt och eng Plainte bei Ärer zoustänneger Opsiichtsautoritéit maachen.",
       cookiesTitle: "Cookien",
       cookiesText:
-        "Parkventory benotzt nëmmen technesch Cookien, déi fir d’Umeldung an d’Erhale vun der Sessioun néideg sinn. Är Wiel vum Thema gëtt am lokale Späicher vun Ärem Browser gespäichert. Är Sproochwahl gëtt am selwechte lokale Späicher an an engem technesche Cookie gespäichert, fir se beim nächste Besuch unzewenden. Et gi keng Reklamme-Cookië benotzt.",
+        "Parkventory benotzt nëmmen technesch Cookien, déi fir d’Umeldung an d’Erhale vun der Sessioun néideg sinn. Är Wiel vum Thema gëtt am lokale Späicher vun Ärem Browser gespäichert. Virun der Umeldung gëtt Är Sproochwahl am selwechte lokale Späicher an an engem technesche Cookie gespäichert. Bei der éischter Umeldung gëtt d’Sprooch, déi dobäi benotzt gëtt, automatesch als Astellung an Ärem Kont gespäichert; duerno kënnt Dir se am Profil änneren. Et gi keng Reklamme-Cookië benotzt.",
     },
     legalNotice: {
       title: "Impressum",

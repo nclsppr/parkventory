@@ -10,9 +10,15 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 - ajout de versions complètes française, anglaise, allemande et
   luxembourgeoise pour la landing, l’authentification, l’application connectée,
   les pages légales, les erreurs API et les e-mails de connexion ;
-- ajout d’URLs stables préfixées par langue, avec priorité à l’URL, choix
-  explicite persistant et négociation de la langue du navigateur uniquement sur
-  les entrées neutres ;
+- ajout d’URLs stables préfixées par langue, avec priorité à l’URL avant
+  connexion, choix explicite persistant et négociation de la langue du
+  navigateur uniquement sur les entrées neutres ;
+- conservation du sélecteur sur les surfaces déconnectées, déplacement de son
+  unique instance connectée dans le profil — y compris lorsqu’un membre revient
+  sur une page publique —, et persistance de la préférence
+  `fr`, `en`, `de` ou `lb` sur `user_account` via la migration D1 `0004` et une
+  mutation authentifiée de même origine ; la session restaure ensuite la route
+  équivalente sans ajouter d’entrée artificielle à l’historique ;
 - ajout de canoniques auto-référents, groupes `hreflang` réciproques,
   `x-default`, métadonnées et contenu visible initial localisés, puis sitemap
   limité aux douze variantes des trois pages réellement publiques ;
@@ -41,7 +47,9 @@ la source du diff technique et les ADR expliquent les décisions importantes.
   qui ne correspondaient pas au périmètre MVP ;
 - validation visuelle locale dans Chrome des douze pages publiques, des écrans
   connectés, de la connexion, des callbacks et des pages introuvables, en vue
-  mobile et bureau, avec menus mobiles et parcours luxembourgeois dédiés.
+  mobile et bureau, avec menus mobiles et parcours luxembourgeois dédiés ; le
+  profil linguistique a aussi été contrôlé à 1 440 × 900, 390 × 844 et
+  320 × 568, avec écriture D1 et restauration de session.
 
 ### Indexation publique
 

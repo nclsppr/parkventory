@@ -9,13 +9,13 @@ import {
   ApplicationBrand,
   OrganizationBrandingProvider,
 } from "../components/OrganizationBranding";
-import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { ThemeToggle } from "../components/Theme";
 import { Toast } from "../components/Toast";
 import { useDashboardData } from "../hooks/useDashboardData";
 import { applicationMessages } from "../i18n/application";
 import { commonMessages } from "../i18n/common";
 import { useI18n } from "../i18n/I18n";
+import type { Locale } from "../../../shared/i18n";
 import type { OrganizationBranding } from "../types";
 import { DashboardPage } from "./DashboardPage";
 import { FindPage } from "./FindPage";
@@ -24,12 +24,14 @@ import { SharePage } from "./SharePage";
 interface ApplicationPageProps {
   route: ApplicationRoute;
   initialBranding: OrganizationBranding | null;
+  onLocalePersisted: (locale: Locale) => void;
   onSessionExpired: () => void;
 }
 
 export function ApplicationPage({
   route,
   initialBranding,
+  onLocalePersisted,
   onSessionExpired,
 }: ApplicationPageProps) {
   const { locale } = useI18n();
@@ -65,7 +67,6 @@ export function ApplicationPage({
       <OrganizationBrandingProvider branding={effectiveBranding}>
         <main className="dashboard-state">
           <div className="dashboard-state-preferences">
-            <LanguageSwitcher />
             <ThemeToggle />
           </div>
           <ApplicationBrand />
@@ -90,6 +91,7 @@ export function ApplicationPage({
         loading={loading}
         loadError={loadError}
         onNotify={notify}
+        onLocalePersisted={onLocalePersisted}
         onRetry={() => void refreshDashboard()}
         onSessionExpired={onSessionExpired}
       >

@@ -5,7 +5,7 @@ Le schéma opérationnel est versionné par les migrations D1 sous `migrations/`
 | Table | Rôle |
 | --- | --- |
 | `organization` | frontière tenant, unique par domaine normalisé |
-| `user_account` | identité minimale, unique par e-mail normalisé |
+| `user_account` | identité minimale, unique par e-mail normalisé, et préférence de langue nullable du profil |
 | `membership` | rattachement d’un utilisateur à son organisation |
 | `magic_link_request` | hash du jeton, expiration, consommation et rate limit |
 | `app_session` | hash du cookie opaque, expiration et révocation |
@@ -24,3 +24,8 @@ Le branding est résolu par égalité exacte sur le domaine normalisé. Son abse
 son opt-out ou une valeur invalide produit `null` et conserve l'identité
 Parkventory. Les réponses authentifiées n'ont pas besoin d'exposer le domaine
 pour transmettre le nom, le logo de même origine et les jetons sémantiques.
+
+La préférence `preferred_locale` appartient au compte global, pas à une
+adhésion ni à une session. Elle accepte uniquement `fr`, `en`, `de` ou `lb` et
+reste `NULL` pour un compte historique tant qu’aucun choix connecté ou nouvelle
+connexion ne l’a initialisée.

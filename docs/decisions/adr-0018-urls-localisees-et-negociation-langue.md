@@ -19,14 +19,24 @@ choix explicite.
 ## Décision
 
 Les quatre langues ont des URLs stables préfixées par `fr`, `en`, `de` ou `lb`.
-La langue portée par l’URL est toujours prioritaire. Les seules URLs neutres
-`/`, `/privacy` et `/legal` négocient une langue avec une redirection temporaire :
+Avant authentification, la langue portée par l’URL est toujours prioritaire. Les
+seules URLs neutres `/`, `/privacy` et `/legal` négocient une langue avec une
+redirection temporaire :
 le cookie de préférence passe avant `Accept-Language`, puis le français sert de
 repli. Les anciennes routes françaises redirigent vers leur équivalent préfixé.
 
 Le sélecteur de langue conserve la route, la requête et le fragment lorsqu’un
-équivalent existe. Il mémorise le choix dans le stockage local pour le rendu
-client et dans un cookie technique pour les redirections suivantes. Le client
+équivalent existe. Sur les surfaces publiques, tant qu’aucune session
+authentifiée n’est reconnue, il mémorise
+le choix dans le stockage local pour le rendu client et dans un cookie technique
+pour les redirections suivantes. Dès que le client reconnaît une session
+authentifiée, il retire les sélecteurs de toutes les surfaces publiques et
+applique la préférence du compte à la route courante. Le seul sélecteur restant
+est celui du profil. Il écrit une préférence nullable sur le compte D1 ; la
+session la restaure et remplace la route courante par son équivalent localisé,
+sans ajouter une entrée artificielle à l’historique. Le stockage local et le
+cookie sont alors alignés avec ce choix afin que la prochaine entrée publique
+reste cohérente. Le client
 transmet aussi `X-Parkventory-Locale` à l’API afin de localiser les erreurs, les
 dates de compatibilité et les e-mails de connexion. Les valeurs temporelles
 brutes restent dans le contrat API et le navigateur les présente avec `Intl`.
@@ -54,9 +64,9 @@ catalogues, métadonnées, cartes sociales, manifestes, réponses API et e-mails
 doivent conserver une parité stricte entre quatre langues.
 
 Le coût est un plus grand nombre de routes et d’artefacts à tester, ainsi qu’un
-cookie de préférence non sensible à documenter. Toute nouvelle page publique
-doit ajouter quatre traductions et un groupe `hreflang` complet avant d’entrer
-dans le sitemap.
+cookie de préférence non sensible et une donnée de profil à documenter. Toute
+nouvelle page publique doit ajouter quatre traductions et un groupe `hreflang`
+complet avant d’entrer dans le sitemap.
 
 ## Retour arrière
 

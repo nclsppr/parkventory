@@ -1,3 +1,5 @@
+import type { Locale } from "../../shared/i18n";
+
 export type AvailabilityStatus = "AVAILABLE" | "RESERVED" | "UNAVAILABLE";
 export type AvailabilityViewerRelation = "NONE" | "OFFERED" | "RESERVED";
 
@@ -88,4 +90,5 @@ export interface SessionData {
   organizationName: string;
   role: "MEMBER" | "ADMIN";
   branding: OrganizationBranding | null;
+  locale: Locale;
 }

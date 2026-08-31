@@ -151,7 +151,13 @@ export function SignInPage({ reason }: { reason?: string }) {
   );
 }
 
-export function AuthCallbackPage() {
+export function AuthCallbackPage({
+  onAuthenticated,
+  showLanguageSwitcher = true,
+}: {
+  onAuthenticated?: (session: SessionData) => void;
+  showLanguageSwitcher?: boolean;
+}) {
   const { locale } = useI18n();
   const copy = authMessages[locale];
   const localeRef = useRef(locale);
@@ -185,11 +191,13 @@ export function AuthCallbackPage() {
     verifyMagicLinkOnce(token)
       .then((session) => {
         if (!active) return;
-        window.history.replaceState({}, "", localizedUrls(localeRef.current).authCallbackUrl);
+        onAuthenticated?.(session);
+        window.history.replaceState({}, "", localizedUrls(session.locale).authCallbackUrl);
+        window.dispatchEvent(new PopStateEvent("popstate"));
         setDisplayName(session.displayName);
         setState("success");
         redirectTimer = window.setTimeout(
-          () => window.location.replace(localizedUrls(localeRef.current).appUrl),
+          () => window.location.replace(localizedUrls(session.locale).appUrl),
           700,
         );
       })
@@ -204,7 +212,7 @@ export function AuthCallbackPage() {
       active = false;
       if (redirectTimer !== undefined) window.clearTimeout(redirectTimer);
     };
-  }, [token]);
+  }, [onAuthenticated, token]);
 
   return (
     <main className="auth-page">
@@ -213,7 +221,7 @@ export function AuthCallbackPage() {
         <Logo />
       </a>
       <div className="auth-preferences">
-        <LanguageSwitcher />
+        {showLanguageSwitcher && state !== "success" && <LanguageSwitcher />}
         <ThemeToggle className="auth-theme-toggle" />
       </div>
       <section className="auth-panel auth-callback-panel" aria-labelledby="callback-title">

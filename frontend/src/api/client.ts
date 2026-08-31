@@ -2,6 +2,7 @@ import {
   defaultLocale,
   isLocale,
   localeConfig,
+  type Locale,
 } from "../../../shared/i18n";
 import { applicationMessages } from "../i18n/application";
 import type {
@@ -116,6 +117,13 @@ export function loadSession(): Promise<SessionData> {
 
 export function logout(): Promise<ActionResponse> {
   return request<ActionResponse>("/auth/session", { method: "DELETE" });
+}
+
+export function updateProfileLocale(locale: Locale): Promise<{ locale: Locale }> {
+  return request<{ locale: Locale }>("/profile", {
+    method: "PATCH",
+    body: JSON.stringify({ locale }),
+  });
 }
 
 export function loadDashboard(): Promise<DashboardData> {

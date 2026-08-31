@@ -74,4 +74,28 @@ describe("production error boundary", () => {
       }),
     );
   });
+
+  it("enregistre la langue du profil avec une mutation authentifiée", async () => {
+    document.documentElement.lang = "en";
+    const fetchMock = vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ locale: "lb" }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ));
+    vi.stubGlobal("fetch", fetchMock);
+    const { updateProfileLocale } = await import("./client");
+
+    await expect(updateProfileLocale("lb")).resolves.toEqual({ locale: "lb" });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/profile",
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({ locale: "lb" }),
+        credentials: "include",
+        headers: expect.objectContaining({
+          "Content-Type": "application/json",
+          "X-Parkventory-Locale": "en",
+        }),
+      }),
+    );
+  });
 });

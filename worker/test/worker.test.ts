@@ -23,10 +23,12 @@ async function seedMember({
   domain,
   email,
   token,
+  preferredLocale = null,
 }: {
   domain: string;
   email: string;
   token: string;
+  preferredLocale?: Locale | null;
 }) {
   const now = Math.floor(Date.now() / 1000);
   const orgId = `org-${domain}`;
@@ -38,8 +40,11 @@ async function seedMember({
   await testEnv.DB.batch([
     testEnv.DB.prepare("INSERT OR IGNORE INTO organization VALUES (?1, ?2, ?3, ?4)")
       .bind(orgId, domain, organizationName(domain), now),
-    testEnv.DB.prepare("INSERT INTO user_account VALUES (?1, ?2, ?3, ?4)")
-      .bind(userId, email, displayName(email), now),
+    testEnv.DB.prepare(`
+      INSERT INTO user_account (
+        id, normalized_email, display_name, created_at, preferred_locale
+      ) VALUES (?1, ?2, ?3, ?4, ?5)
+    `).bind(userId, email, displayName(email), now, preferredLocale),
     testEnv.DB.prepare("INSERT INTO membership VALUES (?1, ?2, ?3, 'MEMBER', ?4)")
       .bind(membershipId, orgId, userId, now),
     testEnv.DB.prepare(`
@@ -54,7 +59,7 @@ async function seedMember({
       ) VALUES (?1, ?2, ?3, ?4, ?5, ?6)
     `).bind(sessionId, await sha256(sessionToken), linkId, membershipId, now + 3600, now),
   ]);
-  return { orgId, membershipId, token: sessionToken };
+  return { orgId, userId, membershipId, token: sessionToken };
 }
 
 async function seedOffer(orgId: string, membershipId: string) {
@@ -250,6 +255,24 @@ describe("contrat Cloudflare MVP", () => {
     expect(body.detail).toContain("Ihre Sitzung ist abgelaufen");
   });
 
+  it("ajoute une préférence nullable et contraint les langues prises en charge", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const userId = `usr-${crypto.randomUUID()}`;
+    await testEnv.DB.prepare(`
+      INSERT INTO user_account (id, normalized_email, display_name, created_at)
+      VALUES (?1, ?2, 'Compte historique', ?3)
+    `).bind(userId, `${crypto.randomUUID()}@history.test`, now).run();
+
+    const historical = await testEnv.DB.prepare(`
+      SELECT preferred_locale FROM user_account WHERE id = ?1
+    `).bind(userId).first<{ preferred_locale: string | null }>();
+    expect(historical?.preferred_locale).toBeNull();
+
+    await expect(testEnv.DB.prepare(`
+      UPDATE user_account SET preferred_locale = 'nl' WHERE id = ?1
+    `).bind(userId).run()).rejects.toThrow(/CHECK constraint failed/);
+  });
+
   it("convertit les heures de Paris et garde le nom de secours indépendant de la langue", () => {
     expect(zonedDateTimeToEpoch("2026-08-25", "08:00")).toBeTypeOf("number");
     expect(zonedDateTimeToEpoch("2026-03-29", "02:30")).toBeNull();
@@ -323,12 +346,14 @@ describe("contrat Cloudflare MVP", () => {
         Origin: "https://parkventory.test",
         "Sec-Fetch-Site": "same-origin",
         "Content-Type": "application/json",
+        "X-Parkventory-Locale": "de",
       },
       body: JSON.stringify({ token }),
     });
 
     const verified = await request();
     expect(verified.status).toBe(200);
+    await expect(verified.clone().json()).resolves.toMatchObject({ locale: "de" });
     const setCookie = verified.headers.get("Set-Cookie");
     expect(setCookie).toContain("parkventory_session=");
     expect(setCookie).toContain("HttpOnly");
@@ -337,10 +362,142 @@ describe("contrat Cloudflare MVP", () => {
       headers: { Cookie: setCookie?.split(";")[0] ?? "" },
     });
     expect(sessionResponse.status).toBe(200);
-    const session = await sessionResponse.json<{ email: string; organizationName: string }>();
-    expect(session).toMatchObject({ email: "alex@session.test", organizationName: "Session" });
+    const session = await sessionResponse.json<{
+      email: string;
+      organizationName: string;
+      locale: Locale;
+    }>();
+    expect(session).toMatchObject({
+      email: "alex@session.test",
+      organizationName: "Session",
+      locale: "de",
+    });
+    const account = await testEnv.DB.prepare(`
+      SELECT preferred_locale FROM user_account WHERE normalized_email = 'alex@session.test'
+    `).first<{ preferred_locale: string | null }>();
+    expect(account?.preferred_locale).toBe("de");
 
     expect((await request()).status).toBe(400);
+
+    const reconnectToken = `${crypto.randomUUID()}${crypto.randomUUID()}`.replace(/-/g, "");
+    await testEnv.DB.prepare(`
+      INSERT INTO magic_link_request (
+        id, token_hash, normalized_email, normalized_domain, requested_ip_hash,
+        expires_at, created_at
+      ) VALUES (?1, ?2, 'alex@session.test', 'session.test', 'ip', ?3, ?4)
+    `).bind(crypto.randomUUID(), await sha256(reconnectToken), now + 900, now).run();
+    const reconnected = await SELF.fetch("https://parkventory.test/api/v1/auth/verify", {
+      method: "POST",
+      headers: {
+        Origin: "https://parkventory.test",
+        "Sec-Fetch-Site": "same-origin",
+        "Content-Type": "application/json",
+        "X-Parkventory-Locale": "fr",
+      },
+      body: JSON.stringify({ token: reconnectToken }),
+    });
+
+    expect(reconnected.status).toBe(200);
+    await expect(reconnected.clone().json()).resolves.toMatchObject({ locale: "de" });
+    const reconnectCookie = reconnected.headers.get("Set-Cookie")?.split(";")[0] ?? "";
+    const restoredSession = await SELF.fetch("https://parkventory.test/api/v1/auth/session", {
+      headers: { Cookie: reconnectCookie },
+    });
+    await expect(restoredSession.json()).resolves.toMatchObject({ locale: "de" });
+    const preservedAccount = await testEnv.DB.prepare(`
+      SELECT preferred_locale FROM user_account WHERE normalized_email = 'alex@session.test'
+    `).first<{ preferred_locale: string | null }>();
+    expect(preservedAccount?.preferred_locale).toBe("de");
+  });
+
+  it("enregistre la langue sur le seul profil authentifié", async () => {
+    const owner = await seedMember({
+      domain: "profile-a.test",
+      email: "owner@profile-a.test",
+      token: "owner-profile-token",
+      preferredLocale: "fr",
+    });
+    const other = await seedMember({
+      domain: "profile-b.test",
+      email: "other@profile-b.test",
+      token: "other-profile-token",
+      preferredLocale: "en",
+    });
+    const headers = {
+      ...cookie(owner.token),
+      Origin: "https://parkventory.test",
+      "Sec-Fetch-Site": "same-origin",
+      "Content-Type": "application/json",
+      "X-Parkventory-Locale": "fr",
+    };
+
+    let persistedLocale: Locale = "fr";
+    for (const locale of supportedLocales) {
+      const updated = await SELF.fetch("https://parkventory.test/api/v1/profile", {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({ locale }),
+      });
+      expect(updated.status).toBe(200);
+      await expect(updated.json()).resolves.toEqual({ locale });
+      persistedLocale = locale;
+    }
+
+    const accounts = await testEnv.DB.prepare(`
+      SELECT id, preferred_locale FROM user_account WHERE id IN (?1, ?2) ORDER BY id
+    `).bind(owner.userId, other.userId).all<{ id: string; preferred_locale: string | null }>();
+    expect(accounts.results).toEqual(expect.arrayContaining([
+      { id: owner.userId, preferred_locale: persistedLocale },
+      { id: other.userId, preferred_locale: "en" },
+    ]));
+
+    const sessionResponse = await SELF.fetch("https://parkventory.test/api/v1/auth/session", {
+      headers: cookie(owner.token),
+    });
+    await expect(sessionResponse.json()).resolves.toMatchObject({ locale: persistedLocale });
+
+    const rejected = await SELF.fetch("https://parkventory.test/api/v1/profile", {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ locale: "FR" }),
+    });
+    expect(rejected.status).toBe(400);
+    await expect(rejected.json()).resolves.toMatchObject({ code: "INVALID_LOCALE" });
+    const unchanged = await testEnv.DB.prepare(`
+      SELECT preferred_locale FROM user_account WHERE id = ?1
+    `).bind(owner.userId).first<{ preferred_locale: string | null }>();
+    expect(unchanged?.preferred_locale).toBe(persistedLocale);
+  });
+
+  it("protège la mutation de profil par session et même origine", async () => {
+    const member = await seedMember({
+      domain: "profile-security.test",
+      email: "member@profile-security.test",
+      token: "profile-security-token",
+    });
+
+    const anonymous = await SELF.fetch("https://parkventory.test/api/v1/profile", {
+      method: "PATCH",
+      headers: {
+        Origin: "https://parkventory.test",
+        "Sec-Fetch-Site": "same-origin",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ locale: "de" }),
+    });
+    expect(anonymous.status).toBe(401);
+
+    const crossOrigin = await SELF.fetch("https://parkventory.test/api/v1/profile", {
+      method: "PATCH",
+      headers: {
+        ...cookie(member.token),
+        Origin: "https://attacker.test",
+        "Sec-Fetch-Site": "cross-site",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ locale: "de" }),
+    });
+    expect(crossOrigin.status).toBe(403);
   });
 
   it("attribue une offre à exactement une réservation concurrente", async () => {
