@@ -1,10 +1,29 @@
-import { createContext, useContext, useState, type CSSProperties, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { defaultLocale, localeFromLanguageTag } from "../../../shared/i18n";
+import { brandingMessages } from "../i18n/branding";
 import type { OrganizationBranding } from "../types";
 import { Logo, LogoMark } from "./Logo";
 
 const BrandingContext = createContext<OrganizationBranding | null>(null);
 const hexColorPattern = /^#[0-9a-f]{6}$/i;
 const sameOriginLogoPattern = /^\/(?:[a-z0-9][a-z0-9_-]*\/)*[a-z0-9][a-z0-9._-]*\.(?:avif|png|svg|webp)$/i;
+function readDocumentLocale() {
+  return localeFromLanguageTag(document.documentElement.lang) ?? defaultLocale;
+}
+
+function useDocumentLocale() {
+  const [locale, setLocale] = useState(readDocumentLocale);
+
+  useEffect(() => {
+    const syncLocale = () => setLocale(readDocumentLocale());
+    syncLocale();
+    const observer = new MutationObserver(syncLocale);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
+    return () => observer.disconnect();
+  }, []);
+
+  return locale;
+}
 
 interface OrganizationBrandStyles extends CSSProperties {
   "--organization-action-fill": string;
@@ -90,6 +109,7 @@ export function useOrganizationBranding() {
 export function ApplicationBrand({ compact = false }: { compact?: boolean }) {
   const branding = useOrganizationBranding();
   const [failedLogoUrl, setFailedLogoUrl] = useState<string | null>(null);
+  const locale = useDocumentLocale();
 
   if (!branding || failedLogoUrl === branding.logoUrl) return <Logo compact={compact} />;
 
@@ -97,7 +117,7 @@ export function ApplicationBrand({ compact = false }: { compact?: boolean }) {
     <span
       className={`organization-brand-lockup ${compact ? "organization-brand-lockup-compact" : ""}`.trim()}
       role="img"
-      aria-label={`${branding.companyName}, avec Parkventory`}
+      aria-label={brandingMessages[locale].applicationBrandLabel(branding.companyName)}
     >
       <span className="organization-logo-plate">
         <img

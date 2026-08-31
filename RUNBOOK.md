@@ -58,12 +58,22 @@ l'environnement ciblé avant la fusion sur `main`, qui déclenche le déploiemen
 ## Vérifications après déploiement
 
 1. `GET /api/v1/health` répond `200` avec `{"status":"ok"}`.
-2. Les routes `/`, `/app`, `/app/partager`, `/app/trouver` et
-   `/auth/callback` répondent directement.
-3. Un magic link réel arrive, ne fonctionne qu’une fois et expire après 15 min.
-4. Deux membres du même domaine réalisent le parcours partage/réservation.
-5. Deux réservations concurrentes donnent un `200` et un `409`.
-6. Un membre d’un autre domaine ne voit aucune donnée du premier.
+2. `/` négocie la langue par cookie puis `Accept-Language` ; les douze pages
+   accueil, confidentialité et mentions légales sous `/fr`, `/en`, `/de` et
+   `/lb` répondent `200` avec le bon `Content-Language`, leur canonical, cinq
+   alternates et un contenu visible dans le HTML initial.
+3. Une route inconnue répond `404` avec `noindex`; un asset pointé mais absent
+   répond aussi `404` en `text/plain`, jamais avec le shell HTML.
+4. `robots.txt`, `sitemap.xml`, `llms.txt`, les quatre manifestes, les icônes et
+   cartes sociales répondent avec leur MIME attendu. Le sitemap contient
+   exactement les douze pages indexables.
+5. Les routes applicatives localisées — par exemple `/fr/app/partager`,
+   `/en/app/share`, `/de/app/suchen` et `/lb/auth/callback` — répondent
+   directement et restent hors index.
+6. Un magic link réel arrive, ne fonctionne qu’une fois et expire après 15 min.
+7. Deux membres du même domaine réalisent le parcours partage/réservation.
+8. Deux réservations concurrentes donnent un `200` et un `409`.
+9. Un membre d’un autre domaine ne voit aucune donnée du premier.
 
 ## Bascule et retour arrière
 

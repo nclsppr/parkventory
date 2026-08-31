@@ -1,0 +1,32 @@
+{
+  "id": "/en/",
+  "name": "Parkventory",
+  "short_name": "Parkventory",
+  "description": "Share and book available workplace parking spaces with colleagues, simply and without double bookings.",
+  "lang": "en",
+  "start_url": "/en/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#030504",
+  "theme_color": "#030504",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

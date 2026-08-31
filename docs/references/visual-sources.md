@@ -61,14 +61,15 @@ au mot `Parkventory` en texte accessible. Il ne doit être ni redessiné, ni
 recoloré, ni injecté plusieurs fois inline : ses IDs internes doivent rester
 isolés dans le document image.
 
-Les copies SVG de publication sont byte-identiques au master. Le PNG est son
-dérivé raster déterministe, nécessaire parce que le moteur Open Graph de
-Nimbus ne décode pas le SVG :
+La copie principale de publication reste byte-identique au master. Le favicon
+place les mêmes chemins, sans les modifier, sur un canevas carré `560 × 560`
+(`viewBox="-3 0 560 560"`) afin de respecter le ratio attendu dans les résultats
+de recherche. Les PNG sont des dérivés raster déterministes :
 
 | Copie | Consommateur |
 | --- | --- |
 | `frontend/public/parkventory-logo-transparent.svg` | Huit emplacements React via le composant partagé `Logo` |
-| `frontend/public/favicon.svg` | Favicon de la landing et de l'application |
+| `frontend/public/favicon.svg` | Favicon carré de la landing et de l'application ; géométrie du symbole inchangée |
 | `docs-nimbus/public/favicon.svg` | Header et favicon Nimbus |
 | `docs-nimbus/public/parkventory-logo-transparent.png` | Cartes Open Graph Nimbus générées en PNG |
 
@@ -100,7 +101,10 @@ des cinq JPEG de référence dont les droits restent non établis.
 | Artefact | Dimensions | Octets | SHA-256 | Statut |
 | --- | ---: | ---: | --- | --- |
 | `assets/brand/parkventory-social-card.svg` | 1 200 × 630 | 4 644 | `b0d50f4dbb354e5e176ad63b0156a8c45b61b31e6a936915711ddd79a67debe1` | Source éditable avec ancres logo et police |
-| `frontend/public/parkventory-social-card.png` | 1 200 × 630 | 51 695 | `fd2ccf37d786492a13379920712b9c6400858216abe0110139edd5cd8db061bf` | Raster optimisé servi publiquement |
+| `frontend/public/parkventory-social-card-fr.png` | 1 200 × 630 | 51 695 | `fd2ccf37d786492a13379920712b9c6400858216abe0110139edd5cd8db061bf` | Raster français ; alias historique byte-identique |
+| `frontend/public/parkventory-social-card-en.png` | 1 200 × 630 | 50 757 | `19e8bb34a4b8b5035b9bd8037e7e16740cae74580c8bed2b755c2c778fed486b` | Raster anglais |
+| `frontend/public/parkventory-social-card-de.png` | 1 200 × 630 | 50 638 | `4fce7df31fddd0f0ec0f506cb91645290fdc7791eac54f7564a8837f5782382e` | Raster allemand |
+| `frontend/public/parkventory-social-card-lb.png` | 1 200 × 630 | 51 541 | `541ff3f75dd95ecdcf32ce6d68631dfd4c7180d37a27b1c62aa41ebd2c576e51` | Raster luxembourgeois |
 
 `npm run brand:sync` injecte uniquement en mémoire les octets exacts du symbole
 canonique et de la police Inter verrouillée. `opentype.js` `2.0.0` vectorise les
@@ -111,12 +115,24 @@ et dérivé aux octets attendus. Le test Node refuse tout nœud `<text>` transmi
 au rasteriseur. Un checkout neuf n'a besoin que du `npm ci` racine pour exécuter
 ces commandes ; macOS arm64 et Linux x64 produisent le même SHA-256 public.
 
-Le raster est consommé par les métadonnées Open Graph, Twitter et JSON-LD de
-`frontend/index.html` à l'URL stable
-`https://parkventory.com/parkventory-social-card.png`. La carte ne contient que
-le nom Parkventory et la promesse existante « Le parking partagé, simplement. ».
+Le raster de la langue active est consommé par les métadonnées Open Graph,
+Twitter et JSON-LD à l’URL stable
+`https://parkventory.com/parkventory-social-card-{lang}.png`. Chaque carte ne
+contient que le nom Parkventory et la traduction de la promesse existante.
 Elle ne présente ni métrique, ni logo client, ni témoignage, ni assertion que
 le parcours de validation à deux membres est terminé.
+
+## Icônes d’installation
+
+| Artefact | Dimensions | Octets | SHA-256 | Usage |
+| --- | ---: | ---: | --- | --- |
+| `frontend/public/icon-192.png` | 192 × 192 | 2 946 | `fb15cb1dd0b63ba6298cd6ef02f9ae49f903c682e1e7001779a7c8d4dbe03ce0` | Icône manifeste |
+| `frontend/public/icon-512.png` | 512 × 512 | 8 381 | `07094965d6488c522cec674e8b19edf6db75e18e11ec51cc026acd796ca7139a` | Icône manifeste |
+| `frontend/public/icon-maskable-512.png` | 512 × 512 | 6 979 | `82e20c040b21543e7abeba0dda9cbb5d79b43989b632f317fb10aa2e8ec73bc2` | Zone sûre maskable |
+| `frontend/public/apple-touch-icon.png` | 180 × 180 | 2 761 | `6554e1b3c8fdd292c737c6b24da7f009d05c89ef45b1289de903aea00236921f` | Écran d’accueil Apple |
+
+Ces quatre PNG sont opaques, utilisent le fond `#030504` et centrent les octets
+du symbole canonique sans modifier sa géométrie ni ses couleurs.
 
 ## Co-marque Victor Buck Services
 

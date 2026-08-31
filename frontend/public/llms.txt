@@ -1,0 +1,21 @@
+# Parkventory
+
+> Parkventory helps colleagues make workplace parking spaces available and book them without double bookings.
+
+## Public pages
+
+- [Français](https://parkventory.com/fr/)
+- [English](https://parkventory.com/en/)
+- [Deutsch](https://parkventory.com/de/)
+- [Lëtzebuergesch](https://parkventory.com/lb/)
+
+## Privacy and legal information
+
+- [Confidentialité](https://parkventory.com/fr/confidentialite)
+- [Privacy](https://parkventory.com/en/privacy)
+- [Datenschutz](https://parkventory.com/de/datenschutz)
+- [Dateschutz](https://parkventory.com/lb/dateschutz)
+- [Mentions légales](https://parkventory.com/fr/mentions-legales)
+- [Legal notice](https://parkventory.com/en/legal-notice)
+- [Impressum (DE)](https://parkventory.com/de/impressum)
+- [Impressum (LB)](https://parkventory.com/lb/impressum)

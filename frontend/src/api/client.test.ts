@@ -5,9 +5,29 @@ afterEach(() => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
   vi.resetModules();
+  document.documentElement.lang = "fr";
 });
 
 describe("production error boundary", () => {
+  it("transmet la langue active sur chaque requête API", async () => {
+    document.documentElement.lang = "de";
+    const fetchMock = vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ availability: [] }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ));
+    vi.stubGlobal("fetch", fetchMock);
+    const { loadDashboard } = await import("./client");
+
+    await loadDashboard();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/dashboard",
+      expect.objectContaining({
+        headers: expect.objectContaining({ "X-Parkventory-Locale": "de" }),
+      }),
+    );
+  });
+
   it.each([
     [403, "Action interdite.", "Action interdite."],
     [409, "La place vient de changer.", "La place vient de changer."],

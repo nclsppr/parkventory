@@ -13,6 +13,23 @@ const victorBuckColors: OrganizationBranding["colors"] = {
 };
 
 describe("e-mail de connexion Parkventory", () => {
+  it.each([
+    ["fr", "Votre accès sécurisé à Parkventory", "Votre place vous attend."],
+    ["en", "Your secure access to Parkventory", "Your parking space is waiting."],
+    ["de", "Ihr sicherer Zugang zu Parkventory", "Ihr Parkplatz wartet auf Sie."],
+    ["lb", "Äre sécheren Zougang zu Parkventory", "Är Parkplaz waart op Iech."],
+  ] as const)("localise le sujet, le texte et le HTML en %s", (locale, subject, heading) => {
+    const link = `https://parkventory.com/${locale}/auth/callback?token=test-token`;
+    const email = magicLinkEmail(link, undefined, locale);
+
+    expect(email.subject).toBe(subject);
+    expect(email.text).toContain(link);
+    expect(email.text).toContain("15");
+    expect(email.html).toContain(`<html lang="${locale}">`);
+    expect(email.html).toContain(heading);
+    expect(email.html).toContain(`href="${link}"`);
+  });
+
   it("fournit un message HTML de marque et une alternative texte complète", () => {
     const link = "https://parkventory.com/auth/callback?token=test-token";
     const email = magicLinkEmail(link);

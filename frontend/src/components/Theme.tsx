@@ -1,11 +1,14 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useLayoutEffect,
   useState,
   type ReactNode,
 } from "react";
 import { Moon, Sun } from "lucide-react";
+import { defaultLocale, localeFromLanguageTag } from "../../../shared/i18n";
+import { commonMessages } from "../i18n/common";
 
 export type Theme = "dark" | "light";
 
@@ -47,6 +50,24 @@ function applyTheme(theme: Theme) {
     ?.setAttribute("content", themeColors[theme]);
 }
 
+function readDocumentLocale() {
+  return localeFromLanguageTag(document.documentElement.lang) ?? defaultLocale;
+}
+
+function useDocumentLocale() {
+  const [locale, setLocale] = useState(readDocumentLocale);
+
+  useEffect(() => {
+    const syncLocale = () => setLocale(readDocumentLocale());
+    syncLocale();
+    const observer = new MutationObserver(syncLocale);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
+    return () => observer.disconnect();
+  }, []);
+
+  return locale;
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(readInitialTheme);
 
@@ -74,24 +95,26 @@ function useTheme() {
 
 export function ThemeToggle({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme();
+  const locale = useDocumentLocale();
+  const copy = commonMessages[locale];
   const classes = ["theme-toggle", className].filter(Boolean).join(" ");
 
   return (
-    <div className={classes} role="group" aria-label="Apparence">
+    <div className={classes} role="group" aria-label={copy.appearance}>
       <button
         type="button"
-        aria-label="Thème clair"
+        aria-label={copy.lightTheme}
         aria-pressed={theme === "light"}
-        title="Thème clair"
+        title={copy.lightTheme}
         onClick={() => setTheme("light")}
       >
         <Sun aria-hidden="true" />
       </button>
       <button
         type="button"
-        aria-label="Thème sombre"
+        aria-label={copy.darkTheme}
         aria-pressed={theme === "dark"}
-        title="Thème sombre"
+        title={copy.darkTheme}
         onClick={() => setTheme("dark")}
       >
         <Moon aria-hidden="true" />

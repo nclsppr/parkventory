@@ -3,8 +3,11 @@ export type AvailabilityViewerRelation = "NONE" | "OFFERED" | "RESERVED";
 
 export interface AvailabilityItem {
   id: string;
-  dateLabel: string;
-  timeLabel: string;
+  localDate?: string;
+  localFrom?: string;
+  localTo?: string;
+  dateLabel?: string;
+  timeLabel?: string;
   timeZone: string;
   spot: string;
   level: string;

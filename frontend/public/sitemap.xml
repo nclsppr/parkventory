@@ -1,12 +1,102 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset
+  xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml"
+>
   <url>
-    <loc>https://parkventory.com/</loc>
+    <loc>https://parkventory.com/fr/</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://parkventory.com/fr/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://parkventory.com/en/" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://parkventory.com/de/" />
+    <xhtml:link rel="alternate" hreflang="lb" href="https://parkventory.com/lb/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://parkventory.com/" />
   </url>
   <url>
-    <loc>https://parkventory.com/confidentialite</loc>
+    <loc>https://parkventory.com/en/</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://parkventory.com/fr/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://parkventory.com/en/" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://parkventory.com/de/" />
+    <xhtml:link rel="alternate" hreflang="lb" href="https://parkventory.com/lb/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://parkventory.com/" />
   </url>
   <url>
-    <loc>https://parkventory.com/mentions-legales</loc>
+    <loc>https://parkventory.com/de/</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://parkventory.com/fr/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://parkventory.com/en/" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://parkventory.com/de/" />
+    <xhtml:link rel="alternate" hreflang="lb" href="https://parkventory.com/lb/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://parkventory.com/" />
+  </url>
+  <url>
+    <loc>https://parkventory.com/lb/</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://parkventory.com/fr/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://parkventory.com/en/" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://parkventory.com/de/" />
+    <xhtml:link rel="alternate" hreflang="lb" href="https://parkventory.com/lb/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://parkventory.com/" />
+  </url>
+  <url>
+    <loc>https://parkventory.com/fr/confidentialite</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://parkventory.com/fr/confidentialite" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://parkventory.com/en/privacy" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://parkventory.com/de/datenschutz" />
+    <xhtml:link rel="alternate" hreflang="lb" href="https://parkventory.com/lb/dateschutz" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://parkventory.com/privacy" />
+  </url>
+  <url>
+    <loc>https://parkventory.com/en/privacy</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://parkventory.com/fr/confidentialite" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://parkventory.com/en/privacy" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://parkventory.com/de/datenschutz" />
+    <xhtml:link rel="alternate" hreflang="lb" href="https://parkventory.com/lb/dateschutz" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://parkventory.com/privacy" />
+  </url>
+  <url>
+    <loc>https://parkventory.com/de/datenschutz</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://parkventory.com/fr/confidentialite" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://parkventory.com/en/privacy" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://parkventory.com/de/datenschutz" />
+    <xhtml:link rel="alternate" hreflang="lb" href="https://parkventory.com/lb/dateschutz" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://parkventory.com/privacy" />
+  </url>
+  <url>
+    <loc>https://parkventory.com/lb/dateschutz</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://parkventory.com/fr/confidentialite" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://parkventory.com/en/privacy" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://parkventory.com/de/datenschutz" />
+    <xhtml:link rel="alternate" hreflang="lb" href="https://parkventory.com/lb/dateschutz" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://parkventory.com/privacy" />
+  </url>
+  <url>
+    <loc>https://parkventory.com/fr/mentions-legales</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://parkventory.com/fr/mentions-legales" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://parkventory.com/en/legal-notice" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://parkventory.com/de/impressum" />
+    <xhtml:link rel="alternate" hreflang="lb" href="https://parkventory.com/lb/impressum" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://parkventory.com/legal" />
+  </url>
+  <url>
+    <loc>https://parkventory.com/en/legal-notice</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://parkventory.com/fr/mentions-legales" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://parkventory.com/en/legal-notice" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://parkventory.com/de/impressum" />
+    <xhtml:link rel="alternate" hreflang="lb" href="https://parkventory.com/lb/impressum" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://parkventory.com/legal" />
+  </url>
+  <url>
+    <loc>https://parkventory.com/de/impressum</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://parkventory.com/fr/mentions-legales" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://parkventory.com/en/legal-notice" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://parkventory.com/de/impressum" />
+    <xhtml:link rel="alternate" hreflang="lb" href="https://parkventory.com/lb/impressum" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://parkventory.com/legal" />
+  </url>
+  <url>
+    <loc>https://parkventory.com/lb/impressum</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://parkventory.com/fr/mentions-legales" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://parkventory.com/en/legal-notice" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://parkventory.com/de/impressum" />
+    <xhtml:link rel="alternate" hreflang="lb" href="https://parkventory.com/lb/impressum" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://parkventory.com/legal" />
   </url>
 </urlset>

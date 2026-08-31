@@ -131,4 +131,12 @@ describe("branding d’organisation", () => {
     expect(contrast(branding.colors.highlight, "#F4F6F1")).toBeGreaterThanOrEqual(3);
     expect(styles).toMatch(/\.organization-brand-scope \.app-sidebar\s*\{\s*box-shadow: inset 0 3px var\(--company-highlight\);/);
   });
+
+  it("compacte le verrou de marque et les préférences dans le topbar étroit", () => {
+    expect(styles).toMatch(/@media \(max-width: 560px\)[\s\S]*?\.mobile-organization-logo\s*\{\s*width: 72px;\s*height: 44px;/);
+    expect(styles).toMatch(/@media \(max-width: 560px\)[\s\S]*?\.app-topbar-actions \.language-switcher\s*\{\s*min-width: 52px;\s*min-height: 44px;/);
+    expect(styles).toMatch(/@media \(max-width: 560px\)[\s\S]*?\.app-topbar-actions \.theme-toggle\s*\{\s*grid-template-columns: repeat\(2, 44px\);/);
+    expect(styles).toMatch(/@media \(max-width: 560px\)[\s\S]*?\.app-topbar-actions \.theme-toggle button\s*\{\s*width: 44px;\s*height: 44px;/);
+    expect(styles).toMatch(/@media \(max-width: 560px\)[\s\S]*?\.availability-agenda-status\s*\{[\s\S]*?flex-direction: column;/);
+  });
 });

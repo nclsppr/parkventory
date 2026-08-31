@@ -1,6 +1,43 @@
-# État vérifié — 26 août 2026
+# État vérifié — 31 août 2026
 
-## Production Cloudflare active
+## Candidat SEO et i18n — non fusionné, non déployé
+
+- La branche `codex/seo-i18n-four-locales`, créée sur
+  `origin/main@938c3a40aef5e65affaf19d6a1c546cbfa5a78f1`, porte le candidat français,
+  anglais, allemand et luxembourgeois. Elle n’a encore modifié ni `main`, ni la
+  base D1 distante, ni le Worker public.
+- Douze pages publiques ont des URLs stables, un canonical auto-référent, cinq
+  alternates (`fr`, `en`, `de`, `lb`, `x-default`) et un contenu visible dans
+  le HTML initial. Les routes privées et 404 restent hors index.
+- La racine négocie le cookie puis `Accept-Language`; un choix explicite dans
+  l’URL reste prioritaire. L’API, les erreurs, les dates, les e-mails et les
+  routes de callback suivent la locale choisie.
+- La fenêtre de partage et la date proposée utilisent le fuseau du parking. Les
+  valeurs temporelles brutes restent dans le contrat API et les libellés sont
+  formatés côté client avec `Intl`.
+- La gate `npm run verify` réussit avec 6 tests de marque, 99 tests Worker/D1,
+  90 tests React, le typecheck Worker, le build Vite et le dry-run Wrangler. La
+  matrice Worker traverse réellement le binding Assets pour les douze pages,
+  les `HEAD`, 404 conditionnelles, fichiers SEO, manifestes et images.
+- Les assets raster et le favicon carré ont été contrôlés. Le navigateur
+  intégré n’a pas pu ouvrir le serveur local parce que sa politique
+  administrateur était indisponible malgré trois tentatives ; les corrections
+  320 px sont donc couvertes par contraintes CSS et tests de régression, mais
+  une revue visuelle navigateur reste requise avant le pilote.
+- La PR #28 de palette VBS reste ouverte et verte sur le même `origin/main`.
+  Si elle fusionne avant ce candidat, il faudra rebaser et résoudre ses fichiers
+  communs avant toute fusion.
+
+## Production publique observée le 31 août 2026
+
+- `https://parkventory.com/en/` répond encore avec le titre français ;
+  `sitemap.xml` ne contient encore que `/`, `/confidentialite` et
+  `/mentions-legales`.
+- `manifest-lb.webmanifest` et un asset JavaScript inexistant répondent encore
+  `200 text/html`. Ces sondes confirment que le contrat multilingue et les vraies
+  404 de ce candidat ne sont pas encore en production.
+
+## Production Cloudflare active — snapshot historique du 26 août 2026
 
 - La réécriture Cloudflare-native est sur `origin/main` depuis la PR #13,
   fusionnée au SHA `bd95f98ab73d7644fcc20a2f8d717ca16c3c8ff0`.

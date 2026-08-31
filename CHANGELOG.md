@@ -5,6 +5,38 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ## Non publié
 
+### Internationalisation et SEO multilingue
+
+- ajout de versions complètes française, anglaise, allemande et
+  luxembourgeoise pour la landing, l’authentification, l’application connectée,
+  les pages légales, les erreurs API et les e-mails de connexion ;
+- ajout d’URLs stables préfixées par langue, avec priorité à l’URL, choix
+  explicite persistant et négociation de la langue du navigateur uniquement sur
+  les entrées neutres ;
+- ajout de canoniques auto-référents, groupes `hreflang` réciproques,
+  `x-default`, métadonnées et contenu visible initial localisés, puis sitemap
+  limité aux douze variantes des trois pages réellement publiques ;
+- mise hors index des routes privées, de l’authentification, des aperçus et des
+  vraies réponses 404, avec redirections HTTPS, `www` et anciennes routes
+  conservant chemin et requête ;
+- ajout de quatre cartes sociales, quatre manifestes, icônes d’installation,
+  `apple-touch-icon` et `llms.txt`, tous dérivés des sources de marque
+  canoniques et contrôlés par la gate ;
+- conservation dans l’API des dates et heures brutes, formatées avec `Intl`
+  dans la langue active et le fuseau du parking, validation de la fenêtre de
+  partage dans ce même fuseau, et transmission explicite de la locale aux
+  réponses serveur et aux magic links ;
+- correction des validateurs et du `Vary` des 404 négociées, ajout d’un favicon
+  carré, transfert de focus après navigation interne et compactage des longues
+  traductions dans le shell connecté à 320 px ; le tiroir mobile ferme au
+  passage en vue bureau, bloque le défilement arrière et conserve des cibles de
+  44 px ;
+- centralisation du contact légal entre HTML initial et React, libellés de
+  fuseau calculés à l’heure exacte du créneau lors des changements saisonniers,
+  et nom de secours membre indépendant de la langue de première connexion ;
+- suppression des promesses de notification, invitations et filtres multi-sites
+  qui ne correspondaient pas au périmètre MVP.
+
 ### Indexation publique
 
 - ajout d’un sitemap canonique limité à l’accueil, la confidentialité et les

@@ -1,88 +1,106 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  legacyRouteFromPathname,
+  localizedRouteFromPathname,
+  type Locale,
+  type RouteId,
+} from "../../shared/i18n";
 import { ApiError, loadSession } from "./api/client";
 import type { ApplicationRoute } from "./components/AppShell";
-import { findUrl, relativePathname, shareUrl } from "./config";
-import { ApplicationPage } from "./pages/ApplicationPage";
-import { LandingPage } from "./pages/LandingPage";
-import { NotFoundPage } from "./pages/NotFoundPage";
-import { AuthCallbackPage, SignInPage } from "./pages/AuthPages";
-import { LegalNoticePage, PrivacyPage } from "./pages/LegalPages";
+import { LanguageSwitcher } from "./components/LanguageSwitcher";
 import { ThemeProvider, ThemeToggle } from "./components/Theme";
+import { relativePathname, routeUrl } from "./config";
+import { I18nProvider, useI18n } from "./i18n/I18n";
+import { applyClientMetadata } from "./i18n/metadata";
+import { systemMessages } from "./i18n/system";
+import { ApplicationPage } from "./pages/ApplicationPage";
+import { AuthCallbackPage, SignInPage } from "./pages/AuthPages";
+import { LandingPage } from "./pages/LandingPage";
+import { LegalNoticePage, PrivacyPage } from "./pages/LegalPages";
+import { NotFoundPage } from "./pages/NotFoundPage";
 import type { SessionData } from "./types";
 
-const applicationRoutes: Record<string, ApplicationRoute> = {
-  "/app": "dashboard",
-  "/app/partager": "share",
-  "/app/trouver": "find",
+const applicationRoutes: Partial<Record<RouteId, ApplicationRoute>> = {
+  app: "dashboard",
+  share: "share",
+  find: "find",
 };
 
-function legacyIntentTarget() {
-  if (relativePathname(window.location.pathname) !== "/app") return null;
+function legacyIntentRoute(pathname: string): Exclude<RouteId, "notFound"> | null {
+  const legacyRoute = legacyRouteFromPathname(pathname);
+  if (legacyRoute !== "app") return legacyRoute;
   const intent = new URLSearchParams(window.location.search).get("intent");
-  if (intent === "share") return shareUrl;
-  if (intent === "find") return findUrl;
-  return null;
+  if (intent === "share") return "share";
+  if (intent === "find") return "find";
+  return legacyRoute;
 }
 
 function currentPath() {
-  const legacyTarget = legacyIntentTarget();
-  return legacyTarget
-    ? relativePathname(new URL(legacyTarget, window.location.origin).pathname)
-    : relativePathname(window.location.pathname);
+  return relativePathname(window.location.pathname);
 }
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AppContent />
-    </ThemeProvider>
+    <I18nProvider>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
+    </I18nProvider>
   );
 }
 
 function AppContent() {
+  const { locale } = useI18n();
   const [path, setPath] = useState(currentPath);
+  const localizedRoute = useMemo(() => localizedRouteFromPathname(path), [path]);
+  const route = localizedRoute?.route ?? legacyIntentRoute(path) ?? "notFound";
+  const routeLocale = localizedRoute?.locale ?? locale;
 
   useEffect(() => {
-    const onPopState = () => {
-      const legacyTarget = legacyIntentTarget();
-      if (legacyTarget) window.history.replaceState({}, "", legacyTarget);
-      setPath(relativePathname(window.location.pathname));
-    };
-
-    onPopState();
+    const onPopState = () => setPath(currentPath());
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
   useEffect(() => {
-    const titles: Record<string, string> = {
-      "/": "Parkventory — Le parking partagé, simplement",
-      "/app": "Accueil — Parkventory",
-      "/app/partager": "Partager ma place — Parkventory",
-      "/app/trouver": "Trouver une place — Parkventory",
-      "/auth/callback": "Connexion — Parkventory",
-      "/confidentialite": "Confidentialité — Parkventory",
-      "/mentions-legales": "Mentions légales — Parkventory",
-    };
-    document.title = titles[path] ?? "Page introuvable — Parkventory";
-  }, [path]);
+    if (localizedRoute || route === "notFound") return;
+    const url = new URL(window.location.href);
+    url.pathname = routeUrl(locale, route);
+    if (path === "/app" && url.searchParams.has("intent")) {
+      url.searchParams.delete("intent");
+    }
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  }, [locale, localizedRoute, path, route]);
 
-  if (path === "/") return <LandingPage />;
-  if (path === "/auth/callback") return <AuthCallbackPage />;
-  if (path === "/confidentialite") return <PrivacyPage />;
-  if (path === "/mentions-legales") return <LegalNoticePage />;
-  if (applicationRoutes[path]) {
-    return <AuthenticatedApplication route={applicationRoutes[path]} />;
+  useEffect(() => {
+    applyClientMetadata(routeLocale, route);
+  }, [route, routeLocale]);
+
+  if (route === "home") return <LandingPage />;
+  if (route === "authCallback") return <AuthCallbackPage />;
+  if (route === "privacy") return <PrivacyPage />;
+  if (route === "legal") return <LegalNoticePage />;
+  const applicationRoute = applicationRoutes[route];
+  if (applicationRoute) {
+    return <AuthenticatedApplication route={applicationRoute} locale={routeLocale} />;
   }
   return <NotFoundPage />;
 }
 
-function AuthenticatedApplication({ route }: { route: ApplicationRoute }) {
+function AuthenticatedApplication({
+  route,
+  locale,
+}: {
+  route: ApplicationRoute;
+  locale: Locale;
+}) {
+  const copy = systemMessages[locale];
   const [state, setState] = useState<"checking" | "authenticated" | "anonymous">(
     "checking",
   );
   const [session, setSession] = useState<SessionData | null>(null);
-  const [reason, setReason] = useState<string | undefined>();
+  const [sessionCheckFailed, setSessionCheckFailed] = useState(false);
   const handleSessionExpired = useCallback(() => {
     setSession(null);
     setState("anonymous");
@@ -94,19 +112,14 @@ function AuthenticatedApplication({ route }: { route: ApplicationRoute }) {
       .then((loadedSession) => {
         if (!active) return;
         setSession(loadedSession);
+        setSessionCheckFailed(false);
         setState("authenticated");
       })
       .catch((error) => {
         if (!active) return;
         setSession(null);
         setState("anonymous");
-        setReason(
-          error instanceof ApiError && error.status === 401
-            ? undefined
-            : error instanceof Error
-              ? error.message
-              : "La connexion n’a pas pu être vérifiée.",
-        );
+        setSessionCheckFailed(!(error instanceof ApiError && error.status === 401));
       });
     return () => {
       active = false;
@@ -117,14 +130,19 @@ function AuthenticatedApplication({ route }: { route: ApplicationRoute }) {
     return (
       <main className="auth-page">
         <div className="auth-backdrop" aria-hidden="true" />
-        <ThemeToggle className="auth-theme-toggle" />
+        <div className="auth-preferences">
+          <LanguageSwitcher />
+          <ThemeToggle />
+        </div>
         <p className="auth-loading" role="status">
-          Vérification de la connexion…
+          {copy.checkingConnection}
         </p>
       </main>
     );
   }
-  if (state === "anonymous") return <SignInPage reason={reason} />;
+  if (state === "anonymous") {
+    return <SignInPage reason={sessionCheckFailed ? copy.connectionCheckFailed : undefined} />;
+  }
   return (
     <ApplicationPage
       route={route}

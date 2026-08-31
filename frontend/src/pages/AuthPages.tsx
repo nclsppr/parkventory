@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -7,15 +7,28 @@ import {
   Mail,
   ShieldCheck,
 } from "lucide-react";
-import { requestMagicLink, verifyMagicLink } from "../api/client";
-import { appUrl, homeUrl } from "../config";
+import { ApiError, requestMagicLink, verifyMagicLink } from "../api/client";
+import { localizedUrls } from "../config";
+import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { Logo } from "../components/Logo";
 import { ThemeToggle } from "../components/Theme";
 import { Turnstile } from "../components/Turnstile";
+import { authMessages } from "../i18n/auth";
+import { useI18n } from "../i18n/I18n";
 import type { SessionData } from "../types";
 
 const personalDomains = ["gmail.com", "outlook.com", "hotmail.com", "yahoo.com", "icloud.com"];
 const verificationRequests = new Map<string, Promise<SessionData>>();
+
+type SignInFeedbackKey =
+  | "invalidProfessionalEmail"
+  | "securityRequired"
+  | "linkSent"
+  | "requestRateLimited"
+  | "requestUnavailable"
+  | "requestFailed";
+
+type SignInFeedback = { key: SignInFeedbackKey } | { text: string } | null;
 
 function verifyMagicLinkOnce(token: string): Promise<SessionData> {
   const existingRequest = verificationRequests.get(token);
@@ -29,38 +42,56 @@ function verifyMagicLinkOnce(token: string): Promise<SessionData> {
 }
 
 export function SignInPage({ reason }: { reason?: string }) {
+  const { locale } = useI18n();
+  const copy = authMessages[locale];
+  const { homeUrl } = localizedUrls(locale);
   const [email, setEmail] = useState("");
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [challengeKey, setChallengeKey] = useState(0);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(reason ?? null);
-  const [sent, setSent] = useState(false);
+  const [feedback, setFeedback] = useState<SignInFeedback>(reason ? { text: reason } : null);
   const handleTurnstile = useCallback((token: string | null) => setTurnstileToken(token), []);
+
+  useEffect(() => {
+    setFeedback((current) => {
+      if (reason) return { text: reason };
+      return current && "text" in current ? null : current;
+    });
+  }, [reason]);
+
+  const message = feedback
+    ? "key" in feedback
+      ? copy[feedback.key]
+      : feedback.text
+    : null;
+  const sent = feedback !== null && "key" in feedback && feedback.key === "linkSent";
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const normalized = email.trim().toLowerCase();
     const domain = normalized.split("@")[1];
     if (!domain || personalDomains.includes(domain)) {
-      setSent(false);
-      setMessage("Utilisez une adresse e-mail professionnelle.");
+      setFeedback({ key: "invalidProfessionalEmail" });
       return;
     }
     if (!turnstileToken) {
-      setSent(false);
-      setMessage("Terminez la vérification de sécurité avant de continuer.");
+      setFeedback({ key: "securityRequired" });
       return;
     }
 
     setBusy(true);
-    setMessage(null);
+    setFeedback(null);
     try {
-      const response = await requestMagicLink(normalized, turnstileToken);
-      setSent(true);
-      setMessage(response.message);
+      await requestMagicLink(normalized, turnstileToken);
+      setFeedback({ key: "linkSent" });
     } catch (error) {
-      setSent(false);
-      setMessage(error instanceof Error ? error.message : "L’envoi du lien a échoué.");
+      if (error instanceof ApiError && error.status === 429) {
+        setFeedback({ key: "requestRateLimited" });
+      } else if (error instanceof ApiError && (error.status === 0 || error.status >= 500)) {
+        setFeedback({ key: "requestUnavailable" });
+      } else {
+        setFeedback({ key: "requestFailed" });
+      }
     } finally {
       setBusy(false);
       setChallengeKey((key) => key + 1);
@@ -70,22 +101,25 @@ export function SignInPage({ reason }: { reason?: string }) {
   return (
     <main className="auth-page">
       <div className="auth-backdrop" aria-hidden="true" />
-      <a className="auth-brand" href={homeUrl} aria-label="Parkventory, accueil"><Logo /></a>
-      <ThemeToggle className="auth-theme-toggle" />
+      <a className="auth-brand" href={homeUrl} aria-label={copy.brandHomeLabel}>
+        <Logo />
+      </a>
+      <div className="auth-preferences">
+        <LanguageSwitcher />
+        <ThemeToggle className="auth-theme-toggle" />
+      </div>
       <section className="auth-panel" aria-labelledby="auth-title">
         <div className="auth-icon"><Mail aria-hidden="true" /></div>
-        <p className="section-index">Accès à l’espace parking</p>
-        <h1 id="auth-title">Connectez-vous sans mot de passe.</h1>
-        <p className="auth-intro">
-          Saisissez votre adresse professionnelle. Le lien privé expire après 15 minutes et ne fonctionne qu’une fois.
-        </p>
+        <p className="section-index">{copy.accessKicker}</p>
+        <h1 id="auth-title">{copy.signInTitle}</h1>
+        <p className="auth-intro">{copy.signInIntro}</p>
         <form onSubmit={submit} noValidate>
-          <label htmlFor="signin-email">Adresse e-mail professionnelle</label>
+          <label htmlFor="signin-email">{copy.emailLabel}</label>
           <input
             id="signin-email"
             type="email"
             autoComplete="email"
-            placeholder="vous@entreprise.com"
+            placeholder={copy.emailPlaceholder}
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             aria-describedby="signin-message"
@@ -94,7 +128,7 @@ export function SignInPage({ reason }: { reason?: string }) {
           <Turnstile key={challengeKey} onToken={handleTurnstile} />
           <button className="button button-primary" type="submit" disabled={busy || !turnstileToken}>
             {busy ? <LoaderCircle className="spin" aria-hidden="true" /> : <ArrowRight aria-hidden="true" />}
-            {busy ? "Envoi en cours…" : "Recevoir mon lien"}
+            {busy ? copy.sending : copy.requestLink}
           </button>
         </form>
         <div
@@ -103,47 +137,67 @@ export function SignInPage({ reason }: { reason?: string }) {
           role={message ? "status" : undefined}
         >
           {sent && <CheckCircle2 aria-hidden="true" />}
-          <span>{message ?? "Aucun compte n’est créé avant la validation du lien."}</span>
+          <span>{message ?? copy.defaultHint}</span>
         </div>
         <p className="auth-trust">
           <ShieldCheck aria-hidden="true" />
-          Parkventory ne demande jamais votre mot de passe d’entreprise.
+          {copy.trust}
         </p>
       </section>
       <a className="auth-home-link" href={homeUrl}>
-        <ArrowLeft aria-hidden="true" /> Revenir à la présentation
+        <ArrowLeft aria-hidden="true" /> {copy.backToPresentation}
       </a>
     </main>
   );
 }
 
 export function AuthCallbackPage() {
+  const { locale } = useI18n();
+  const copy = authMessages[locale];
+  const localeRef = useRef(locale);
+  localeRef.current = locale;
+  const { appUrl, homeUrl } = localizedUrls(locale);
   const [token] = useState(() => new URLSearchParams(window.location.search).get("token"));
   const [state, setState] = useState<"verifying" | "success" | "error">("verifying");
-  const [message, setMessage] = useState("Validation de votre lien sécurisé…");
+  const [displayName, setDisplayName] = useState("");
+  const [errorKind, setErrorKind] = useState<"incomplete" | "expired" | "failed" | null>(null);
+
+  const message = state === "verifying"
+    ? copy.callbackVerifyingMessage
+    : state === "success"
+      ? copy.callbackWelcome(displayName)
+      : errorKind === "incomplete"
+        ? copy.callbackIncomplete
+        : errorKind === "expired"
+          ? copy.callbackExpired
+          : copy.callbackFailed;
 
   useEffect(() => {
     let active = true;
     let redirectTimer: number | undefined;
     if (!token) {
+      window.history.replaceState({}, "", localizedUrls(localeRef.current).authCallbackUrl);
       setState("error");
-      setMessage("Ce lien de connexion est incomplet.");
+      setErrorKind("incomplete");
       return () => undefined;
     }
 
     verifyMagicLinkOnce(token)
       .then((session) => {
         if (!active) return;
-        window.history.replaceState({}, "", "/auth/callback");
+        window.history.replaceState({}, "", localizedUrls(localeRef.current).authCallbackUrl);
+        setDisplayName(session.displayName);
         setState("success");
-        setMessage(`Bienvenue ${session.displayName}. Votre espace est prêt.`);
-        redirectTimer = window.setTimeout(() => window.location.replace(appUrl), 700);
+        redirectTimer = window.setTimeout(
+          () => window.location.replace(localizedUrls(localeRef.current).appUrl),
+          700,
+        );
       })
       .catch((error) => {
         if (!active) return;
-        window.history.replaceState({}, "", "/auth/callback");
+        window.history.replaceState({}, "", localizedUrls(localeRef.current).authCallbackUrl);
         setState("error");
-        setMessage(error instanceof Error ? error.message : "Ce lien ne peut pas être validé.");
+        setErrorKind(error instanceof ApiError && error.status === 400 ? "expired" : "failed");
       });
 
     return () => {
@@ -155,8 +209,13 @@ export function AuthCallbackPage() {
   return (
     <main className="auth-page">
       <div className="auth-backdrop" aria-hidden="true" />
-      <a className="auth-brand" href={homeUrl} aria-label="Parkventory, accueil"><Logo /></a>
-      <ThemeToggle className="auth-theme-toggle" />
+      <a className="auth-brand" href={homeUrl} aria-label={copy.brandHomeLabel}>
+        <Logo />
+      </a>
+      <div className="auth-preferences">
+        <LanguageSwitcher />
+        <ThemeToggle className="auth-theme-toggle" />
+      </div>
       <section className="auth-panel auth-callback-panel" aria-labelledby="callback-title">
         <div className={`auth-icon auth-icon-${state}`}>
           {state === "verifying"
@@ -165,14 +224,18 @@ export function AuthCallbackPage() {
               ? <CheckCircle2 aria-hidden="true" />
               : <Mail aria-hidden="true" />}
         </div>
-        <p className="section-index">Lien de connexion</p>
+        <p className="section-index">{copy.callbackKicker}</p>
         <h1 id="callback-title">
-          {state === "verifying" ? "Un instant." : state === "success" ? "Vous êtes connecté." : "Lien non valide."}
+          {state === "verifying"
+            ? copy.callbackVerifyingTitle
+            : state === "success"
+              ? copy.callbackSuccessTitle
+              : copy.callbackErrorTitle}
         </h1>
         <p className="auth-intro" role="status">{message}</p>
         {state === "error" && (
           <a className="button button-primary" href={appUrl}>
-            Demander un nouveau lien <ArrowRight aria-hidden="true" />
+            {copy.requestNewLink} <ArrowRight aria-hidden="true" />
           </a>
         )}
       </section>

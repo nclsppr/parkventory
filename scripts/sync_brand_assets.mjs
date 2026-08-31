@@ -3,6 +3,12 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 import { renderSocialCard } from "./social_card.mjs";
+import {
+  localeConfig,
+  localizedPath,
+  seoMetadata,
+  supportedLocales,
+} from "../shared/i18n.ts";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const logoSource = resolve(projectRoot, "assets/brand/parkventory-logo-transparent.svg");
@@ -15,6 +21,20 @@ const checkOnly = process.argv.includes("--check");
 const logoBytes = await readFile(logoSource);
 const interBytes = await readFile(interSource);
 const socialCardText = await readFile(socialCardSource, "utf8");
+
+function squareFavicon(sourceBytes) {
+  const source = sourceBytes.toString("utf8");
+  const dimensions = 'width="554" height="560" viewBox="0 0 554 560"';
+  if (!source.includes(dimensions)) {
+    throw new Error("Le master du symbole ne porte plus les dimensions attendues.");
+  }
+  return Buffer.from(source.replace(
+    dimensions,
+    'width="560" height="560" viewBox="-3 0 560 560"',
+  ));
+}
+
+const faviconBytes = squareFavicon(logoBytes);
 
 const canonicalLogoAnchor = 'href="__PARKVENTORY_LOGO_BASE64__"';
 const embeddedFontAnchor = 'src: url("__PARKVENTORY_FONT_BASE64__") format("truetype");';
@@ -31,11 +51,84 @@ const openGraphBytes = await sharp(logoBytes)
   .resize({ width: 256 })
   .png({ compressionLevel: 9 })
   .toBuffer();
-const socialCardBytes = await renderSocialCard({
-  sourceText: socialCardText,
-  logoBytes,
-  fontBytes: interBytes,
-});
+const socialCardCopy = {
+  fr: {
+    title: "Parkventory, le parking partagé, simplement",
+    lineOne: "Le parking partagé,",
+    lineTwo: "simplement.",
+  },
+  en: {
+    title: "Parkventory, shared parking made simple",
+    lineOne: "Shared parking,",
+    lineTwo: "made simple.",
+  },
+  de: {
+    title: "Parkventory, Parkplätze teilen, ganz einfach",
+    lineOne: "Parkplätze teilen,",
+    lineTwo: "ganz einfach.",
+  },
+  lb: {
+    title: "Parkventory, Parkplazen deelen, ganz einfach",
+    lineOne: "Parkplazen deelen,",
+    lineTwo: "ganz einfach.",
+  },
+};
+const socialCards = new Map();
+for (const locale of supportedLocales) {
+  socialCards.set(locale, await renderSocialCard({
+    sourceText: socialCardText,
+    logoBytes,
+    fontBytes: interBytes,
+    copy: {
+      ...socialCardCopy[locale],
+      description: seoMetadata(locale, "home").socialImageAlt,
+    },
+  }));
+}
+
+async function squareIcon(size, logoScale) {
+  const logoSize = Math.round(size * logoScale);
+  const logo = await sharp(logoBytes)
+    .resize(logoSize, logoSize, { fit: "contain" })
+    .png({ compressionLevel: 9 })
+    .toBuffer();
+  return sharp({
+    create: {
+      width: size,
+      height: size,
+      channels: 4,
+      background: "#030504",
+    },
+  })
+    .composite([{ input: logo, gravity: "centre" }])
+    .png({ adaptiveFiltering: true, compressionLevel: 9 })
+    .toBuffer();
+}
+
+const icon192 = await squareIcon(192, 0.66);
+const icon512 = await squareIcon(512, 0.66);
+const maskableIcon512 = await squareIcon(512, 0.52);
+const appleTouchIcon = await squareIcon(180, 0.66);
+
+function manifest(locale) {
+  return Buffer.from(`${JSON.stringify({
+    id: localizedPath(locale, "home"),
+    name: "Parkventory",
+    short_name: "Parkventory",
+    description: seoMetadata(locale, "home").description,
+    lang: localeConfig[locale].htmlLang,
+    start_url: localizedPath(locale, "home"),
+    scope: "/",
+    display: "standalone",
+    background_color: "#030504",
+    theme_color: "#030504",
+    icons: [
+      { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+    ],
+  }, null, 2)}\n`);
+}
 const targets = [
   {
     path: resolve(projectRoot, "frontend/public/parkventory-logo-transparent.svg"),
@@ -43,7 +136,7 @@ const targets = [
   },
   {
     path: resolve(projectRoot, "frontend/public/favicon.svg"),
-    bytes: logoBytes,
+    bytes: faviconBytes,
   },
   {
     path: resolve(projectRoot, "docs-nimbus/public/favicon.svg"),
@@ -55,8 +148,20 @@ const targets = [
   },
   {
     path: resolve(projectRoot, "frontend/public/parkventory-social-card.png"),
-    bytes: socialCardBytes,
+    bytes: socialCards.get("fr"),
   },
+  ...supportedLocales.map((locale) => ({
+    path: resolve(projectRoot, `frontend/public/parkventory-social-card-${locale}.png`),
+    bytes: socialCards.get(locale),
+  })),
+  { path: resolve(projectRoot, "frontend/public/icon-192.png"), bytes: icon192 },
+  { path: resolve(projectRoot, "frontend/public/icon-512.png"), bytes: icon512 },
+  { path: resolve(projectRoot, "frontend/public/icon-maskable-512.png"), bytes: maskableIcon512 },
+  { path: resolve(projectRoot, "frontend/public/apple-touch-icon.png"), bytes: appleTouchIcon },
+  ...supportedLocales.map((locale) => ({
+    path: resolve(projectRoot, `frontend/public/manifest-${locale}.webmanifest`),
+    bytes: manifest(locale),
+  })),
 ];
 const drifted = [];
 

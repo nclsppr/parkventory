@@ -17,5 +17,6 @@ backend/.quarkus/
 /docs/assets/references/*.jpg
 
 *.log
+*.tsbuildinfo
 __pycache__/
 *.py[cod]

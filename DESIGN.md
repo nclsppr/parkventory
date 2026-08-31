@@ -48,6 +48,34 @@ financier. Elle reste humaine, rapide et utile avant d'être spectaculaire.
 6. Toute donnée affichée provient de l'API ou porte explicitement le label démo.
 7. Mouvement et image renforcent la compréhension, jamais le domaine métier.
 
+## Langues et contenu
+
+- L’interface complète existe en français, anglais, allemand et
+  luxembourgeois ; aucune surface produit ne mélange deux langues.
+- Une URL localisée est l’autorité. La langue du navigateur ne choisit une
+  version que sur une entrée neutre et ne remplace jamais un préfixe explicite.
+- Le sélecteur de langue reste visible sur les surfaces publiques,
+  l’authentification, les pages légales et le shell connecté. Il conserve la
+  destination courante et mémorise le choix sans bloquer la navigation.
+- Les libellés visibles, alternatives, annonces, erreurs et intitulés de thème
+  viennent des mêmes catalogues par domaine. Les identifiants techniques et
+  fragments ne sont pas présentés comme du contenu.
+- Le terme visible canonique est « organisation » et l’action principale est
+  « partager » dans les quatre langues ; disponibilité et créneau décrivent
+  l’état métier, pas une action concurrente.
+- Dates, heures, nombres et pluriels utilisent `Intl` avec `fr-LU`, `en-GB`,
+  `de-LU` ou `lb-LU`. Les valeurs brutes restent disponibles pour éviter de
+  reformater un texte déjà localisé par le serveur.
+- Les compositions doivent accepter les longueurs allemandes et
+  luxembourgeoises à 320 px, à 200 % de zoom et sans réduire le texte sous les
+  tailles accessibles.
+- Le widget Turnstile luxembourgeois emploie son repli français explicite ; ce
+  repli fournisseur ne change ni le document `lang="lb"` ni les autres textes.
+- Les trois pages publiques par langue possèdent un contenu HTML initial
+  visible, issu des mêmes catalogues que React. Le chargement de l’application
+  remplace ce rendu initial, mais le titre, le résumé, les sections et les liens
+  essentiels ne dépendent jamais de JavaScript.
+
 ## Tokens
 
 Ce document porte la sémantique canonique. Les valeurs exécutables vivent dans
@@ -157,9 +185,9 @@ essentiel ne descend sous 14 px ; les champs restent à 16 px sur mobile.
 | --- | --- | --- | --- |
 | Landing | Promesse et CTA email professionnel | Fonctionnement, bénéfices, sécurité, FAQ | Logos clients, pricing, revenus |
 | Onboarding | Étape courante et confiance | Explication du domaine et de la confidentialité | Membres avant vérification |
-| Dashboard — `/app` | Partager ou trouver | Prochaine réservation, prochain partage, invitation | Activité factice |
-| Partager — `/app/partager` | Place et intervalle | Résumé, fuseau, confidentialité et retrait des partages actifs non réservés | Récurrence infinie au MVP |
-| Trouver — `/app/trouver` | Disponibilités réelles à sept jours | Sélection, confirmation et annulation de la réservation active avant son début | Filtres sans contrat API, plan avant F07 |
+| Dashboard — `/{lang}/app` | Partager ou trouver | Prochaine réservation et prochain partage | Activité factice ou invitation hors MVP |
+| Partager — route localisée `/{lang}/app/*` | Place et intervalle | Résumé, fuseau, confidentialité et retrait des partages actifs non réservés | Récurrence infinie au MVP |
+| Trouver — route localisée `/{lang}/app/*` | Disponibilités réelles à sept jours | Sélection, confirmation et annulation de la réservation active avant son début | Filtres sans contrat API, plan avant F07 |
 | Réservations, future route | Prochaine réservation | Historique paginé ; l'annulation active existe déjà dans Trouver | Gamification |
 | Administration | Gouvernance et inventaire | Audit et enrichissement | Accès visible aux non-admins |
 
@@ -175,6 +203,7 @@ essentiel ne descend sous 14 px ; les champs restent à 16 px sur mobile.
 | Toast ou annonce | Feedback non bloquant | succès, information, erreur | `aria-live` adapté, fermeture |
 | Dialogue | Confirmation sensible | annulation, promotion admin | focus piégé, retour focus, erreur |
 | Navigation | Sections du produit | desktop, mobile | route active, focus, badge réel |
+| Sélecteur de langue | Toutes les surfaces | FR, EN, DE, LB | valeur active, focus, changement de route |
 
 ## Interaction et mouvement
 
@@ -207,6 +236,8 @@ essentiel ne descend sous 14 px ; les champs restent à 16 px sur mobile.
 - Cibles tactiles d'au moins 44 × 44 px.
 - Le sélecteur de thème expose deux boutons pressés/non pressés, nommés
   « Thème clair » et « Thème sombre », avec cibles de 44 px.
+- Le sélecteur de langue expose un nom traduit, la langue active et une cible
+  tactile d’au moins 44 px ; les options gardent leur autonyme.
 - Les champs conservent un anneau de focus glacier de 2 px et leurs placeholders
   utilisent une encre à pleine opacité, indépendamment du navigateur.
 - Les thèmes, routes et sélections actives restent distinguables lorsque les
@@ -251,15 +282,20 @@ publiques et les dérivés raster sont produits par
 `npm run brand:sync` puis contrôlés par `npm run brand:check`.
 
 La carte sociale produit a pour source compacte et éditable
-`assets/brand/parkventory-social-card.svg` et pour dérivé public
-`frontend/public/parkventory-social-card.png`. La génération injecte en mémoire,
+`assets/brand/parkventory-social-card.svg` et pour dérivés publics les variantes
+`frontend/public/parkventory-social-card-{fr,en,de,lb}.png` ; l’ancien
+`parkventory-social-card.png` reste un alias byte-identique au français. La génération injecte en mémoire,
 sans le redessiner, le master du symbole et la police Inter verrouillée dans une
 composition de grille inspirée des vraies primitives de disponibilité et de
-sélection du produit. Son seul message visible associe « Parkventory » à
-« Le parking partagé, simplement. » : elle ne porte ni métrique, ni client, ni
-état de validation. Le PNG mesure `1 200 × 630`, pèse `51 695` octets et porte
-le SHA-256
+sélection du produit. Son seul message visible associe « Parkventory » à la
+promesse équivalente dans la langue de la page : elle ne porte ni métrique, ni
+client, ni état de validation. Chaque PNG mesure `1 200 × 630`; la variante
+française pèse `51 695` octets et porte le SHA-256
 `fd2ccf37d786492a13379920712b9c6400858216abe0110139edd5cd8db061bf`.
+
+Les icônes 192, 512, maskable 512 et Apple 180 sont des dérivés opaques du même
+symbole, centré sur le fond sombre canonique. Elles ne constituent pas une
+nouvelle variante de logo et sont régénérées par `npm run brand:sync`.
 
 Dans un espace co-marqué, le logo de l'entreprise reste un asset autonome et
 inchangé. Il est posé sur une plaque qui garantit sa lisibilité dans les deux
@@ -286,8 +322,8 @@ consommateurs sont consignés dans `docs/references/visual-sources.md`.
 - CLS : cible inférieure à 0,1.
 - Les images réservent leurs dimensions et les enrichissements hors écran sont
   différés.
-- Fallback : landing et actions essentielles restent compréhensibles sans
-  texture, animation ou plan.
+- Fallback : landing, pages légales et actions essentielles restent
+  compréhensibles sans JavaScript, texture, animation ou plan.
 
 ## Zones gelées
 

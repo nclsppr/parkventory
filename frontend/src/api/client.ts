@@ -1,3 +1,9 @@
+import {
+  defaultLocale,
+  isLocale,
+  localeConfig,
+} from "../../../shared/i18n";
+import { applicationMessages } from "../i18n/application";
 import type {
   ActionResponse,
   DashboardData,
@@ -7,6 +13,12 @@ import type {
 } from "../types";
 
 const apiBase = import.meta.env.VITE_API_BASE_URL || "/api/v1";
+
+function currentRequestLocale() {
+  if (typeof document === "undefined") return defaultLocale;
+  const language = document.documentElement.lang.split("-")[0].toLowerCase();
+  return isLocale(language) ? language : defaultLocale;
+}
 
 export class ApiError extends Error {
   constructor(
@@ -20,23 +32,38 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const locale = currentRequestLocale();
+  const copy = applicationMessages[locale].api;
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    "X-Parkventory-Locale": locale,
+  };
+  if (Array.isArray(init?.headers)) {
+    for (const [name, value] of init.headers) headers[name] = value;
+  } else if (init?.headers instanceof Headers) {
+    init.headers.forEach((value, name) => {
+      headers[name] = value;
+    });
+  } else if (init?.headers) {
+    Object.assign(headers, init.headers);
+  }
+  headers["X-Parkventory-Locale"] = locale;
+  if (init?.body !== undefined && !Object.keys(headers).some((name) => name.toLowerCase() === "content-type")) {
+    headers["Content-Type"] = "application/json";
+  }
   let response: Response;
   try {
     response = await fetch(`${apiBase}${path}`, {
       ...init,
       credentials: "include",
-      headers: {
-        Accept: "application/json",
-        ...(init?.body === undefined ? {} : { "Content-Type": "application/json" }),
-        ...init?.headers,
-      },
+      headers,
       signal: AbortSignal.timeout(8_000),
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "TimeoutError") {
-      throw new ApiError("Le service met trop de temps à répondre. Réessayez.", 0);
+      throw new ApiError(copy.timeout, 0);
     }
-    throw new ApiError("Impossible de joindre Parkventory. Réessayez dans un instant.", 0);
+    throw new ApiError(copy.unreachable, 0);
   }
 
   if (!response.ok) {
@@ -46,19 +73,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const retryAfter = retryAfterHeader && /^\d+$/.test(retryAfterHeader)
       ? Number(retryAfterHeader)
       : undefined;
-    let message = serverDetail ?? "Cette action n’a pas abouti. Réessayez.";
+    let message = serverDetail ?? copy.actionFailed;
     if (response.status === 401 && !serverDetail) {
-      message = "Votre connexion a expiré. Reconnectez-vous pour continuer.";
+      message = copy.sessionExpired;
     } else if (response.status === 403 && !serverDetail) {
-      message = "Vous n’avez pas l’autorisation d’effectuer cette action.";
+      message = copy.forbidden;
     } else if (response.status === 409 && !serverDetail) {
-      message = "Ces données viennent de changer. Actualisez la page et réessayez.";
+      message = copy.conflict;
     } else if (response.status === 429) {
-      message = retryAfter
-        ? `Trop de demandes. Réessayez dans ${retryAfter} secondes.`
-        : "Trop de demandes. Patientez avant de réessayer.";
+      const formattedSeconds = retryAfter === undefined
+        ? null
+        : new Intl.NumberFormat(localeConfig[locale].intlLocale).format(retryAfter);
+      message = retryAfter !== undefined
+        ? copy.rateLimited(formattedSeconds ?? String(retryAfter))
+        : copy.rateLimitedGeneric;
     } else if (response.status >= 500) {
-      message = "Le service rencontre un problème. Réessayez dans un instant.";
+      message = copy.serviceProblem;
     }
     throw new ApiError(message, response.status, retryAfter);
   }
