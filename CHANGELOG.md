@@ -29,6 +29,13 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 - recherche exacte d’incident, requête ou entité, références métier visibles et
   liens depuis les diagnostics, avec déduplication sur cinq minutes des refus
   godmode identiques ;
+- ajout d’un détail paginé pour chacun des neuf contrôles d’intégrité, limité aux
+  identifiants internes et relié aux tenants et au journal, ainsi que d’un filtre
+  exact par code d’erreur pour regrouper les occurrences d’une même cause ;
+- distinction stricte entre contraintes D1 métier attendues et erreurs
+  inattendues : seules les premières deviennent un `409`, les secondes conservent
+  un incident `500` corrélé ; les réservations concurrentes portant la même clé
+  d’idempotence convergent vers un unique succès ;
 - renforcement D1 des frontières métier : les triggers refusent les écritures dans
   `SYSTEM` et les discordances tenant/membre/place/offre/réservation ;
 - déplacement du jeton de connexion vers le fragment URL, invisible pour la
@@ -40,7 +47,9 @@ la source du diff technique et les ADR expliquent les décisions importantes.
   runbook ; aucune application de migration distante, création de secret,
   fusion, publication ou authentification réelle n’est revendiquée ici ;
 - extension de la gate CI aux types Wrangler et aux deux dry-runs, afin qu’un
-  candidat ne puisse plus valider uniquement la configuration de préversion.
+  candidat ne puisse plus valider uniquement la configuration de préversion ;
+- exclusion Git de toutes les variantes racine `.env*` et `.dev.vars*`, tout en
+  conservant les fichiers d’exemple versionnés.
 
 ### Indexation publique
 

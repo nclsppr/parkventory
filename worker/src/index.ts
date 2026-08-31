@@ -47,6 +47,7 @@ const EXACT_CLASSIFIED_ROUTES = new Set([
   "/api/v1/admin/users",
   "/api/v1/admin/activity",
   "/api/v1/admin/diagnostics",
+  "/api/v1/admin/diagnostics/integrity",
 ]);
 
 function problem(status: number, detail: string): Response {
@@ -70,6 +71,11 @@ function classifiedErrorType(error: unknown): "TypeError" | "Error" | "unknown" 
   if (error instanceof TypeError) return "TypeError";
   if (error instanceof Error) return "Error";
   return "unknown";
+}
+
+function isExpectedUniqueConstraint(error: unknown, columns: string): boolean {
+  return error instanceof Error
+    && error.message.includes(`UNIQUE constraint failed: ${columns}`);
 }
 
 async function classifiedErrorCode(error: unknown, secret: string): Promise<string> {
@@ -692,12 +698,25 @@ app.post("/api/v1/spots", async (context) => {
       TIME_ZONE,
       nowSeconds(),
     ).run();
-  } catch {
+  } catch (error) {
+    if (
+      !isExpectedUniqueConstraint(error, "parking_spot.owner_membership_id")
+      && !isExpectedUniqueConstraint(error, "parking_spot.organization_id, parking_spot.label")
+    ) throw error;
+    const existingSpot = await context.env.DB.prepare(`
+      SELECT id
+      FROM parking_spot
+      WHERE organization_id = ?1
+        AND (owner_membership_id = ?2 OR label = ?3)
+      ORDER BY CASE WHEN owner_membership_id = ?2 THEN 0 ELSE 1 END, id
+      LIMIT 1
+    `).bind(member.organizationId, member.membershipId, label).first<{ id: string }>();
     return tenantConflict(context, {
       code: "SPOT_ALREADY_DECLARED",
       detail: "Cette place est déjà déclarée dans votre entreprise.",
       route: "/api/v1/spots",
       entityType: "PARKING_SPOT",
+      entityId: existingSpot?.id,
     });
   }
   return accepted(`La place ${label} est prête à être partagée.`);
@@ -806,6 +825,25 @@ app.post("/api/v1/availability/:id/reservations", async (context) => {
       crypto.randomUUID(), member.membershipId, idempotencyKey, nowSeconds(), offerId, member.organizationId,
     ).run();
     if ((result.meta.changes ?? 0) < 1) {
+      const concurrentExisting = await context.env.DB.prepare(`
+        SELECT id, availability_offer_id
+        FROM reservation
+        WHERE organization_id = ?1
+          AND reserver_membership_id = ?2
+          AND idempotency_key = ?3
+      `).bind(member.organizationId, member.membershipId, idempotencyKey)
+        .first<{ id: string; availability_offer_id: string }>();
+      if (concurrentExisting) {
+        return concurrentExisting.availability_offer_id === offerId
+          ? accepted("La place est réservée.")
+          : tenantConflict(context, {
+              code: "RESERVATION_IDEMPOTENCY_CONFLICT",
+              detail: "Cette tentative de réservation a déjà été utilisée.",
+              route: "/api/v1/availability/:id/reservations",
+              entityType: "AVAILABILITY_OFFER",
+              entityId: concurrentExisting.availability_offer_id,
+            });
+      }
       return tenantConflict(context, {
         code: "RESERVATION_UNAVAILABLE",
         detail: "Cette place n’est plus disponible.",
@@ -813,12 +851,47 @@ app.post("/api/v1/availability/:id/reservations", async (context) => {
         entityType: "AVAILABILITY_OFFER",
       });
     }
-  } catch {
+  } catch (error) {
+    if (isExpectedUniqueConstraint(
+      error,
+      "reservation.organization_id, reservation.reserver_membership_id, reservation.idempotency_key",
+    )) {
+      const concurrentExisting = await context.env.DB.prepare(`
+        SELECT id, availability_offer_id
+        FROM reservation
+        WHERE organization_id = ?1
+          AND reserver_membership_id = ?2
+          AND idempotency_key = ?3
+      `).bind(member.organizationId, member.membershipId, idempotencyKey)
+        .first<{ id: string; availability_offer_id: string }>();
+      if (!concurrentExisting) throw error;
+      return concurrentExisting.availability_offer_id === offerId
+        ? accepted("La place est réservée.")
+        : tenantConflict(context, {
+            code: "RESERVATION_IDEMPOTENCY_CONFLICT",
+            detail: "Cette tentative de réservation a déjà été utilisée.",
+            route: "/api/v1/availability/:id/reservations",
+            entityType: "AVAILABILITY_OFFER",
+            entityId: concurrentExisting.availability_offer_id,
+          });
+    }
+    if (!isExpectedUniqueConstraint(error, "reservation.availability_offer_id")) throw error;
+    const conflictingOffer = await context.env.DB.prepare(`
+      SELECT availability_offer.id
+      FROM availability_offer
+      JOIN reservation
+        ON reservation.availability_offer_id = availability_offer.id
+        AND reservation.status = 'CONFIRMED'
+      WHERE availability_offer.id = ?1
+        AND availability_offer.organization_id = ?2
+      LIMIT 1
+    `).bind(offerId, member.organizationId).first<{ id: string }>();
     return tenantConflict(context, {
       code: "RESERVATION_WRITE_CONFLICT",
       detail: "Cette place vient d’être réservée par un collègue.",
       route: "/api/v1/availability/:id/reservations",
       entityType: "AVAILABILITY_OFFER",
+      entityId: conflictingOffer?.id,
     });
   }
   return accepted("La place est réservée.");

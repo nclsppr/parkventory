@@ -13,13 +13,18 @@ Le schéma opérationnel est versionné par les migrations D1 sous `migrations/`
 | `availability_offer` | créneau entier publié ou retiré |
 | `reservation` | réservation confirmée ou annulée |
 | `organization_branding` | co-marque optionnelle par domaine, modifiable et désactivable sans changer l'identité des membres |
-| `activity_event` | chronologie redacted des transitions métier et incidents, indexée par date, tenant, utilisateur, adhésion, type, entité et requête |
+| `activity_event` | chronologie redacted des transitions métier et incidents, indexée par date, tenant, utilisateur, adhésion, type, entité, requête et code d’erreur |
 
 L’index partiel `one_active_reservation_per_offer` garantit une seule
 réservation confirmée par offre. Le trigger `availability_no_overlap_insert`
 refuse les créneaux qui se chevauchent pour une même place. Le trigger
 `reservation_same_tenant_insert` refuse une réservation inter-tenant ou par le
 propriétaire de la place.
+
+L’index partiel `availability_spot_active_window_idx` borne la recherche des
+créneaux publiés d’une place, utilisée à la fois par le trigger anti-chevauchement
+et par le contrôle d’intégrité global. Il évite qu’une vérification locale ne
+devienne un scan de toutes les offres à mesure que l’historique grandit.
 
 Le branding est résolu par égalité exacte sur le domaine normalisé. Son absence,
 son opt-out ou une valeur invalide produit `null` et conserve l'identité
@@ -40,7 +45,9 @@ Des triggers additionnels refusent toute place, offre ou réservation rattachée
 `SYSTEM`, ainsi que les discordances entre l’organisation portée par la ligne, le
 propriétaire, la place, l’offre et le réservataire. Les diagnostics restent utiles
 pour les lignes historiques antérieures à ces gardes et pour détecter une future
-régression de schéma.
+régression de schéma. Chacun de leurs neuf contrôles peut être détaillé par
+curseur ; la réponse contient uniquement la portée tenant éventuelle, les types
+et identifiants internes concernés et leur multiplicité.
 
 `activity_event` ne conserve aucun payload libre. Ses références sont des
 identifiants internes optionnels ; ses seules informations opérationnelles sont

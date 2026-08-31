@@ -329,12 +329,49 @@ describe("Parkventory", () => {
         ],
       },
     };
-    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+    let integritySecondPageRequests = 0;
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.endsWith("/auth/session")) return jsonResponse(godmodeSession);
       if (url.endsWith("/admin/diagnostics")) return jsonResponse(diagnostics);
+      if (url.endsWith("/admin/diagnostics/integrity?check=active_offer_overlap&limit=25")) {
+        return jsonResponse({
+          check: "active_offer_overlap",
+          items: [{
+            issueKind: "ROW",
+            organizationId: "org_1",
+            references: [{ type: "AVAILABILITY_OFFER", id: "share_1" }],
+            occurrences: 2,
+          }],
+          page: { nextCursor: "integrity_cursor" },
+        });
+      }
+      if (url.endsWith("/admin/diagnostics/integrity?check=active_offer_overlap&limit=25&cursor=integrity_cursor")) {
+        integritySecondPageRequests += 1;
+        if (integritySecondPageRequests > 1) {
+          return jsonResponse({
+            check: "active_offer_overlap",
+            items: [],
+            page: { nextCursor: null },
+          });
+        }
+        return jsonResponse({
+          check: "active_offer_overlap",
+          items: [{
+            issueKind: "MISSING",
+            organizationId: null,
+            references: [{ type: "RESERVATION", id: "reservation_missing" }],
+            occurrences: 1,
+          }],
+          page: { nextCursor: null },
+        });
+      }
+      if (url.endsWith("/admin/activity?limit=50&errorCode=UNHANDLED_ERROR")) {
+        return jsonResponse({ items: [], page: { nextCursor: null } });
+      }
       throw new Error(`Unexpected request: ${url}`);
-    }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
     window.history.replaceState({}, "", "/admin/operations?view=diagnostics");
     render(<App />);
 
@@ -346,6 +383,40 @@ describe("Parkventory", () => {
     expect(screen.getByText("Base de données opérationnelle")).toBeInTheDocument();
     expect(screen.getByTitle("inc_public_1")).toHaveTextContent("Incident · inc_public_1");
     expect(screen.getByTitle("req_public_1")).toHaveTextContent("Requête · req_public_1");
+    const incidentCode = screen.getByRole("link", { name: "UNHANDLED_ERROR" });
+    expect(incidentCode).toHaveAttribute("href", "/admin/operations?errorCode=UNHANDLED_ERROR");
+
+    fireEvent.click(screen.getByRole("link", { name: "Voir les lignes" }));
+    expect(window.location.search).toBe("?view=diagnostics&check=active_offer_overlap");
+    const integrityHeading = await screen.findByRole("heading", { name: "Lignes à examiner" });
+    expect(integrityHeading).toBeInTheDocument();
+    await waitFor(() => expect(integrityHeading).toHaveFocus());
+    expect(screen.getByRole("link", { name: "Ouvrir le tenant org_1" })).toHaveAttribute("href", "/admin/tenants/org_1");
+    expect(screen.getByRole("link", { name: "Rechercher la référence AVAILABILITY_OFFER share_1 dans le journal" })).toHaveAttribute("href", "/admin/operations?reference=share_1");
+    expect(screen.getByText("occurrences")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Suivant/ }));
+    expect(await screen.findByText("reservation_missing")).toBeInTheDocument();
+    expect(screen.getByText("Portée système")).toBeInTheDocument();
+
+    const integrityRequestsBeforeRefresh = fetchMock.mock.calls.filter(([input]) => (
+      String(input).includes("/admin/diagnostics/integrity?")
+    )).length;
+    fireEvent.click(screen.getByRole("button", { name: "Actualiser" }));
+    await waitFor(() => expect(fetchMock.mock.calls.filter(([input]) => (
+      String(input).includes("/admin/diagnostics/integrity?")
+    ))).toHaveLength(integrityRequestsBeforeRefresh + 1));
+    expect(await screen.findByText("Cette page ne contient plus de ligne.")).toBeInTheDocument();
+    const previousPage = screen.getByRole("button", { name: /Précédent/ });
+    expect(previousPage).toBeEnabled();
+    fireEvent.click(previousPage);
+    expect(await screen.findByText("share_1")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("link", { name: "UNHANDLED_ERROR" }));
+    expect(await screen.findByRole("heading", { name: "Journal d’activité" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Code d’erreur exact")).toHaveValue("UNHANDLED_ERROR");
+    const emptyActivity = await screen.findByText("Aucun événement correspondant.");
+    expect(emptyActivity.closest('[role="status"]')).not.toBeNull();
   });
 
   it("recherche et pagine les tenants avec les curseurs opaques du serveur", async () => {

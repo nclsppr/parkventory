@@ -9,12 +9,54 @@ export const SYSTEM_ORGANIZATION_DOMAIN = "system.parkventory.invalid";
 
 const DEFAULT_PAGE_SIZE = 25;
 const DEFAULT_ACTIVITY_PAGE_SIZE = 50;
+const DEFAULT_INTEGRITY_PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 100;
 const OVERVIEW_DAYS = 30;
+
+const INTEGRITY_CHECK_KEYS = [
+  "tenant_without_member",
+  "spot_owner_tenant_mismatch",
+  "offer_spot_owner_mismatch",
+  "reservation_offer_member_mismatch",
+  "active_offer_overlap",
+  "multiple_confirmed_reservations",
+  "system_organization_count",
+  "system_membership_invalid",
+  "system_business_data",
+] as const;
+
+type IntegrityCheckKey = typeof INTEGRITY_CHECK_KEYS[number];
+type IntegrityIssueKind = "ROW" | "MISSING";
+type IntegrityReferenceType =
+  | "ORGANIZATION"
+  | "MEMBERSHIP"
+  | "PARKING_SPOT"
+  | "AVAILABILITY_OFFER"
+  | "RESERVATION";
 
 interface PageCursor {
   at: number;
   id: string;
+}
+
+interface IntegrityCursor {
+  check: IntegrityCheckKey;
+  primary: string;
+  secondary: string;
+}
+
+interface IntegrityIssueRow {
+  issue_kind: IntegrityIssueKind;
+  organization_id: string | null;
+  reference_1_type: IntegrityReferenceType | null;
+  reference_1_id: string | null;
+  reference_2_type: IntegrityReferenceType | null;
+  reference_2_id: string | null;
+  reference_3_type: IntegrityReferenceType | null;
+  reference_3_id: string | null;
+  occurrences: number;
+  sort_primary: string;
+  sort_secondary: string;
 }
 
 interface ActivityRow {
@@ -71,6 +113,35 @@ function decodeCursor(value: string | undefined): PageCursor | null {
   }
 }
 
+function isIntegrityCheckKey(value: string): value is IntegrityCheckKey {
+  return (INTEGRITY_CHECK_KEYS as readonly string[]).includes(value);
+}
+
+function encodeIntegrityCursor(cursor: IntegrityCursor): string {
+  return btoa(JSON.stringify(cursor))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
+function decodeIntegrityCursor(
+  value: string | undefined,
+  expectedCheck: IntegrityCheckKey,
+): IntegrityCursor | null {
+  if (!value || value.length > 512 || !/^[A-Za-z0-9_-]+$/.test(value)) return null;
+  try {
+    const padded = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
+    const parsed = JSON.parse(atob(padded)) as Partial<IntegrityCursor>;
+    if (parsed.check !== expectedCheck) return null;
+    if (typeof parsed.primary !== "string" || !validIdentifier(parsed.primary)) return null;
+    if (typeof parsed.secondary !== "string"
+      || (parsed.secondary !== "" && !validIdentifier(parsed.secondary))) return null;
+    return { check: expectedCheck, primary: parsed.primary, secondary: parsed.secondary };
+  } catch {
+    return null;
+  }
+}
+
 function parseLimit(value: string | undefined, fallback: number): number | null {
   if (value === undefined || value === "") return fallback;
   if (!/^\d{1,3}$/.test(value)) return null;
@@ -117,6 +188,298 @@ function activityView(row: ActivityRow) {
         },
   };
 }
+
+function integrityIssueView(row: IntegrityIssueRow) {
+  const references = [
+    [row.reference_1_type, row.reference_1_id],
+    [row.reference_2_type, row.reference_2_id],
+    [row.reference_3_type, row.reference_3_id],
+  ].flatMap(([type, id]) => type !== null && id !== null ? [{ type, id }] : []);
+  return {
+    issueKind: row.issue_kind,
+    organizationId: row.organization_id,
+    references,
+    occurrences: Number(row.occurrences),
+  };
+}
+
+function paginatedIntegrityQuery(issueSelect: string): string {
+  return `
+    WITH issues AS (
+      ${issueSelect}
+    )
+    SELECT
+      issue_kind, organization_id,
+      reference_1_type, reference_1_id,
+      reference_2_type, reference_2_id,
+      reference_3_type, reference_3_id,
+      occurrences, sort_primary, sort_secondary
+    FROM issues
+    WHERE ?1 IS NULL
+      OR sort_primary > ?1
+      OR (sort_primary = ?1 AND sort_secondary > ?2)
+    ORDER BY sort_primary, sort_secondary
+    LIMIT ?3
+  `;
+}
+
+const INTEGRITY_ISSUE_QUERIES: Record<IntegrityCheckKey, string> = {
+  tenant_without_member: paginatedIntegrityQuery(`
+    SELECT
+      'ROW' AS issue_kind,
+      tenant.id AS organization_id,
+      'ORGANIZATION' AS reference_1_type,
+      tenant.id AS reference_1_id,
+      NULL AS reference_2_type,
+      NULL AS reference_2_id,
+      NULL AS reference_3_type,
+      NULL AS reference_3_id,
+      1 AS occurrences,
+      tenant.id AS sort_primary,
+      '' AS sort_secondary
+    FROM organization tenant
+    WHERE tenant.kind = 'TENANT'
+      AND NOT EXISTS (
+        SELECT 1
+        FROM membership
+        WHERE membership.organization_id = tenant.id
+      )
+  `),
+  spot_owner_tenant_mismatch: paginatedIntegrityQuery(`
+    SELECT
+      'ROW' AS issue_kind,
+      parking_spot.organization_id,
+      'PARKING_SPOT' AS reference_1_type,
+      parking_spot.id AS reference_1_id,
+      'MEMBERSHIP' AS reference_2_type,
+      parking_spot.owner_membership_id AS reference_2_id,
+      NULL AS reference_3_type,
+      NULL AS reference_3_id,
+      1 AS occurrences,
+      parking_spot.id AS sort_primary,
+      '' AS sort_secondary
+    FROM parking_spot
+    LEFT JOIN membership ON membership.id = parking_spot.owner_membership_id
+    WHERE membership.id IS NULL
+      OR membership.organization_id <> parking_spot.organization_id
+  `),
+  offer_spot_owner_mismatch: paginatedIntegrityQuery(`
+    SELECT
+      'ROW' AS issue_kind,
+      availability_offer.organization_id,
+      'AVAILABILITY_OFFER' AS reference_1_type,
+      availability_offer.id AS reference_1_id,
+      'PARKING_SPOT' AS reference_2_type,
+      availability_offer.parking_spot_id AS reference_2_id,
+      'MEMBERSHIP' AS reference_3_type,
+      availability_offer.owner_membership_id AS reference_3_id,
+      1 AS occurrences,
+      availability_offer.id AS sort_primary,
+      '' AS sort_secondary
+    FROM availability_offer
+    LEFT JOIN parking_spot ON parking_spot.id = availability_offer.parking_spot_id
+    LEFT JOIN membership ON membership.id = availability_offer.owner_membership_id
+    WHERE parking_spot.id IS NULL
+      OR membership.id IS NULL
+      OR parking_spot.organization_id <> availability_offer.organization_id
+      OR membership.organization_id <> availability_offer.organization_id
+      OR parking_spot.owner_membership_id <> availability_offer.owner_membership_id
+  `),
+  reservation_offer_member_mismatch: paginatedIntegrityQuery(`
+    SELECT
+      'ROW' AS issue_kind,
+      reservation.organization_id,
+      'RESERVATION' AS reference_1_type,
+      reservation.id AS reference_1_id,
+      'AVAILABILITY_OFFER' AS reference_2_type,
+      reservation.availability_offer_id AS reference_2_id,
+      'MEMBERSHIP' AS reference_3_type,
+      reservation.reserver_membership_id AS reference_3_id,
+      1 AS occurrences,
+      reservation.id AS sort_primary,
+      '' AS sort_secondary
+    FROM reservation
+    LEFT JOIN availability_offer ON availability_offer.id = reservation.availability_offer_id
+    LEFT JOIN membership ON membership.id = reservation.reserver_membership_id
+    WHERE availability_offer.id IS NULL
+      OR membership.id IS NULL
+      OR availability_offer.organization_id <> reservation.organization_id
+      OR membership.organization_id <> reservation.organization_id
+      OR availability_offer.owner_membership_id = reservation.reserver_membership_id
+  `),
+  active_offer_overlap: paginatedIntegrityQuery(`
+    SELECT
+      'ROW' AS issue_kind,
+      first_offer.organization_id,
+      'AVAILABILITY_OFFER' AS reference_1_type,
+      first_offer.id AS reference_1_id,
+      'AVAILABILITY_OFFER' AS reference_2_type,
+      second_offer.id AS reference_2_id,
+      NULL AS reference_3_type,
+      NULL AS reference_3_id,
+      1 AS occurrences,
+      first_offer.id AS sort_primary,
+      second_offer.id AS sort_secondary
+    FROM availability_offer first_offer
+    JOIN availability_offer second_offer
+      ON second_offer.parking_spot_id = first_offer.parking_spot_id
+      AND second_offer.id > first_offer.id
+      AND second_offer.status = 'PUBLISHED'
+      AND first_offer.starts_at < second_offer.ends_at
+      AND first_offer.ends_at > second_offer.starts_at
+    WHERE first_offer.status = 'PUBLISHED'
+  `),
+  multiple_confirmed_reservations: paginatedIntegrityQuery(`
+    SELECT
+      'ROW' AS issue_kind,
+      reservation.organization_id,
+      'RESERVATION' AS reference_1_type,
+      reservation.id AS reference_1_id,
+      'AVAILABILITY_OFFER' AS reference_2_type,
+      reservation.availability_offer_id AS reference_2_id,
+      NULL AS reference_3_type,
+      NULL AS reference_3_id,
+      duplicates.occurrences,
+      reservation.availability_offer_id AS sort_primary,
+      reservation.id AS sort_secondary
+    FROM reservation
+    JOIN (
+      SELECT availability_offer_id, COUNT(*) AS occurrences
+      FROM reservation
+      WHERE status = 'CONFIRMED'
+      GROUP BY availability_offer_id
+      HAVING COUNT(*) > 1
+    ) duplicates ON duplicates.availability_offer_id = reservation.availability_offer_id
+    WHERE reservation.status = 'CONFIRMED'
+  `),
+  system_organization_count: paginatedIntegrityQuery(`
+    SELECT
+      'ROW' AS issue_kind,
+      NULL AS organization_id,
+      'ORGANIZATION' AS reference_1_type,
+      system_organization.id AS reference_1_id,
+      NULL AS reference_2_type,
+      NULL AS reference_2_id,
+      NULL AS reference_3_type,
+      NULL AS reference_3_id,
+      1 AS occurrences,
+      system_organization.id AS sort_primary,
+      '' AS sort_secondary
+    FROM organization system_organization
+    WHERE system_organization.kind = 'SYSTEM'
+      AND (
+        SELECT CASE
+          WHEN COUNT(*) = 1
+            AND SUM(CASE
+              WHEN id = 'org_system_parkventory'
+                AND normalized_domain = 'system.parkventory.invalid'
+              THEN 1 ELSE 0
+            END) = 1
+          THEN 0 ELSE 1
+        END
+        FROM organization
+        WHERE kind = 'SYSTEM'
+      ) = 1
+    UNION ALL
+    SELECT
+      'MISSING' AS issue_kind,
+      NULL AS organization_id,
+      NULL AS reference_1_type,
+      NULL AS reference_1_id,
+      NULL AS reference_2_type,
+      NULL AS reference_2_id,
+      NULL AS reference_3_type,
+      NULL AS reference_3_id,
+      1 AS occurrences,
+      '__missing__' AS sort_primary,
+      '' AS sort_secondary
+    WHERE NOT EXISTS (
+      SELECT 1 FROM organization WHERE kind = 'SYSTEM'
+    )
+  `),
+  system_membership_invalid: paginatedIntegrityQuery(`
+    SELECT
+      'ROW' AS issue_kind,
+      NULL AS organization_id,
+      'MEMBERSHIP' AS reference_1_type,
+      membership.id AS reference_1_id,
+      'ORGANIZATION' AS reference_2_type,
+      membership.organization_id AS reference_2_id,
+      NULL AS reference_3_type,
+      NULL AS reference_3_id,
+      (
+        SELECT COUNT(*)
+        FROM membership system_membership
+        JOIN organization system_organization
+          ON system_organization.id = system_membership.organization_id
+        WHERE system_organization.kind = 'SYSTEM'
+      ) AS occurrences,
+      membership.id AS sort_primary,
+      '' AS sort_secondary
+    FROM membership
+    JOIN organization ON organization.id = membership.organization_id
+    WHERE organization.kind = 'SYSTEM'
+      AND (
+        membership.role <> 'ADMIN'
+        OR (
+          SELECT COUNT(*)
+          FROM membership system_membership
+          JOIN organization system_organization
+            ON system_organization.id = system_membership.organization_id
+          WHERE system_organization.kind = 'SYSTEM'
+        ) > 1
+      )
+  `),
+  system_business_data: paginatedIntegrityQuery(`
+    SELECT
+      'ROW' AS issue_kind,
+      NULL AS organization_id,
+      'PARKING_SPOT' AS reference_1_type,
+      parking_spot.id AS reference_1_id,
+      NULL AS reference_2_type,
+      NULL AS reference_2_id,
+      NULL AS reference_3_type,
+      NULL AS reference_3_id,
+      1 AS occurrences,
+      'PARKING_SPOT' AS sort_primary,
+      parking_spot.id AS sort_secondary
+    FROM parking_spot
+    JOIN organization ON organization.id = parking_spot.organization_id
+    WHERE organization.kind = 'SYSTEM'
+    UNION ALL
+    SELECT
+      'ROW' AS issue_kind,
+      NULL AS organization_id,
+      'AVAILABILITY_OFFER' AS reference_1_type,
+      availability_offer.id AS reference_1_id,
+      NULL AS reference_2_type,
+      NULL AS reference_2_id,
+      NULL AS reference_3_type,
+      NULL AS reference_3_id,
+      1 AS occurrences,
+      'AVAILABILITY_OFFER' AS sort_primary,
+      availability_offer.id AS sort_secondary
+    FROM availability_offer
+    JOIN organization ON organization.id = availability_offer.organization_id
+    WHERE organization.kind = 'SYSTEM'
+    UNION ALL
+    SELECT
+      'ROW' AS issue_kind,
+      NULL AS organization_id,
+      'RESERVATION' AS reference_1_type,
+      reservation.id AS reference_1_id,
+      NULL AS reference_2_type,
+      NULL AS reference_2_id,
+      NULL AS reference_3_type,
+      NULL AS reference_3_id,
+      1 AS occurrences,
+      'RESERVATION' AS sort_primary,
+      reservation.id AS sort_secondary
+    FROM reservation
+    JOIN organization ON organization.id = reservation.organization_id
+    WHERE organization.kind = 'SYSTEM'
+  `),
+};
 
 function numberValue(row: Record<string, unknown> | undefined, key: string): number {
   return Number(row?.[key] ?? 0);
@@ -664,6 +1027,7 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
     const userId = (context.req.query("userId") ?? "").trim();
     const type = (context.req.query("type") ?? "").trim();
     const severity = (context.req.query("severity") ?? "").trim();
+    const errorCode = (context.req.query("errorCode") ?? "").trim();
     const reference = (context.req.query("reference") ?? "").trim();
     if (
       limit === null
@@ -672,6 +1036,7 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
       || (userId && !validIdentifier(userId))
       || (type && !/^[A-Z][A-Z0-9_]{2,79}$/.test(type))
       || (severity && !["INFO", "WARNING", "ERROR"].includes(severity))
+      || (errorCode && !/^[A-Z][A-Z0-9_]{1,79}$/.test(errorCode))
       || (reference && !validIdentifier(reference))
     ) return problem(400, "Les filtres d’activité ne sont pas valides.");
 
@@ -686,6 +1051,7 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
     addFilter("event.user_id", userId);
     addFilter("event.event_type", type);
     addFilter("event.severity", severity);
+    addFilter("event.error_code", errorCode);
     if (reference) {
       bindings.push(reference);
       clauses.push(`(
@@ -728,6 +1094,42 @@ export function registerAdminRoutes(app: Hono<AppEnvironment>): void {
       page: {
         nextCursor: hasMore && last
           ? encodeCursor({ at: last.occurred_at, id: last.id })
+          : null,
+      },
+    });
+  });
+
+  app.get("/api/v1/admin/diagnostics/integrity", async (context) => {
+    const checkValue = (context.req.query("check") ?? "").trim();
+    const limit = parseLimit(context.req.query("limit"), DEFAULT_INTEGRITY_PAGE_SIZE);
+    const cursorValue = context.req.query("cursor");
+    if (!isIntegrityCheckKey(checkValue) || limit === null) {
+      return problem(400, "Le contrôle d’intégrité demandé n’est pas valide.");
+    }
+    const cursor = cursorValue === undefined
+      ? null
+      : decodeIntegrityCursor(cursorValue, checkValue);
+    if (cursorValue !== undefined && cursor === null) {
+      return problem(400, "Le curseur du contrôle d’intégrité n’est pas valide.");
+    }
+
+    const result = await context.env.DB.prepare(INTEGRITY_ISSUE_QUERIES[checkValue])
+      .bind(cursor?.primary ?? null, cursor?.secondary ?? null, limit + 1)
+      .all<IntegrityIssueRow>();
+    const hasMore = result.results.length > limit;
+    const rows = result.results.slice(0, limit);
+    const last = rows.at(-1);
+
+    return context.json({
+      check: checkValue,
+      items: rows.map(integrityIssueView),
+      page: {
+        nextCursor: hasMore && last
+          ? encodeIntegrityCursor({
+              check: checkValue,
+              primary: last.sort_primary,
+              secondary: last.sort_secondary,
+            })
           : null,
       },
     });

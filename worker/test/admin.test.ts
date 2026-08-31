@@ -32,8 +32,37 @@ beforeEach(async () => {
   ]);
 });
 
-afterEach(() => {
+afterEach(async () => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+  await testEnv.DB.prepare(`
+    INSERT OR IGNORE INTO organization (
+      id, normalized_domain, display_name, created_at, kind
+    ) VALUES (?1, ?2, 'Parkventory', unixepoch(), 'SYSTEM')
+  `).bind(SYSTEM_ORGANIZATION_ID, SYSTEM_ORGANIZATION_DOMAIN).run();
+  await testEnv.DB.prepare(`
+    CREATE TRIGGER IF NOT EXISTS system_organization_required
+    BEFORE DELETE ON organization
+    WHEN OLD.kind = 'SYSTEM'
+    BEGIN
+      SELECT RAISE(ABORT, 'system_organization_required');
+    END
+  `).run();
+  await testEnv.DB.prepare(`
+    CREATE TRIGGER IF NOT EXISTS parking_spot_tenant_integrity_insert
+    BEFORE INSERT ON parking_spot
+    WHEN NOT EXISTS (
+      SELECT 1
+      FROM organization
+      JOIN membership ON membership.id = NEW.owner_membership_id
+      WHERE organization.id = NEW.organization_id
+        AND organization.kind = 'TENANT'
+        AND membership.organization_id = NEW.organization_id
+    )
+    BEGIN
+      SELECT RAISE(ABORT, 'parking_spot_tenant_integrity');
+    END
+  `).run();
 });
 
 async function seedSession({
@@ -146,6 +175,34 @@ function deferredExecutionContext() {
     executionCtx,
     drain: () => Promise.all(pending),
   };
+}
+
+function databaseFailingRun(queryFragment: string, rawMessage: string): D1Database {
+  const wrapStatement = (statement: D1PreparedStatement): D1PreparedStatement => new Proxy(statement, {
+    get(target, property) {
+      if (property === "bind") {
+        return (...values: unknown[]) => wrapStatement(target.bind(...values));
+      }
+      if (property === "run") {
+        return () => Promise.reject(new Error(rawMessage));
+      }
+      const value = Reflect.get(target, property, target) as unknown;
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+
+  return new Proxy(testEnv.DB, {
+    get(target, property) {
+      if (property === "prepare") {
+        return (query: string) => {
+          const statement = target.prepare(query);
+          return query.includes(queryFragment) ? wrapStatement(statement) : statement;
+        };
+      }
+      const value = Reflect.get(target, property, target) as unknown;
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
 }
 
 describe("godmode Parkventory", () => {
@@ -413,6 +470,11 @@ describe("godmode Parkventory", () => {
       headers: sessionHeaders(tenantAdmin.token),
     });
     expect(tenantAdminResponse.status).toBe(403);
+    const tenantAdminIntegrityResponse = await SELF.fetch(
+      "https://parkventory.test/api/v1/admin/diagnostics/integrity?check=tenant_without_member",
+      { headers: sessionHeaders(tenantAdmin.token) },
+    );
+    expect(tenantAdminIntegrityResponse.status).toBe(403);
     const repeatedTenantAdminResponse = await SELF.fetch("https://parkventory.test/api/v1/admin/overview", {
       headers: sessionHeaders(tenantAdmin.token),
     });
@@ -472,15 +534,30 @@ describe("godmode Parkventory", () => {
 
   it("valide les filtres et distingue 401, 400 et 404", async () => {
     expect((await SELF.fetch("https://parkventory.test/api/v1/admin/overview")).status).toBe(401);
+    expect((await SELF.fetch(
+      "https://parkventory.test/api/v1/admin/diagnostics/integrity?check=tenant_without_member",
+    )).status).toBe(401);
 
     const godmode = await verifyGodmodeMagicLink();
     const headers = { Cookie: godmode.cookie };
+    const wrongCheckCursor = btoa(JSON.stringify({
+      check: "tenant_without_member",
+      primary: "org-example",
+      secondary: "",
+    })).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
     for (const path of [
       "/api/v1/admin/tenants?limit=0",
       "/api/v1/admin/tenants?cursor=*",
       "/api/v1/admin/users?tenantId=tenant%2Finvalid",
       "/api/v1/admin/activity?severity=CRITICAL",
+      "/api/v1/admin/activity?errorCode=unhandled_invalid",
+      "/api/v1/admin/activity?errorCode=INVALID%2FCODE",
       "/api/v1/admin/activity?reference=invalid%2Freference",
+      "/api/v1/admin/diagnostics/integrity",
+      "/api/v1/admin/diagnostics/integrity?check=unknown_check",
+      "/api/v1/admin/diagnostics/integrity?check=tenant_without_member&limit=0",
+      "/api/v1/admin/diagnostics/integrity?check=tenant_without_member&cursor=*",
+      `/api/v1/admin/diagnostics/integrity?check=spot_owner_tenant_mismatch&cursor=${wrongCheckCursor}`,
     ]) {
       expect((await SELF.fetch(`https://parkventory.test${path}`, { headers })).status, path).toBe(400);
     }
@@ -631,6 +708,19 @@ describe("godmode Parkventory", () => {
     expect(diagnostics.integrity.checks).toHaveLength(9);
     expect(diagnostics.authentication).toMatchObject({ activeTenantSessions: 3, activeSystemSessions: 1 });
 
+    for (const check of diagnostics.integrity.checks) {
+      const integrityResponse = await SELF.fetch(
+        `https://parkventory.test/api/v1/admin/diagnostics/integrity?check=${check.key}`,
+        { headers },
+      );
+      expect(integrityResponse.status, check.key).toBe(200);
+      expect(await integrityResponse.json(), check.key).toEqual({
+        check: check.key,
+        items: [],
+        page: { nextCursor: null },
+      });
+    }
+
     const successfulReadAudits = await testEnv.DB.prepare(`
       SELECT COUNT(*) AS count
       FROM activity_event
@@ -639,6 +729,196 @@ describe("godmode Parkventory", () => {
     expect(successfulReadAudits?.count).toBe(0);
 
     expect(other.orgId).not.toBe(owner.orgId);
+  });
+
+  it("filtre le journal sur un code d’erreur exact et dispose de l’index dédié", async () => {
+    const godmode = await verifyGodmodeMagicLink();
+    const now = Math.floor(Date.now() / 1000);
+    const expectedCode = "UNHANDLED_AAAAAAAAAAAAAAAA";
+    const otherCode = "UNHANDLED_BBBBBBBBBBBBBBBB";
+    await testEnv.DB.batch([
+      testEnv.DB.prepare(`
+        INSERT INTO activity_event (
+          id, event_type, occurred_at, severity, outcome,
+          entity_type, entity_id, request_id, route, error_code, source
+        ) VALUES (
+          'evt-error-code-a', 'INCIDENT_RECORDED', ?1, 'ERROR', 'FAILED',
+          'INCIDENT', 'incident-a', 'request-a', '/api/v1/spots', ?2, 'WORKER'
+        )
+      `).bind(now, expectedCode),
+      testEnv.DB.prepare(`
+        INSERT INTO activity_event (
+          id, event_type, occurred_at, severity, outcome,
+          entity_type, entity_id, request_id, route, error_code, source
+        ) VALUES (
+          'evt-error-code-b', 'INCIDENT_RECORDED', ?1, 'ERROR', 'FAILED',
+          'INCIDENT', 'incident-b', 'request-b', '/api/v1/shares', ?2, 'WORKER'
+        )
+      `).bind(now, otherCode),
+    ]);
+
+    const response = await SELF.fetch(
+      `https://parkventory.test/api/v1/admin/activity?errorCode=${expectedCode}`,
+      { headers: { Cookie: godmode.cookie } },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json<{
+      items: Array<{ id: string; errorCode: string | null }>;
+    }>();
+    expect(body.items.map(({ id, errorCode }) => ({ id, errorCode })))
+      .toEqual([{ id: "evt-error-code-a", errorCode: expectedCode }]);
+
+    const indexes = await testEnv.DB.prepare("PRAGMA index_list('activity_event')")
+      .all<{ name: string; partial: number }>();
+    expect(indexes.results).toContainEqual(expect.objectContaining({
+      name: "activity_event_error_time_idx",
+      partial: 1,
+    }));
+    const availabilityIndexes = await testEnv.DB.prepare("PRAGMA index_list('availability_offer')")
+      .all<{ name: string; partial: number }>();
+    expect(availabilityIndexes.results).toContainEqual(expect.objectContaining({
+      name: "availability_spot_active_window_idx",
+      partial: 1,
+    }));
+  });
+
+  it("pagine les lignes d’intégrité avec des identifiants internes sans PII", async () => {
+    const tenant = await seedSession({
+      domain: "integrity-target.test",
+      email: "owner@integrity-target.test",
+    });
+    const firstForeignOwner = await seedSession({
+      domain: "integrity-foreign-a.test",
+      email: "foreign-a@integrity-foreign-a.test",
+    });
+    const secondForeignOwner = await seedSession({
+      domain: "integrity-foreign-b.test",
+      email: "foreign-b@integrity-foreign-b.test",
+    });
+    await testEnv.DB.exec("DROP TRIGGER parking_spot_tenant_integrity_insert");
+    const now = Math.floor(Date.now() / 1000);
+    await testEnv.DB.batch([
+      testEnv.DB.prepare(`
+        INSERT INTO parking_spot (
+          id, organization_id, owner_membership_id, label, level, time_zone, created_at
+        ) VALUES ('spot-integrity-01', ?1, ?2, 'Mismatch 1', '', 'Europe/Paris', ?3)
+      `).bind(tenant.orgId, firstForeignOwner.membershipId, now),
+      testEnv.DB.prepare(`
+        INSERT INTO parking_spot (
+          id, organization_id, owner_membership_id, label, level, time_zone, created_at
+        ) VALUES ('spot-integrity-02', ?1, ?2, 'Mismatch 2', '', 'Europe/Paris', ?3)
+      `).bind(tenant.orgId, secondForeignOwner.membershipId, now),
+    ]);
+    const godmode = await verifyGodmodeMagicLink();
+    const headers = { Cookie: godmode.cookie };
+
+    const firstResponse = await SELF.fetch(
+      "https://parkventory.test/api/v1/admin/diagnostics/integrity?check=spot_owner_tenant_mismatch&limit=1",
+      { headers },
+    );
+    expect(firstResponse.status).toBe(200);
+    const firstPage = await firstResponse.json<{
+      check: string;
+      items: Array<{
+        issueKind: string;
+        organizationId: string | null;
+        references: Array<{ type: string; id: string }>;
+        occurrences: number;
+      }>;
+      page: { nextCursor: string | null };
+    }>();
+    expect(firstPage).toMatchObject({
+      check: "spot_owner_tenant_mismatch",
+      items: [{
+        issueKind: "ROW",
+        organizationId: tenant.orgId,
+        references: [
+          { type: "PARKING_SPOT", id: "spot-integrity-01" },
+          { type: "MEMBERSHIP", id: firstForeignOwner.membershipId },
+        ],
+        occurrences: 1,
+      }],
+    });
+    expect(firstPage.page.nextCursor).toBeTypeOf("string");
+
+    const secondResponse = await SELF.fetch(
+      `https://parkventory.test/api/v1/admin/diagnostics/integrity?check=spot_owner_tenant_mismatch&limit=1&cursor=${firstPage.page.nextCursor}`,
+      { headers },
+    );
+    expect(secondResponse.status).toBe(200);
+    const secondPage = await secondResponse.json<typeof firstPage>();
+    expect(secondPage).toMatchObject({
+      check: "spot_owner_tenant_mismatch",
+      items: [{
+        issueKind: "ROW",
+        organizationId: tenant.orgId,
+        references: [
+          { type: "PARKING_SPOT", id: "spot-integrity-02" },
+          { type: "MEMBERSHIP", id: secondForeignOwner.membershipId },
+        ],
+        occurrences: 1,
+      }],
+      page: { nextCursor: null },
+    });
+    const serialized = JSON.stringify([firstPage, secondPage]);
+    expect(serialized).not.toContain("owner@integrity-target.test");
+    expect(serialized).not.toContain("foreign-a@integrity-foreign-a.test");
+    expect(serialized).not.toContain("foreign-b@integrity-foreign-b.test");
+    expect(serialized).not.toContain("token_hash");
+    expect(serialized).not.toContain("requested_ip_hash");
+
+    const mismatchedCursorResponse = await SELF.fetch(
+      `https://parkventory.test/api/v1/admin/diagnostics/integrity?check=tenant_without_member&cursor=${firstPage.page.nextCursor}`,
+      { headers },
+    );
+    expect(mismatchedCursorResponse.status).toBe(400);
+  });
+
+  it("représente explicitement une organisation SYSTEM manquante sans inventer de référence", async () => {
+    await testEnv.DB.exec("DROP TRIGGER system_organization_required");
+    await testEnv.DB.prepare("DELETE FROM organization WHERE id = ?1")
+      .bind(SYSTEM_ORGANIZATION_ID).run();
+    const syntheticMember = {
+      session_id: "session-synthetic-godmode",
+      membership_id: "membership-synthetic-godmode",
+      organization_id: SYSTEM_ORGANIZATION_ID,
+      organization_kind: "SYSTEM",
+      organization_name: "Parkventory",
+      user_id: "user-synthetic-godmode",
+      email: godmodeEmail,
+      display_name: "Godmode",
+      role: "ADMIN",
+      branding_enabled: null,
+    };
+    const missingSystemDatabase = {
+      prepare(query: string) {
+        if (query.includes("FROM app_session session")) {
+          return {
+            bind: () => ({
+              first: () => Promise.resolve(syntheticMember),
+            }),
+          };
+        }
+        return testEnv.DB.prepare(query);
+      },
+    } as unknown as D1Database;
+
+    const response = await app.request(
+      "https://parkventory.test/api/v1/admin/diagnostics/integrity?check=system_organization_count",
+      { headers: sessionHeaders("synthetic-token") },
+      { ...bindingsWithDigest(godmodeDigest), DB: missingSystemDatabase },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      check: "system_organization_count",
+      items: [{
+        issueKind: "MISSING",
+        organizationId: null,
+        references: [],
+        occurrences: 1,
+      }],
+      page: { nextCursor: null },
+    });
   });
 
   it("bloque les incohérences tenant au schéma avant qu’elles polluent les diagnostics", async () => {
@@ -696,6 +976,115 @@ describe("godmode Parkventory", () => {
       const response = await SELF.fetch(`https://parkventory.test${path}`);
       expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
     }
+  });
+
+  it("relaie les erreurs D1 inattendues des écritures vers un incident 500 corrélé", async () => {
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const spotMember = await seedSession({
+      domain: "unexpected-spot.test",
+      email: "member@unexpected-spot.test",
+    });
+    const spotResponse = await app.request(
+      "https://parkventory.test/api/v1/spots",
+      {
+        method: "POST",
+        headers: {
+          ...sessionHeaders(spotMember.token),
+          Origin: "https://parkventory.test",
+          "Sec-Fetch-Site": "same-origin",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ label: "A-01", level: "Niveau A" }),
+      },
+      {
+        ...bindingsWithDigest(godmodeDigest),
+        DB: databaseFailingRun("INSERT INTO parking_spot (", "raw-unexpected-spot-error"),
+      },
+    );
+    const spotProblem = await spotResponse.json<{ detail: string }>();
+    expect(spotResponse.status).toBe(500);
+    expect(spotProblem.detail).toMatch(/Référence : [0-9a-f-]{36}$/);
+    expect(spotProblem.detail).not.toContain("raw-unexpected-spot-error");
+
+    const owner = await seedSession({
+      domain: "unexpected-reservation.test",
+      email: "owner@unexpected-reservation.test",
+    });
+    const reserver = await seedSession({
+      domain: "unexpected-reservation.test",
+      email: "reserver@unexpected-reservation.test",
+    });
+    const now = Math.floor(Date.now() / 1000);
+    const spotId = `spot-${crypto.randomUUID()}`;
+    const offerId = `offer-${crypto.randomUUID()}`;
+    await testEnv.DB.batch([
+      testEnv.DB.prepare(`
+        INSERT INTO parking_spot (
+          id, organization_id, owner_membership_id, label, level, time_zone, created_at
+        ) VALUES (?1, ?2, ?3, 'R-01', '', 'Europe/Paris', ?4)
+      `).bind(spotId, owner.orgId, owner.membershipId, now),
+      testEnv.DB.prepare(`
+        INSERT INTO availability_offer (
+          id, organization_id, parking_spot_id, owner_membership_id,
+          starts_at, ends_at, local_date, local_from, local_to, time_zone, created_at
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, '2026-09-01', '08:00', '18:00', 'Europe/Paris', ?7)
+      `).bind(offerId, owner.orgId, spotId, owner.membershipId, now + 3600, now + 7200, now),
+    ]);
+    const reservationResponse = await app.request(
+      `https://parkventory.test/api/v1/availability/${offerId}/reservations`,
+      {
+        method: "POST",
+        headers: {
+          ...sessionHeaders(reserver.token),
+          Origin: "https://parkventory.test",
+          "Sec-Fetch-Site": "same-origin",
+          "Idempotency-Key": crypto.randomUUID(),
+        },
+      },
+      {
+        ...bindingsWithDigest(godmodeDigest),
+        DB: databaseFailingRun("INSERT INTO reservation (", "raw-unexpected-reservation-error"),
+      },
+    );
+    const reservationProblem = await reservationResponse.json<{ detail: string }>();
+    expect(reservationResponse.status).toBe(500);
+    expect(reservationProblem.detail).toMatch(/Référence : [0-9a-f-]{36}$/);
+    expect(reservationProblem.detail).not.toContain("raw-unexpected-reservation-error");
+
+    const incidents = await testEnv.DB.prepare(`
+      SELECT route, error_code, entity_type, entity_id
+      FROM activity_event
+      WHERE event_type = 'INCIDENT_RECORDED'
+      ORDER BY route
+    `).all<{
+      route: string;
+      error_code: string;
+      entity_type: string;
+      entity_id: string;
+    }>();
+    expect(incidents.results).toEqual([
+      {
+        route: "/api/v1/availability/:id/reservations",
+        error_code: expect.stringMatching(/^UNHANDLED_[0-9A-F]{16}$/),
+        entity_type: "INCIDENT",
+        entity_id: expect.stringMatching(/^[0-9a-f-]{36}$/),
+      },
+      {
+        route: "/api/v1/spots",
+        error_code: expect.stringMatching(/^UNHANDLED_[0-9A-F]{16}$/),
+        entity_type: "INCIDENT",
+        entity_id: expect.stringMatching(/^[0-9a-f-]{36}$/),
+      },
+    ]);
+    const disguisedConflicts = await testEnv.DB.prepare(`
+      SELECT COUNT(*) AS count
+      FROM activity_event
+      WHERE event_type = 'BUSINESS_RULE_REJECTED'
+        AND error_code IN ('SPOT_ALREADY_DECLARED', 'RESERVATION_WRITE_CONFLICT')
+    `).first<{ count: number }>();
+    expect(disguisedConflicts?.count).toBe(0);
+    expect(errorLog).toHaveBeenCalledTimes(2);
+    errorLog.mockRestore();
   });
 
   it("corrèle un incident sans exposer l’erreur brute", async () => {

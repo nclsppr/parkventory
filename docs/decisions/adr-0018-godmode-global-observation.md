@@ -71,7 +71,8 @@ par :
 - `GET /api/v1/admin/tenants` et `GET /api/v1/admin/tenants/:id` ;
 - `GET /api/v1/admin/users` ;
 - `GET /api/v1/admin/activity` ;
-- `GET /api/v1/admin/diagnostics`.
+- `GET /api/v1/admin/diagnostics` ;
+- `GET /api/v1/admin/diagnostics/integrity`.
 
 La première livraison ne propose ni impersonation, ni promotion, ni révocation,
 ni correction de ligne D1. Une réparation reste une opération séparée, autorisée
@@ -85,6 +86,19 @@ transforment jamais « voir tous les utilisateurs » en réponse non paginée.
 Le journal accepte en plus une référence exacte qui correspond à l’identifiant de
 l’événement, de l’entité ou de la requête ; les diagnostics lient directement vers
 ce filtre pour retrouver un incident ancien au-delà de leur liste récente bornée.
+Il accepte aussi un code d’erreur exact pour regrouper les incidents partageant
+une empreinte `UNHANDLED_*` ou un même refus métier. Le détail d’un contrôle
+d’intégrité est une collection paginée séparée : son curseur est lié à la clé du
+contrôle et sa réponse ne contient que des identifiants internes, jamais les
+valeurs ou messages D1 qui ont servi au calcul.
+
+Le compteur agrégé et le nombre de lignes explicatives ne sont pas toujours une
+relation un-pour-un. Un chevauchement représente une paire d’offres ; une offre
+avec plusieurs réservations confirmées expose chaque réservation et répète dans
+`occurrences` la taille du groupe ; les contrôles `SYSTEM` peuvent exposer
+plusieurs lignes expliquant un unique état global, ou une ligne `MISSING` sans
+référence. L’interface présente donc le compteur comme un signal et le détail
+comme sa preuve, jamais comme une seconde somme supposée identique.
 
 ### Registre d’activité D1
 
@@ -154,12 +168,20 @@ Les diagnostics distinguent liens magiques en attente ou expirés, sessions tena
 et système actives, sessions révoquées, volume et ancienneté du registre,
 incidents des dernières 24 heures et des sept derniers jours, puis contrôles
 d’intégrité entre tenants, membres, places, partages et réservations ainsi que
-l’unicité et l’absence de données métier dans l’organisation `SYSTEM`. La
+l’unicité et l’absence de données métier dans l’organisation `SYSTEM`. Chaque
+compteur en anomalie mène à ses lignes internes paginées ; un état attendu mais
+absent est représenté explicitement sans inventer de référence. La
 référence bornée rendue avec une réponse `500` est conservée comme identifiant
 interne de l’incident et permet sa corrélation avec le `request_id`, sans message
 d’erreur brut. Un code `UNHANDLED_<empreinte>` dérivé de la cause avec le secret
 applicatif permet de regrouper les occurrences identiques sans stocker la pile ;
 le client conserve uniquement l’UUID d’incident validé dans son message sûr.
+
+Les écritures de place et de réservation ne traduisent en conflit métier que les
+contraintes d’unicité explicitement attendues. Toute autre erreur D1 remonte au
+gestionnaire d’incident `500`. Deux réservations concurrentes portant la même clé
+d’idempotence relisent la ligne gagnante et retournent le même succès, sans créer
+un refus artificiel.
 
 ## Sécurité et confidentialité
 

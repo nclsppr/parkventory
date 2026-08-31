@@ -93,6 +93,9 @@ CREATE INDEX parking_spot_org_created_idx
   ON parking_spot(organization_id, created_at DESC, id DESC);
 CREATE INDEX availability_org_created_idx
   ON availability_offer(organization_id, created_at DESC, id DESC);
+CREATE INDEX availability_spot_active_window_idx
+  ON availability_offer(parking_spot_id, starts_at, ends_at, id)
+  WHERE status = 'PUBLISHED';
 CREATE INDEX reservation_org_created_idx
   ON reservation(organization_id, created_at DESC, id DESC);
 CREATE INDEX app_session_created_idx
@@ -142,6 +145,9 @@ CREATE INDEX activity_event_entity_time_idx
 CREATE INDEX activity_event_request_idx
   ON activity_event(request_id)
   WHERE request_id IS NOT NULL;
+CREATE INDEX activity_event_error_time_idx
+  ON activity_event(error_code, occurred_at DESC, id DESC)
+  WHERE error_code IS NOT NULL;
 
 CREATE TRIGGER parking_spot_tenant_integrity_insert
 BEFORE INSERT ON parking_spot

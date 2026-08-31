@@ -91,7 +91,8 @@ L’ordre sûr est :
 1. exécuter `npm run verify` sur le candidat exact ;
 2. appliquer la migration sur la D1 de préversion avec
    `npm run db:migrate:remote`, puis la lister et contrôler les tables, index,
-   triggers et agrégats sans afficher de donnée personnelle ;
+   triggers et agrégats sans afficher de donnée personnelle ; vérifier notamment
+   `activity_event_error_time_idx` et `availability_spot_active_window_idx` ;
 3. appliquer et vérifier la même migration en production avec
    `npm run db:migrate:production` ;
 4. seulement ensuite fusionner ou déployer le Worker qui lit
@@ -113,14 +114,17 @@ et incidents classifiés écrits par le Worker portent `WORKER`.
    En préversion contrôlée, cinq demandes concurrentes pour une même adresse
    doivent en accepter trois et en limiter deux, sans cinquième ligne ni envoi.
 4. Deux membres du même domaine réalisent le parcours partage/réservation.
-5. Deux réservations concurrentes donnent un `200` et un `409`.
+5. Deux réservations concurrentes avec des clés distinctes donnent un `200` et
+   un `409`. Deux requêtes portant la même clé idempotente et la même offre
+   donnent `200` et `200`, avec une seule ligne `reservation` et aucun faux refus
+   métier dans `activity_event`.
 6. Un membre d’un autre domaine ne voit aucune donnée du premier.
 7. Sans session, `GET /api/v1/admin/overview` répond `401` ; une session tenant,
    y compris avec rôle `ADMIN`, reçoit `403`.
-8. Une session réelle de l’identité système autorisée reçoit `200` sur les six
-   endpoints admin, détail tenant compris, et voit uniquement des organisations
-   `TENANT` dans les métriques d’adoption. La même session reçoit `403` sur
-   `GET /api/v1/dashboard`.
+8. Une session réelle de l’identité système autorisée reçoit `200` sur les sept
+   lectures admin, détail tenant et détail d’intégrité compris, et voit uniquement
+   des organisations `TENANT` dans les métriques d’adoption. La même session
+   reçoit `403` sur `GET /api/v1/dashboard`.
 9. Les listes tenants, utilisateurs et activité paginent sans doublon ; un
    tenant inconnu répond `404`. Contrôler séparément que la table
    `activity_event`, les diagnostics et les logs ne contiennent ni adresse, ni
@@ -128,7 +132,10 @@ et incidents classifiés écrits par le Worker portent `WORKER`.
    test un conflit métier `409` et vérifier son événement `BUSINESS_RULE_REJECTED`
    dédupliqué avec route canonique et code ; les vues
    godmode utilisateurs, détail tenant et activité peuvent seulement enrichir
-   les identifiants avec l’adresse de compte déjà conservée.
+   les identifiants avec l’adresse de compte déjà conservée. Pour un contrôle
+   d’intégrité en anomalie, ouvrir « Voir les lignes », paginer au moins deux pages
+   si disponible, puis vérifier que tenant et références rejoignent les vues
+   attendues sans exposer de donnée libre.
 10. Les nouveaux liens placent le jeton dans le fragment `#token=`, jamais envoyé
     dans la requête de navigation ; le callback le retire immédiatement de l’URL.
     Les logs applicatifs structurés n’exposent que la route canonique et les logs
@@ -141,12 +148,17 @@ Depuis `/admin/operations`, commencer par la référence d’incident affichée 
 fournie par l’utilisateur. Elle est conservée comme identifiant interne de
 l’événement `INCIDENT_RECORDED` ; utiliser son `request_id` associé pour
 rapprocher les logs Workers, puis filtrer le journal par référence exacte, tenant,
-utilisateur, type et sévérité. Regrouper les incidents par leur code
+utilisateur, type et sévérité. Regrouper les incidents avec le filtre exact de code
 `UNHANDLED_<empreinte>` ; il représente une cause sans exposer la pile. Pour un
 refus fonctionnel, rechercher `BUSINESS_RULE_REJECTED` et son code métier. Une
 ligne `BACKFILL` prouve uniquement un état
 historique dérivé. Ne copier dans un ticket ni adresse, ni token, ni corps de
 requête.
+
+Pour une anomalie d’intégrité, partir du compteur dans l’onglet Diagnostics,
+ouvrir « Voir les lignes », puis suivre le tenant ou une référence interne vers
+le journal. Un résultat `MISSING` décrit l’absence d’un état système attendu et
+ne fabrique donc aucun identifiant cible.
 
 La console est en lecture seule. Une correction D1 suit une procédure séparée
 avec export ou bookmark Time Travel, requête bornée, contrôle avant/après et plan

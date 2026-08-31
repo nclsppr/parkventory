@@ -35,7 +35,9 @@ Les membres utilisent les parcours connexion, partage et réservation. L'opérat
 utilise une console dense de suivi pour comparer les tenants, retrouver un
 utilisateur, lire les événements métier récents, suivre l'évolution de l'usage et
 repérer des incohérences de données avant une investigation ciblée par référence
-d’incident, de requête ou d’entité.
+d’incident, de requête ou d’entité. Chaque contrôle d’intégrité en anomalie ouvre
+une liste bornée de lignes internes et chaque code d’erreur permet de regrouper
+les occurrences de la même cause.
 
 ## Capabilities and Constraints
 

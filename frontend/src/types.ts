@@ -305,3 +305,19 @@ export interface AdminDiagnosticsData {
     }>;
   };
 }
+
+export interface AdminIntegrityIssue {
+  issueKind: "ROW" | "MISSING";
+  organizationId: string | null;
+  references: Array<{
+    type: string;
+    id: string;
+  }>;
+  occurrences: number;
+}
+
+export interface AdminIntegrityData {
+  check: string;
+  items: AdminIntegrityIssue[];
+  page: AdminPageInfo;
+}

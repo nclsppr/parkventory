@@ -112,10 +112,36 @@ describe("production error boundary", () => {
     vi.stubGlobal("fetch", fetchMock);
     const { loadAdminActivity } = await import("./client");
 
-    await loadAdminActivity({ tenantId: "org_1", userId: "usr_1", type: "ACCESS_DENIED", severity: "ERROR", reference: "incident_1" });
+    await loadAdminActivity({
+      tenantId: "org_1",
+      userId: "usr_1",
+      type: "ACCESS_DENIED",
+      severity: "ERROR",
+      errorCode: "TENANT_BOUNDARY_MISMATCH",
+      reference: "incident_1",
+    });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/v1/admin/activity?limit=50&tenantId=org_1&userId=usr_1&type=ACCESS_DENIED&severity=ERROR&reference=incident_1",
+      "/api/v1/admin/activity?limit=50&tenantId=org_1&userId=usr_1&type=ACCESS_DENIED&severity=ERROR&errorCode=TENANT_BOUNDARY_MISMATCH&reference=incident_1",
+      expect.objectContaining({ credentials: "include" }),
+    );
+  });
+
+  it("loads one integrity check with its opaque pagination cursor", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ check: "active_offer_overlap", items: [], page: { nextCursor: null } }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ));
+    vi.stubGlobal("fetch", fetchMock);
+    const { loadAdminDiagnosticsIntegrity } = await import("./client");
+
+    await loadAdminDiagnosticsIntegrity({
+      check: "active_offer_overlap",
+      cursor: "opaque_integrity_cursor",
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/admin/diagnostics/integrity?check=active_offer_overlap&limit=25&cursor=opaque_integrity_cursor",
       expect.objectContaining({ credentials: "include" }),
     );
   });

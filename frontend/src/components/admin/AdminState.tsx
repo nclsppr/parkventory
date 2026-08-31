@@ -45,7 +45,7 @@ export function AdminEmpty({
   action?: ReactNode;
 }) {
   return (
-    <div className="admin-state admin-state-empty">
+    <div className="admin-state admin-state-empty" role="status">
       <Inbox aria-hidden="true" />
       <div>
         <strong>{title}</strong>

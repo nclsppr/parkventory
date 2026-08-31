@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { loadAdminActivity, loadAdminDiagnostics } from "../../api/client";
 import { AppLink } from "../../components/AppLink";
 import { AdminActivityList } from "../../components/admin/AdminActivityList";
+import { AdminIntegrityDetails } from "../../components/admin/AdminIntegrityDetails";
 import { AdminPager } from "../../components/admin/AdminPager";
 import { AdminEmpty, AdminError, AdminLoading } from "../../components/admin/AdminState";
 import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
@@ -16,25 +17,33 @@ interface ActivityFilters {
   userId: string;
   type: string;
   severity: "" | AdminActivitySeverity;
+  errorCode: string;
   reference: string;
 }
+
+type OperationsLocation = Partial<ActivityFilters> & {
+  view?: "activity" | "diagnostics";
+  check?: string;
+};
 
 const integritySeverityLabels = { WARNING: "Avertissement", ERROR: "Erreur" } as const;
 const integrityStatusLabels = { ok: "Conforme", attention: "À examiner" } as const;
 
-function operationsUrl(values: Partial<ActivityFilters> & { view?: "activity" | "diagnostics" }) {
+function operationsUrl(values: OperationsLocation) {
   const query = new URLSearchParams();
   if (values.view === "diagnostics") query.set("view", "diagnostics");
+  if (values.check) query.set("check", values.check);
   if (values.tenantId) query.set("tenantId", values.tenantId);
   if (values.userId) query.set("userId", values.userId);
   if (values.type) query.set("type", values.type);
   if (values.severity) query.set("severity", values.severity);
+  if (values.errorCode) query.set("errorCode", values.errorCode);
   if (values.reference) query.set("reference", values.reference);
   const serialized = query.toString();
   return serialized ? `${adminOperationsUrl}?${serialized}` : adminOperationsUrl;
 }
 
-function navigateOperations(values: Partial<ActivityFilters> & { view?: "activity" | "diagnostics" }) {
+function navigateOperations(values: OperationsLocation) {
   window.history.pushState({}, "", operationsUrl(values));
   window.dispatchEvent(new PopStateEvent("popstate"));
 }
@@ -59,7 +68,7 @@ export function AdminOperationsPage({
       </nav>
       {view === "activity"
         ? <AdminActivityView search={search} onSessionExpired={onSessionExpired} onForbidden={onForbidden} />
-        : <AdminDiagnosticsView onSessionExpired={onSessionExpired} onForbidden={onForbidden} />}
+        : <AdminDiagnosticsView search={search} onSessionExpired={onSessionExpired} onForbidden={onForbidden} />}
     </section>
   );
 }
@@ -79,6 +88,7 @@ function AdminActivityView({
     userId: parameters.get("userId")?.trim() ?? "",
     type: parameters.get("type")?.trim() ?? "",
     severity: (["INFO", "WARNING", "ERROR"] as const).find((value) => value === parameters.get("severity")) ?? "",
+    errorCode: parameters.get("errorCode")?.trim() ?? "",
     reference: parameters.get("reference")?.trim() ?? "",
   };
   const [draft, setDraft] = useState(filters);
@@ -99,10 +109,11 @@ function AdminActivityView({
     userId: filters.userId || undefined,
     type: filters.type || undefined,
     severity: filters.severity || undefined,
+    errorCode: filters.errorCode || undefined,
     reference: filters.reference || undefined,
   }), [cursor, filterKey]);
   const resource = useAdminResource(loader, [loader], onSessionExpired, onForbidden);
-  const filtered = Boolean(filters.tenantId || filters.userId || filters.type || filters.severity || filters.reference);
+  const filtered = Boolean(filters.tenantId || filters.userId || filters.type || filters.severity || filters.errorCode || filters.reference);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -118,6 +129,7 @@ function AdminActivityView({
         <div><label htmlFor="activity-tenant">Tenant ID</label><input id="activity-tenant" value={draft.tenantId} onChange={(event) => setDraft({ ...draft, tenantId: event.target.value })} maxLength={160} /></div>
         <div><label htmlFor="activity-user">Utilisateur ID</label><input id="activity-user" value={draft.userId} onChange={(event) => setDraft({ ...draft, userId: event.target.value })} maxLength={160} /></div>
         <div><label htmlFor="activity-type">Type d’événement</label><input id="activity-type" value={draft.type} onChange={(event) => setDraft({ ...draft, type: event.target.value })} maxLength={80} /></div>
+        <div><label htmlFor="activity-error-code">Code d’erreur exact</label><input id="activity-error-code" value={draft.errorCode} onChange={(event) => setDraft({ ...draft, errorCode: event.target.value })} maxLength={80} /></div>
         <div><label htmlFor="activity-reference">Référence</label><input id="activity-reference" value={draft.reference} onChange={(event) => setDraft({ ...draft, reference: event.target.value })} maxLength={160} placeholder="Incident, requête ou entité" /></div>
         <div>
           <label htmlFor="activity-severity">Sévérité</label>
@@ -161,19 +173,27 @@ function AdminActivityView({
 }
 
 function AdminDiagnosticsView({
+  search,
   onSessionExpired,
   onForbidden,
 }: {
+  search: string;
   onSessionExpired: () => void;
   onForbidden: () => void;
 }) {
+  const selectedCheckKey = new URLSearchParams(search).get("check")?.trim() ?? "";
+  const [integrityRefreshVersion, setIntegrityRefreshVersion] = useState(0);
   const loader = useCallback(() => loadAdminDiagnostics(), []);
   const resource = useAdminResource(loader, [loader], onSessionExpired, onForbidden);
+  const selectedCheck = resource.data?.integrity.checks.find((check) => check.key === selectedCheckKey);
   return (
     <section className="admin-operation-view" aria-labelledby="diagnostics-view-title">
       <div className="admin-subsection-heading">
         <div><h2 id="diagnostics-view-title">Diagnostics</h2><p>Intégrité, télémétrie, authentification et incidents récents.</p></div>
-        {resource.data && <button className="button button-secondary button-small" type="button" onClick={() => void resource.reload()} disabled={resource.refreshing}><RefreshCw className={resource.refreshing ? "spin" : ""} aria-hidden="true" /> Actualiser</button>}
+        {resource.data && <button className="button button-secondary button-small" type="button" onClick={() => {
+          setIntegrityRefreshVersion((version) => version + 1);
+          void resource.reload();
+        }} disabled={resource.refreshing}><RefreshCw className={resource.refreshing ? "spin" : ""} aria-hidden="true" /> Actualiser</button>}
       </div>
       {resource.loading && <AdminLoading label="Exécution des diagnostics…" />}
       {!resource.data && resource.error && <AdminError error={resource.error} onRetry={() => void resource.reload()} />}
@@ -192,7 +212,7 @@ function AdminDiagnosticsView({
             <section className="admin-integrity" aria-labelledby="integrity-title">
               <header><div><h3 id="integrity-title">Contrôles d’intégrité</h3><p>{resource.data.integrity.issueCount === 0 ? "Aucune anomalie détectée" : `${formatNumber(resource.data.integrity.issueCount)} anomalie${resource.data.integrity.issueCount === 1 ? "" : "s"} à examiner`}</p></div></header>
               <ul>{resource.data.integrity.checks.map((check) => {
-                const requiresAttention = check.status === "attention" && check.count > 0;
+                const requiresAttention = check.status === "attention";
                 return (
                   <li key={check.key}>
                     <span className={requiresAttention ? `admin-severity admin-severity-${check.severity.toLowerCase()}` : "admin-severity admin-severity-ok"}>
@@ -200,11 +220,35 @@ function AdminDiagnosticsView({
                     </span>
                     <div><strong>{check.label}</strong><p>{check.detail}</p></div>
                     <span>{formatNumber(check.count)}</span>
-                    {requiresAttention && <span className="admin-integrity-status">{integrityStatusLabels.attention}</span>}
+                    {requiresAttention && (
+                      <div className="admin-integrity-actions">
+                        <span className="admin-integrity-status">{integrityStatusLabels.attention}</span>
+                        <AppLink
+                          href={operationsUrl({ view: "diagnostics", check: check.key })}
+                          aria-current={selectedCheckKey === check.key ? "location" : undefined}
+                        >Voir les lignes</AppLink>
+                      </div>
+                    )}
                   </li>
                 );
               })}</ul>
             </section>
+          )}
+          {selectedCheckKey && selectedCheck && (
+            <AdminIntegrityDetails
+              key={selectedCheckKey}
+              checkKey={selectedCheckKey}
+              checkLabel={selectedCheck.label}
+              refreshVersion={integrityRefreshVersion}
+              onSessionExpired={onSessionExpired}
+              onForbidden={onForbidden}
+            />
+          )}
+          {selectedCheckKey && !selectedCheck && (
+            <AdminEmpty
+              title="Contrôle introuvable."
+              action={<AppLink className="button button-secondary button-small" href={operationsUrl({ view: "diagnostics" })}>Revenir aux diagnostics</AppLink>}
+            >Ce contrôle n’est pas proposé par les diagnostics actuels.</AdminEmpty>
           )}
           <div className="admin-diagnostics-grid">
             <section className="admin-panel" aria-labelledby="telemetry-title">
@@ -232,7 +276,13 @@ function AdminDiagnosticsView({
               <ol>{resource.data.incidents.latest.map((incident) => (
                 <li key={incident.id}>
                   <time dateTime={new Date(incident.occurredAt * 1_000).toISOString()}>{formatDateTime(incident.occurredAt)}</time>
-                  <strong>{incident.errorCode ?? "Incident sans code"}</strong>
+                  {incident.errorCode ? (
+                    <AppLink
+                      className="admin-incident-code"
+                      href={operationsUrl({ errorCode: incident.errorCode })}
+                      title={`Filtrer le journal sur le code ${incident.errorCode}`}
+                    ><strong>{incident.errorCode}</strong></AppLink>
+                  ) : <strong>Incident sans code</strong>}
                   <span>{incident.route ?? "Route inconnue"}</span>
                   <div className="admin-incident-references">
                     {incident.incidentId && <AppLink href={operationsUrl({ reference: incident.incidentId })}><code title={incident.incidentId}>Incident · {incident.incidentId}</code></AppLink>}

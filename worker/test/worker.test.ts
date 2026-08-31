@@ -190,10 +190,12 @@ describe("contrat Cloudflare MVP", () => {
       user_id: reserver.userId,
       membership_id: reserver.membershipId,
       entity_type: "AVAILABILITY_OFFER",
-      entity_id: null,
       route: "/api/v1/availability/:id/reservations",
       error_code: expect.stringMatching(/^RESERVATION_(UNAVAILABLE|WRITE_CONFLICT)$/),
     });
+    expect(conflict?.entity_id).toBe(
+      conflict?.error_code === "RESERVATION_WRITE_CONFLICT" ? offerId : null,
+    );
 
     for (const attemptedId of [`token-${crypto.randomUUID()}`, `secret-${crypto.randomUUID()}`]) {
       const rejected = await SELF.fetch(`https://parkventory.test/api/v1/reservations/${attemptedId}`, {
@@ -210,6 +212,112 @@ describe("contrat Cloudflare MVP", () => {
         AND error_code = 'RESERVATION_CANCELLATION_REJECTED'
     `).bind(reserver.membershipId).first<{ count: number; entity_id: string | null }>();
     expect(rejectedCancellation).toEqual({ count: 1, entity_id: null });
+  });
+
+  it("conserve l’idempotence sous concurrence pour une même tentative", async () => {
+    const owner = await seedMember({
+      domain: "idempotent.test",
+      email: "owner@idempotent.test",
+      token: "owner-token",
+    });
+    const reserver = await seedMember({
+      domain: "idempotent.test",
+      email: "guest@idempotent.test",
+      token: "guest-token",
+    });
+    const { offerId } = await seedOffer(owner.orgId, owner.membershipId);
+    const idempotencyKey = crypto.randomUUID();
+    const reserve = () => SELF.fetch(
+      `https://parkventory.test/api/v1/availability/${offerId}/reservations`,
+      {
+        method: "POST",
+        headers: {
+          ...cookie(reserver.token),
+          Origin: "https://parkventory.test",
+          "Sec-Fetch-Site": "same-origin",
+          "Idempotency-Key": idempotencyKey,
+        },
+      },
+    );
+
+    const responses = await Promise.all([reserve(), reserve()]);
+    expect(responses.map((response) => response.status)).toEqual([200, 200]);
+    const reservations = await testEnv.DB.prepare(`
+      SELECT COUNT(*) AS count
+      FROM reservation
+      WHERE organization_id = ?1
+        AND reserver_membership_id = ?2
+        AND idempotency_key = ?3
+    `).bind(reserver.orgId, reserver.membershipId, idempotencyKey)
+      .first<{ count: number }>();
+    expect(reservations?.count).toBe(1);
+    const rejected = await testEnv.DB.prepare(`
+      SELECT COUNT(*) AS count
+      FROM activity_event
+      WHERE event_type = 'BUSINESS_RULE_REJECTED'
+        AND membership_id = ?1
+        AND route = '/api/v1/availability/:id/reservations'
+    `).bind(reserver.membershipId).first<{ count: number }>();
+    expect(rejected?.count).toBe(0);
+  });
+
+  it("classe seulement les contraintes métier de place dupliquée en 409", async () => {
+    const owner = await seedMember({
+      domain: "spot-conflict.test",
+      email: "owner@spot-conflict.test",
+      token: "owner-token",
+    });
+    const colleague = await seedMember({
+      domain: "spot-conflict.test",
+      email: "colleague@spot-conflict.test",
+      token: "colleague-token",
+    });
+    const { spotId } = await seedOffer(owner.orgId, owner.membershipId);
+    const ownerResponse = await SELF.fetch("https://parkventory.test/api/v1/spots", {
+      method: "POST",
+      headers: {
+        ...cookie(owner.token),
+        Origin: "https://parkventory.test",
+        "Sec-Fetch-Site": "same-origin",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ label: "B-42", level: "Niveau B" }),
+    });
+    const labelResponse = await SELF.fetch("https://parkventory.test/api/v1/spots", {
+      method: "POST",
+      headers: {
+        ...cookie(colleague.token),
+        Origin: "https://parkventory.test",
+        "Sec-Fetch-Site": "same-origin",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ label: "A-24", level: "Niveau A" }),
+    });
+
+    expect(ownerResponse.status).toBe(409);
+    expect(labelResponse.status).toBe(409);
+    const conflicts = await testEnv.DB.prepare(`
+      SELECT event_type, error_code, entity_type, entity_id
+      FROM activity_event
+      WHERE membership_id IN (?1, ?2)
+        AND error_code = 'SPOT_ALREADY_DECLARED'
+      ORDER BY membership_id
+    `).bind(owner.membershipId, colleague.membershipId).all<Record<string, unknown>>();
+    expect(conflicts.results).toHaveLength(2);
+    expect(conflicts.results).toEqual(expect.arrayContaining([
+      {
+        event_type: "BUSINESS_RULE_REJECTED",
+        error_code: "SPOT_ALREADY_DECLARED",
+        entity_type: "PARKING_SPOT",
+        entity_id: spotId,
+      },
+      {
+        event_type: "BUSINESS_RULE_REJECTED",
+        error_code: "SPOT_ALREADY_DECLARED",
+        entity_type: "PARKING_SPOT",
+        entity_id: spotId,
+      },
+    ]));
   });
 
   it("refuse deux disponibilités qui se chevauchent pour la même place", async () => {

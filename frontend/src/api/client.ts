@@ -3,6 +3,7 @@ import type {
   AdminActivityData,
   AdminActivitySeverity,
   AdminDiagnosticsData,
+  AdminIntegrityData,
   AdminOverviewData,
   AdminTenantDetailData,
   AdminTenantsData,
@@ -154,6 +155,7 @@ export function loadAdminActivity({
   userId,
   type,
   severity,
+  errorCode,
   reference,
 }: {
   limit?: number;
@@ -162,6 +164,7 @@ export function loadAdminActivity({
   userId?: string;
   type?: string;
   severity?: AdminActivitySeverity;
+  errorCode?: string;
   reference?: string;
 } = {}): Promise<AdminActivityData> {
   return request<AdminActivityData>(queryPath("/admin/activity", {
@@ -171,12 +174,29 @@ export function loadAdminActivity({
     userId,
     type,
     severity,
+    errorCode,
     reference,
   }));
 }
 
 export function loadAdminDiagnostics(): Promise<AdminDiagnosticsData> {
   return request<AdminDiagnosticsData>("/admin/diagnostics");
+}
+
+export function loadAdminDiagnosticsIntegrity({
+  check,
+  limit = 25,
+  cursor,
+}: {
+  check: string;
+  limit?: number;
+  cursor?: string;
+}): Promise<AdminIntegrityData> {
+  return request<AdminIntegrityData>(queryPath("/admin/diagnostics/integrity", {
+    check,
+    limit,
+    cursor,
+  }));
 }
 
 export function declareSpot(payload: SpotRequest): Promise<ActionResponse> {
