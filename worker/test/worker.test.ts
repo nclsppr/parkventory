@@ -38,7 +38,7 @@ async function seedMember({
       VALUES (?1, ?2, ?3, ?4)
     `)
       .bind(orgId, domain, organizationName(domain), now),
-    testEnv.DB.prepare("INSERT INTO user_account VALUES (?1, ?2, ?3, ?4)")
+    testEnv.DB.prepare("INSERT INTO user_account (id, normalized_email, display_name, created_at) VALUES (?1, ?2, ?3, ?4)")
       .bind(userId, email, displayName(email), now),
     testEnv.DB.prepare("INSERT INTO membership VALUES (?1, ?2, ?3, 'MEMBER', ?4)")
       .bind(membershipId, orgId, userId, now),

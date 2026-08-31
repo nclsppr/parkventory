@@ -13,20 +13,22 @@ leur début.
 
 ## Opérateur Parkventory
 
-Il déploie et diagnostique le service pendant la bêta. Une identité exacte,
+Il déploie, diagnostique et gouverne les administrateurs de tenant pendant la bêta. Une identité exacte,
 configurée uniquement sous forme de digest secret côté Worker, rejoint
 l’organisation interne `SYSTEM` avec le rôle `ADMIN`. Elle seule peut ouvrir la
-console globale en lecture seule et consulter tenants, comptes, métriques,
-activité redacted et incidents. Elle n’utilise jamais cet accès global pour un
+console globale, consulter tenants, comptes, métriques, activité redacted et
+incidents, et nommer ou révoquer un administrateur de tenant. Elle n’utilise jamais cet accès global pour un
 usage courant et ne peut pas partager ou réserver une place.
 
 ## Administrateur d’organisation
 
-L’administration autonome d’une organisation n’a pas de surface dans le MVP. La
-colonne `membership.role` reste locale au tenant : même un rôle `ADMIN` de tenant
-ne peut lire aucune donnée globale. La configuration de co-marque reste isolée
-par domaine dans D1 ; une future route tenant pourra modifier ses jetons, son
-logo et son champ `enabled` sans ouvrir les autres organisations.
+Le godmode attribue le rôle `ADMIN` à une adhésion précise. Ce membre ouvre
+`/app/admin` et consulte uniquement les statistiques et membres du tenant porté
+par sa session ; aucun identifiant de tenant fourni par le client n’est accepté.
+Il peut activer la co-marque, choisir deux couleurs dont les contrastes sont
+dérivés côté serveur, autoriser l’affichage d’un logo déjà approuvé et effacer
+l’adresse d’un membre simple. Il ne peut ni nommer un autre administrateur, ni
+agir sur un autre tenant, ni effacer son propre compte ou celui d’un admin.
 
 Les deux autorités ne sont jamais interchangeables : le godmode exige le digest
 exact, `organization.kind = 'SYSTEM'`, le rôle `ADMIN` et une session serveur

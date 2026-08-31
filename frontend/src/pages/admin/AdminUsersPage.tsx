@@ -79,7 +79,7 @@ export function AdminUsersPage({
               <thead><tr><th>Utilisateur</th><th>Tenant</th><th>Rôle</th><th>Place</th><th>Sessions</th><th>Partages</th><th>Réservations</th><th>Dernière activité</th><th>Faits</th></tr></thead>
               <tbody>{resource.data.items.map((user) => (
                 <tr key={user.membershipId}>
-                  <th scope="row"><strong>{user.displayName}</strong><span>{user.email}</span></th>
+                  <th scope="row"><strong>{user.displayName}</strong><span>{user.email ?? "E-mail effacé"}</span></th>
                   <td><AppLink href={adminTenantUrl(user.tenant.id)}><strong>{user.tenant.name}</strong><span>{user.tenant.domain}</span></AppLink></td>
                   <td><span className="admin-role">{formatRole(user.role)}</span></td>
                   <td>{user.spot ? <><strong>{user.spot.label}</strong><span>{user.spot.level}</span></> : "—"}</td>

@@ -18,13 +18,18 @@ Les chemins `/api/*` exécutent toujours le Worker. Les autres chemins sont
 servis comme assets, avec fallback SPA. Aucun service réseau privé ni conteneur
 n’est nécessaire.
 
-## Deux frontières d’autorisation
+## Trois frontières d’autorisation
 
 Les routes métier chargent une session et lient chaque requête à une organisation
 `TENANT`. Les routes `/api/v1/admin/*` utilisent une garde distincte qui exige le
 digest secret exact, l’organisation interne `SYSTEM` et le rôle `ADMIN`. Un rôle
 d’administration tenant n’est donc jamais global et l’identité système ne peut
 pas emprunter les routes métier.
+
+Les routes `/api/v1/tenant-admin/*` ajoutent une troisième garde : session
+`TENANT`, rôle `ADMIN`, absence de godmode et tenant exclusivement dérivé de la
+session. Elles exposent les statistiques et membres de cette seule organisation,
+ainsi que les mutations bornées de marque et d’effacement d’e-mail.
 
 La console `/admin` lit des agrégats D1, des listes paginées et
 `activity_event`. Les transitions métier sont enregistrées atomiquement par des

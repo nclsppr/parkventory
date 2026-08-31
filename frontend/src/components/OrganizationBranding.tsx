@@ -22,7 +22,7 @@ function validatedBranding(branding: OrganizationBranding | null): OrganizationB
   if (
     branding?.enabled !== true
     || typeof branding.companyName !== "string"
-    || typeof branding.logoUrl !== "string"
+    || (branding.logoUrl !== null && typeof branding.logoUrl !== "string")
     || !branding.colors
     || typeof branding.colors !== "object"
     || !branding.colors.dark
@@ -33,7 +33,7 @@ function validatedBranding(branding: OrganizationBranding | null): OrganizationB
   if (
     branding.companyName.trim().length < 1
     || branding.companyName.trim().length > 120
-    || !sameOriginLogoPattern.test(branding.logoUrl)
+    || (branding.logoUrl !== null && !sameOriginLogoPattern.test(branding.logoUrl))
   ) return null;
 
   const colors = [
@@ -91,7 +91,7 @@ export function ApplicationBrand({ compact = false }: { compact?: boolean }) {
   const branding = useOrganizationBranding();
   const [failedLogoUrl, setFailedLogoUrl] = useState<string | null>(null);
 
-  if (!branding || failedLogoUrl === branding.logoUrl) return <Logo compact={compact} />;
+  if (!branding?.logoUrl || failedLogoUrl === branding.logoUrl) return <Logo compact={compact} />;
 
   return (
     <span

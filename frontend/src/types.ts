@@ -24,7 +24,7 @@ export interface DashboardStats {
 export interface OrganizationBranding {
   enabled: true;
   companyName: string;
-  logoUrl: string;
+  logoUrl: string | null;
   colors: {
     actionFill: string;
     onAction: string;
@@ -187,7 +187,7 @@ export interface AdminTenantDetailData {
     branding: null | {
       enabled: boolean;
       companyName: string;
-      logoUrl: string;
+      logoUrl: string | null;
     };
   };
   stats: {
@@ -202,7 +202,8 @@ export interface AdminTenantDetailData {
     membershipId: string;
     userId: string;
     displayName: string;
-    email: string;
+    email: string | null;
+    emailErasedAt: number | null;
     role: "MEMBER" | "ADMIN";
     createdAt: number;
     activeSessions: number;
@@ -218,7 +219,7 @@ export interface AdminTenantDetailData {
       membershipId: string;
       userId: string;
       displayName: string;
-      email: string;
+      email: string | null;
     };
     shares: number;
     reservations: number;
@@ -231,7 +232,8 @@ export interface AdminTenantDetailData {
 
 export interface AdminUserSummary {
   id: string;
-  email: string;
+  email: string | null;
+  emailErasedAt: number | null;
   displayName: string;
   createdAt: number;
   membershipId: string;
@@ -251,6 +253,65 @@ export interface AdminUserSummary {
   lastActivityAt: number | null;
   shares: number;
   reservations: number;
+}
+
+export interface TenantAdminOverviewData {
+  generatedAt: number;
+  tenant: {
+    id: string;
+    name: string;
+    domain: string;
+  };
+  totals: {
+    users: number;
+    administrators: number;
+    parkingSpots: number;
+    shares: number;
+    reservations: number;
+    activeSessions: number;
+  };
+  period: {
+    days: 30;
+    from: number;
+    to: number;
+    shares: number;
+    reservations: number;
+    activeUsers: number;
+  };
+  series: Array<{
+    date: string;
+    shares: number;
+    reservations: number;
+  }>;
+  branding: {
+    configured: boolean;
+    enabled: boolean;
+    actionColor: string;
+    availableColor: string;
+    logoAvailable: boolean;
+    logoEnabled: boolean;
+    logoUrl: string | null;
+    updatedAt: number | null;
+  };
+}
+
+export interface TenantAdminMember {
+  membershipId: string;
+  userId: string;
+  displayName: string;
+  email: string | null;
+  emailErasedAt: number | null;
+  role: "MEMBER" | "ADMIN";
+  createdAt: number;
+  activeSessions: number;
+  lastActivityAt: number | null;
+  isSelf: boolean;
+  canEraseEmail: boolean;
+}
+
+export interface TenantAdminMembersData {
+  items: TenantAdminMember[];
+  page: AdminPageInfo;
 }
 
 export interface AdminUsersData {

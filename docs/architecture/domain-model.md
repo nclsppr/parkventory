@@ -5,8 +5,8 @@ Le schéma opérationnel est versionné par les migrations D1 sous `migrations/`
 | Table | Rôle |
 | --- | --- |
 | `organization` | frontière d’autorisation, unique par domaine normalisé et classée `TENANT` ou `SYSTEM` |
-| `user_account` | identité minimale, unique par e-mail normalisé |
-| `membership` | rattachement d’un utilisateur à son organisation |
+| `user_account` | identité minimale, unique par e-mail normalisé, avec instant d’effacement optionnel |
+| `membership` | rattachement d’un utilisateur à son organisation et rôle `MEMBER` ou `ADMIN` |
 | `magic_link_request` | hash du jeton, expiration, consommation et rate limit |
 | `app_session` | hash du cookie opaque, expiration et révocation |
 | `parking_spot` | place assignée, une par membre |
@@ -30,6 +30,12 @@ Le branding est résolu par égalité exacte sur le domaine normalisé. Son abse
 son opt-out ou une valeur invalide produit `null` et conserve l'identité
 Parkventory. Les réponses authentifiées n'ont pas besoin d'exposer le domaine
 pour transmettre le nom, le logo de même origine et les jetons sémantiques.
+
+La migration `0005_tenant_administration.sql` ajoute l’opt-out du logo, la trace
+de l’administrateur ayant modifié la marque et `email_erased_at`. Des triggers
+vérifient que toute modification tenant-admin de la marque vient d’une adhésion
+`ADMIN` du domaine exact. Un autre trigger refuse au niveau D1 l’effacement d’un
+administrateur ou d’une identité rattachée à plusieurs tenants.
 
 La migration `0004_godmode_admin.sql` ajoute `organization.kind`, crée l’unique
 organisation `org_system_parkventory`, puis réalise un backfill de

@@ -32,6 +32,70 @@ beforeEach(async () => {
   ]);
 });
 
+describe("nomination d’un administrateur de tenant", () => {
+  it("permet uniquement au godmode de promouvoir et rétrograder un membre", async () => {
+    const member = await seedSession({
+      domain: "role-management.test",
+      email: "member@role-management.test",
+    });
+    const otherTenantAdmin = await seedSession({
+      domain: "other-admin.test",
+      email: "admin@other-admin.test",
+      role: "ADMIN",
+    });
+    const route = `/api/v1/admin/tenants/${encodeURIComponent(member.orgId)}/members/${encodeURIComponent(member.membershipId)}/role`;
+    const denied = await SELF.fetch(`https://parkventory.test${route}`, {
+      method: "PATCH",
+      headers: {
+        ...sessionHeaders(otherTenantAdmin.token),
+        Origin: "https://parkventory.test",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ role: "ADMIN" }),
+    });
+    expect(denied.status).toBe(403);
+
+    const godmode = await verifyGodmodeMagicLink();
+    const promoted = await SELF.fetch(`https://parkventory.test${route}`, {
+      method: "PATCH",
+      headers: {
+        Cookie: godmode.cookie,
+        Origin: "https://parkventory.test",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ role: "ADMIN" }),
+    });
+    expect(promoted.status).toBe(200);
+    expect(await promoted.json()).toMatchObject({ accepted: true, role: "ADMIN" });
+    expect(await testEnv.DB.prepare("SELECT role FROM membership WHERE id = ?1").bind(member.membershipId).first())
+      .toEqual({ role: "ADMIN" });
+
+    const demoted = await SELF.fetch(`https://parkventory.test${route}`, {
+      method: "PATCH",
+      headers: {
+        Cookie: godmode.cookie,
+        Origin: "https://parkventory.test",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ role: "MEMBER" }),
+    });
+    expect(demoted.status).toBe(200);
+    expect(await testEnv.DB.prepare("SELECT role FROM membership WHERE id = ?1").bind(member.membershipId).first())
+      .toEqual({ role: "MEMBER" });
+
+    const events = await testEnv.DB.prepare(`
+      SELECT event_type, entity_id, route FROM activity_event
+      WHERE event_type IN ('TENANT_ADMIN_GRANTED', 'TENANT_ADMIN_REVOKED')
+      ORDER BY occurred_at, id
+    `).all<Record<string, unknown>>();
+    expect(events.results).toEqual(expect.arrayContaining([
+      expect.objectContaining({ event_type: "TENANT_ADMIN_GRANTED", entity_id: member.membershipId }),
+      expect.objectContaining({ event_type: "TENANT_ADMIN_REVOKED", entity_id: member.membershipId }),
+    ]));
+    expect(JSON.stringify(events.results)).not.toContain("member@role-management.test");
+  });
+});
+
 afterEach(async () => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();

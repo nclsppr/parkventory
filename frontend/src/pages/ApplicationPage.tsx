@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { AlertTriangle, LoaderCircle } from "lucide-react";
 import {
   AppShell,
+  tenantAdminNavigation,
   type ApplicationRoute,
   type NoticeTone,
 } from "../components/AppShell";
@@ -15,16 +16,19 @@ import type { OrganizationBranding } from "../types";
 import { DashboardPage } from "./DashboardPage";
 import { FindPage } from "./FindPage";
 import { SharePage } from "./SharePage";
+import { TenantAdminPage } from "./TenantAdminPage";
 
 interface ApplicationPageProps {
   route: ApplicationRoute;
   initialBranding: OrganizationBranding | null;
+  isTenantAdmin: boolean;
   onSessionExpired: () => void;
 }
 
 export function ApplicationPage({
   route,
   initialBranding,
+  isTenantAdmin,
   onSessionExpired,
 }: ApplicationPageProps) {
   const {
@@ -70,6 +74,7 @@ export function ApplicationPage({
     <OrganizationBrandingProvider branding={effectiveBranding}>
       <AppShell
         activeRoute={route}
+        navigationItems={isTenantAdmin ? tenantAdminNavigation : undefined}
         profile={{
           initials: data.user.initials,
           primary: data.user.fullName,
@@ -89,11 +94,18 @@ export function ApplicationPage({
             onRefresh={refreshDashboard}
             onSessionExpired={onSessionExpired}
           />
-        ) : (
+        ) : route === "find" ? (
           <FindPage
             data={data}
             onRefresh={refreshDashboard}
             onSessionExpired={onSessionExpired}
+          />
+        ) : (
+          <TenantAdminPage
+            organizationName={data.organization.name}
+            onNotify={notify}
+            onSessionExpired={onSessionExpired}
+            onRefreshDashboard={refreshDashboard}
           />
         )}
       </AppShell>

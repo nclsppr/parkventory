@@ -34,9 +34,17 @@ une session active, le digest opérateur exact, `SYSTEM` et le rôle `ADMIN`. Un
 administrateur de tenant reste borné à son organisation ; le booléen `godmode`
 retourné au frontend ne remplace jamais la garde serveur.
 
-La console globale est en lecture seule. Elle accepte des recherches et curseurs
-bornés, mais aucune instruction SQL, impersonation, promotion, révocation ou
-mutation de données métier.
+Les routes `/api/v1/tenant-admin/*` exigent une session `TENANT` au rôle
+`ADMIN`, rejettent le godmode et dérivent toujours `organization_id` de la
+session. La console globale conserve une seule mutation bornée : promouvoir ou
+rétrograder une adhésion du tenant. Elle n’accepte ni SQL, ni impersonation, ni
+mutation de place, offre ou réservation.
+
+L’effacement d’e-mail supprime d’abord toutes les sessions et demandes de lien
+du compte, puis remplace l’adresse par un identifiant aléatoire sous le domaine
+invalide `privacy.parkventory.invalid`. L’adhésion et les faits métier restent en
+place. Le compte courant, les administrateurs et les identités rattachées à
+plusieurs tenants sont refusés.
 
 ## Minimisation
 
@@ -56,4 +64,5 @@ adresses membres, les hashes de tokens ou d’IP, les corps de requête et les
 messages d’erreur bruts. L’adresse d’un membre n’est renvoyée que par la liste
 utilisateurs, le détail tenant ou l’activité enrichie, après autorisation
 godmode et sous `Cache-Control: no-store`. Elle ne fait pas partie du registre
-brut ni des diagnostics.
+brut ni des diagnostics. Après effacement, ces vues retournent `null` et non la
+valeur pseudonyme interne.

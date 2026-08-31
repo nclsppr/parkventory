@@ -6,7 +6,7 @@ export type Bindings = Omit<Env, "APP_ENV" | "EMAIL"> & {
 export interface OrganizationBranding {
   enabled: true;
   companyName: string;
-  logoUrl: string;
+  logoUrl: string | null;
   colors: {
     actionFill: string;
     onAction: string;

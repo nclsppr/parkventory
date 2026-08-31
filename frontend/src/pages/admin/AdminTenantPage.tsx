@@ -1,6 +1,6 @@
 import { ArrowLeft, ExternalLink } from "lucide-react";
-import { useCallback, useEffect } from "react";
-import { ApiError, loadAdminTenant } from "../../api/client";
+import { useCallback, useEffect, useState } from "react";
+import { ApiError, loadAdminTenant, updateAdminTenantMemberRole } from "../../api/client";
 import { AppLink } from "../../components/AppLink";
 import { AdminActivityList } from "../../components/admin/AdminActivityList";
 import { AdminEmpty, AdminError, AdminLoading } from "../../components/admin/AdminState";
@@ -27,6 +27,26 @@ export function AdminTenantPage({
   const resource = useAdminResource(loader, [loader], onSessionExpired, onForbidden);
   const usersUrl = filteredUrl(adminUsersUrl, "tenantId", tenantId);
   const activityUrl = filteredUrl(adminOperationsUrl, "tenantId", tenantId);
+  const [roleTarget, setRoleTarget] = useState<{ membershipId: string; role: "MEMBER" | "ADMIN" } | null>(null);
+  const [roleBusy, setRoleBusy] = useState(false);
+  const [roleError, setRoleError] = useState<string | null>(null);
+
+  const confirmRole = async () => {
+    if (!roleTarget || roleBusy) return;
+    setRoleBusy(true);
+    setRoleError(null);
+    try {
+      await updateAdminTenantMemberRole(tenantId, roleTarget.membershipId, roleTarget.role);
+      setRoleTarget(null);
+      await resource.reload();
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) onSessionExpired();
+      else if (error instanceof ApiError && error.status === 403) onForbidden();
+      else setRoleError(error instanceof Error ? error.message : "Le rôle n’a pas pu être modifié.");
+    } finally {
+      setRoleBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (!resource.data) return;
@@ -87,6 +107,7 @@ export function AdminTenantPage({
               <div><h2 id="tenant-members-title">Membres récents</h2><p>Comptes les plus récemment rattachés au tenant</p></div>
               <AppLink href={usersUrl}>Liste filtrée</AppLink>
             </header>
+            {roleError && <div className="admin-inline-error" role="alert">{roleError}</div>}
             {resource.data.recentMembers.length ? (
               <div className="admin-table-wrap" aria-label="Table des membres récents, défilement horizontal" role="region" tabIndex={0}>
                 <table className="admin-table">
@@ -94,8 +115,29 @@ export function AdminTenantPage({
                   <thead><tr><th>Membre</th><th>Rôle</th><th>Inscription</th><th>Sessions</th><th>Dernière activité</th><th>Faits</th></tr></thead>
                   <tbody>{resource.data.recentMembers.map((member) => (
                     <tr key={member.membershipId}>
-                      <th scope="row"><strong>{member.displayName}</strong><span>{member.email}</span></th>
-                      <td><span className="admin-role">{formatRole(member.role)}</span></td>
+                      <th scope="row"><strong>{member.displayName}</strong><span>{member.email ?? "E-mail effacé"}</span></th>
+                      <td>
+                        <span className="admin-role">{formatRole(member.role)}</span>
+                        {member.emailErasedAt === null && (
+                          roleTarget?.membershipId === member.membershipId ? (
+                            <span className="admin-role-confirm">
+                              <button type="button" onClick={() => void confirmRole()} disabled={roleBusy}>Confirmer</button>
+                              <button type="button" onClick={() => setRoleTarget(null)} disabled={roleBusy}>Annuler</button>
+                            </span>
+                          ) : (
+                            <button
+                              className="admin-role-action"
+                              type="button"
+                              onClick={() => setRoleTarget({
+                                membershipId: member.membershipId,
+                                role: member.role === "ADMIN" ? "MEMBER" : "ADMIN",
+                              })}
+                            >
+                              {member.role === "ADMIN" ? "Retirer l’accès admin" : "Nommer admin du tenant"}
+                            </button>
+                          )
+                        )}
+                      </td>
                       <td>{formatDateTime(member.createdAt)}</td>
                       <td>{formatNumber(member.activeSessions)}</td>
                       <td>{formatDateTime(member.lastActivityAt)}</td>
@@ -116,7 +158,7 @@ export function AdminTenantPage({
                   <tbody>{resource.data.recentSpots.map((spot) => (
                     <tr key={spot.id}>
                       <th scope="row"><strong>{spot.label}</strong><span>{spot.level} · {spot.timeZone}</span></th>
-                      <td><strong>{spot.owner.displayName}</strong><span>{spot.owner.email}</span></td>
+                      <td><strong>{spot.owner.displayName}</strong><span>{spot.owner.email ?? "E-mail effacé"}</span></td>
                       <td>{formatDateTime(spot.createdAt)}</td>
                       <td>{formatNumber(spot.shares)}</td>
                       <td>{formatNumber(spot.reservations)}</td>

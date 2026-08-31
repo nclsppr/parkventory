@@ -105,9 +105,11 @@ export function PrivacyPage() {
           <li>les journaux techniques et sauvegardes suivent les limites configurées par l’hébergeur et ne sont pas conservés au-delà du besoin d’exploitation.</li>
         </ul>
         <p>
-          Les demandes d’accès, d’export et de suppression sont traitées manuellement. Aucune
-          purge automatique n’est présentée comme active à ce stade ; des durées plus précises
-          seront publiées avec son automatisation.
+          Un administrateur de votre organisation peut effacer l’adresse e-mail d’un compte
+          membre et révoquer ses sessions ; l’historique de partage et de réservation reste alors
+          conservé sans afficher cette adresse. Les demandes d’accès, d’export et de suppression
+          complète restent traitées manuellement. Aucune purge automatique des faits métier
+          n’est présentée comme active à ce stade.
         </p>
       </section>
 

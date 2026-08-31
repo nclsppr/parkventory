@@ -145,4 +145,58 @@ describe("production error boundary", () => {
       expect.objectContaining({ credentials: "include" }),
     );
   });
+
+  it("encodes both identifiers when the godmode changes a tenant role", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ accepted: true, role: "ADMIN", message: "Rôle mis à jour." }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ));
+    vi.stubGlobal("fetch", fetchMock);
+    const { updateAdminTenantMemberRole } = await import("./client");
+
+    await updateAdminTenantMemberRole("org/tenant", "mem/member", "ADMIN");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/admin/tenants/org%2Ftenant/members/mem%2Fmember/role",
+      expect.objectContaining({ method: "PATCH", body: JSON.stringify({ role: "ADMIN" }) }),
+    );
+  });
+
+  it("sends only the bounded tenant branding contract", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ accepted: true, message: "Identité mise à jour." }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ));
+    vi.stubGlobal("fetch", fetchMock);
+    const { updateTenantAdminBranding } = await import("./client");
+    const payload = {
+      enabled: true,
+      logoEnabled: false,
+      actionColor: "#0D92D2",
+      availableColor: "#E31C79",
+    };
+
+    await updateTenantAdminBranding(payload);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/tenant-admin/branding",
+      expect.objectContaining({ method: "PUT", body: JSON.stringify(payload) }),
+    );
+  });
+
+  it("requires the explicit erase confirmation in the tenant member request", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ accepted: true, message: "E-mail effacé." }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ));
+    vi.stubGlobal("fetch", fetchMock);
+    const { eraseTenantMemberEmail } = await import("./client");
+
+    await eraseTenantMemberEmail("mem/target");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/tenant-admin/members/mem%2Ftarget/email",
+      expect.objectContaining({ method: "DELETE", body: JSON.stringify({ confirmation: "EFFACER" }) }),
+    );
+  });
 });

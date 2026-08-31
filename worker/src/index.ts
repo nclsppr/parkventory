@@ -28,6 +28,7 @@ import {
   verifyTurnstile,
 } from "./security";
 import type { AppEnvironment, AuthenticatedMember } from "./types";
+import { registerTenantAdminRoutes, requireTenantAdmin } from "./tenant-admin";
 
 const app = new Hono<AppEnvironment>();
 const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
@@ -48,6 +49,9 @@ const EXACT_CLASSIFIED_ROUTES = new Set([
   "/api/v1/admin/activity",
   "/api/v1/admin/diagnostics",
   "/api/v1/admin/diagnostics/integrity",
+  "/api/v1/tenant-admin/overview",
+  "/api/v1/tenant-admin/members",
+  "/api/v1/tenant-admin/branding",
 ]);
 
 function problem(status: number, detail: string): Response {
@@ -126,13 +130,20 @@ function clientIp(request: Request): string {
 
 function classifiedRoute(pathname: string): string {
   if (EXACT_CLASSIFIED_ROUTES.has(pathname)) return pathname;
+  if (/^\/api\/v1\/admin\/tenants\/[^/]+\/members\/[^/]+\/role$/.test(pathname)) {
+    return "/api/v1/admin/tenants/:id/members/:membershipId/role";
+  }
   if (/^\/api\/v1\/admin\/tenants\/[^/]+$/.test(pathname)) return "/api/v1/admin/tenants/:id";
+  if (/^\/api\/v1\/tenant-admin\/members\/[^/]+\/email$/.test(pathname)) {
+    return "/api/v1/tenant-admin/members/:membershipId/email";
+  }
   if (/^\/api\/v1\/availability\/[^/]+\/reservations$/.test(pathname)) {
     return "/api/v1/availability/:id/reservations";
   }
   if (/^\/api\/v1\/reservations\/[^/]+$/.test(pathname)) return "/api/v1/reservations/:id";
   if (/^\/api\/v1\/availability\/[^/]+$/.test(pathname)) return "/api/v1/availability/:id";
   if (pathname.startsWith("/api/v1/admin/")) return "/api/v1/admin/*";
+  if (pathname.startsWith("/api/v1/tenant-admin/")) return "/api/v1/tenant-admin/*";
   if (pathname.startsWith("/api/")) return "/api/*";
   return "/*";
 }
@@ -192,6 +203,7 @@ const requireMember: MiddlewareHandler<AppEnvironment> = async (context, next) =
       branding.enabled AS branding_enabled,
       branding.company_name AS branding_company_name,
       branding.logo_url AS branding_logo_url,
+      branding.logo_enabled AS branding_logo_enabled,
       branding.action_fill AS branding_action_fill,
       branding.on_action AS branding_on_action,
       branding.available_fill AS branding_available_fill,
@@ -210,6 +222,7 @@ const requireMember: MiddlewareHandler<AppEnvironment> = async (context, next) =
     WHERE session.token_hash = ?1
       AND session.revoked_at IS NULL
       AND session.expires_at > ?2
+      AND user_account.email_erased_at IS NULL
   `).bind(tokenHash, nowSeconds()).first<{
     session_id: string;
     membership_id: string;
@@ -260,6 +273,9 @@ for (const route of [
 app.use("/api/v1/admin/*", requireMember);
 app.use("/api/v1/admin/*", requireGodmode);
 
+app.use("/api/v1/tenant-admin/*", requireMember);
+app.use("/api/v1/tenant-admin/*", requireTenantAdmin);
+
 const requireTenantMember: MiddlewareHandler<AppEnvironment> = async (context, next) => {
   if (context.get("member").organizationKind !== "TENANT") {
     return problem(403, "Ce compte opérateur ne peut pas utiliser les routes d’un tenant.");
@@ -276,6 +292,7 @@ for (const route of [
 ]) app.use(route, requireTenantMember);
 
 registerAdminRoutes(app);
+registerTenantAdminRoutes(app);
 
 app.get("/api/v1/health", async (context) => {
   const row = await context.env.DB.prepare("SELECT 1 AS ready").first<{ ready: number }>();
@@ -468,8 +485,13 @@ app.post("/api/v1/auth/verify", async (context) => {
       `).bind(now, link.id),
       organizationStatement,
       context.env.DB.prepare(`
-        INSERT OR IGNORE INTO user_account (id, normalized_email, display_name, created_at)
-        VALUES (?1, ?2, ?3, ?4)
+        INSERT INTO user_account (id, normalized_email, display_name, created_at, email_erased_at)
+        VALUES (?1, ?2, ?3, ?4, NULL)
+        ON CONFLICT(id) DO UPDATE SET
+          normalized_email = excluded.normalized_email,
+          display_name = excluded.display_name,
+          email_erased_at = NULL
+        WHERE user_account.email_erased_at IS NOT NULL
       `).bind(userId, link.normalized_email, name, now),
       context.env.DB.prepare(`
         INSERT OR IGNORE INTO membership (id, organization_id, user_id, role, created_at)
@@ -517,13 +539,17 @@ app.post("/api/v1/auth/verify", async (context) => {
   }
 
   context.header("Set-Cookie", sessionCookie(sessionToken, context.env.APP_ENV));
+  const authenticatedMembership = await context.env.DB.prepare(`
+    SELECT role FROM membership WHERE id = ?1 AND organization_id = ?2 AND user_id = ?3
+  `).bind(membershipId, orgId, userId).first<{ role: "MEMBER" | "ADMIN" }>();
+  if (!authenticatedMembership) return problem(400, "Ce lien est expiré ou a déjà été utilisé.");
   const branding = await loadOrganizationBranding(context.env.DB, link.normalized_domain);
   return context.json({
     authenticated: true,
     displayName: name,
     email: link.normalized_email,
     organizationName: godmode ? "Parkventory" : branding?.companyName ?? organizationName(link.normalized_domain),
-    role: godmode ? "ADMIN" as const : "MEMBER" as const,
+    role: authenticatedMembership.role,
     godmode,
     branding,
   });

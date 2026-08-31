@@ -5,9 +5,26 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ## Non publié
 
-### Administration globale — candidat local non publié
+### Administration du tenant
 
-- préparation d’une console `/admin` en lecture seule avec synthèse à 30 jours,
+- ajout de `/app/admin` pour les membres `ADMIN` d’une organisation `TENANT`,
+  avec statistiques strictement limitées au tenant de la session, série d’usage
+  à 30 jours et liste paginée de ses seuls membres ;
+- choix borné de deux couleurs de marque, dérivation serveur des contrastes
+  accessibles, activation réversible de la co-marque et option d’utilisation
+  d’un logo déjà autorisé par Parkventory, sans téléversement ni URL libre ;
+- effacement en deux étapes de l’adresse d’un membre simple : révocation des
+  sessions et magic links, pseudonymisation irréversible de l’e-mail et
+  conservation de l’historique métier ; les administrateurs, le compte courant
+  et les comptes multi-tenants sont refusés ;
+- ajout de la mutation godmode qui nomme ou révoque un administrateur du tenant,
+  journalisée uniquement avec des identifiants internes ;
+- migration additive `0005_tenant_administration.sql`, gardes Worker dédiées et
+  réactivation sûre du même compte lors d’une future connexion vérifiée.
+
+### Administration globale — publiée
+
+- publication d’une console `/admin` avec synthèse à 30 jours,
   tenants, comptes enregistrés, activité paginée et diagnostics, sans donnée de
   démonstration ni action de correction ;
 - séparation de l’opérateur global et des administrateurs de tenants : accès
@@ -44,8 +61,8 @@ la source du diff technique et les ADR expliquent les décisions importantes.
   journaliser uniquement une route canonique, et le traitement D1/e-mail admin
   sort du chemin de réponse pour supprimer aussi l’oracle de panne ou de latence ;
 - définition des métriques, de la pagination et des gates dans l’ADR-0018 et le
-  runbook ; aucune application de migration distante, création de secret,
-  fusion, publication ou authentification réelle n’est revendiquée ici ;
+  runbook ; migrations `0003` et `0004`, secret digest et Worker ont été activés
+  en préversion puis en production, sans envoi de magic link réel pendant la livraison ;
 - extension de la gate CI aux types Wrangler et aux deux dry-runs, afin qu’un
   candidat ne puisse plus valider uniquement la configuration de préversion ;
 - exclusion Git de toutes les variantes racine `.env*` et `.dev.vars*`, tout en
