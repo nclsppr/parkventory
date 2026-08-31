@@ -17,8 +17,9 @@ Ouvrir `http://127.0.0.1:8787`. Le site et l’API partagent la même origine.
 npm run verify
 ```
 
-Cette gate exécute les tests Worker/D1, les tests React, le build statique et un
-dry-run Wrangler. Elle ne déploie rien.
+Cette gate exécute les tests Worker/D1, les tests React, les deux typechecks, le
+build statique, le contrôle de dérive des types Wrangler puis les dry-runs
+préversion et production. Elle ne déploie rien et n’accède à aucune D1 distante.
 
 ## Préversion distante
 

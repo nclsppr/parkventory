@@ -69,5 +69,8 @@ npm run dev
 npm run verify
 ```
 
-Le développement local sert l’application sur `http://127.0.0.1:8787`. Copier
-`.dev.vars.example` vers `.dev.vars` et ne jamais committer ce dernier.
+Cette commande vérifie aussi les types de bindings générés et compile les cibles
+Wrangler de préversion et de production en dry-run, sans upload.
+
+Le développement local sert l’application sur `http://127.0.0.1:8787`. Créer
+`.dev.vars` en mode `0600` depuis `.dev.vars.example` et ne jamais le committer.

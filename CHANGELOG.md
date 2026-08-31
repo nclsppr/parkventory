@@ -38,7 +38,9 @@ la source du diff technique et les ADR expliquent les décisions importantes.
   sort du chemin de réponse pour supprimer aussi l’oracle de panne ou de latence ;
 - définition des métriques, de la pagination et des gates dans l’ADR-0018 et le
   runbook ; aucune application de migration distante, création de secret,
-  fusion, publication ou authentification réelle n’est revendiquée ici.
+  fusion, publication ou authentification réelle n’est revendiquée ici ;
+- extension de la gate CI aux types Wrangler et aux deux dry-runs, afin qu’un
+  candidat ne puisse plus valider uniquement la configuration de préversion.
 
 ### Indexation publique
 
