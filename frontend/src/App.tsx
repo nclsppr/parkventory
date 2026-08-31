@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { ApiError, loadSession } from "./api/client";
 import type { ApplicationRoute } from "./components/AppShell";
 import { findUrl, relativePathname, shareUrl } from "./config";
@@ -8,7 +8,17 @@ import { NotFoundPage } from "./pages/NotFoundPage";
 import { AuthCallbackPage, SignInPage } from "./pages/AuthPages";
 import { LegalNoticePage, PrivacyPage } from "./pages/LegalPages";
 import { ThemeProvider, ThemeToggle } from "./components/Theme";
+import { Logo } from "./components/Logo";
 import type { SessionData } from "./types";
+
+const AdminApplicationPage = lazy(() => import("./pages/admin/AdminApplicationPage"));
+
+type AdminRoute = "overview" | "tenants" | "tenant" | "users" | "operations";
+
+interface AdminRouteMatch {
+  route: AdminRoute;
+  tenantId?: string;
+}
 
 const applicationRoutes: Record<string, ApplicationRoute> = {
   "/app": "dashboard",
@@ -31,6 +41,20 @@ function currentPath() {
     : relativePathname(window.location.pathname);
 }
 
+function adminRoute(path: string): AdminRouteMatch | null {
+  if (path === "/admin") return { route: "overview" };
+  if (path === "/admin/tenants") return { route: "tenants" };
+  if (path === "/admin/users") return { route: "users" };
+  if (path === "/admin/operations") return { route: "operations" };
+  const tenantMatch = path.match(/^\/admin\/tenants\/([^/]+)$/);
+  if (!tenantMatch) return null;
+  try {
+    return { route: "tenant", tenantId: decodeURIComponent(tenantMatch[1]) };
+  } catch {
+    return null;
+  }
+}
+
 export default function App() {
   return (
     <ThemeProvider>
@@ -40,13 +64,20 @@ export default function App() {
 }
 
 function AppContent() {
-  const [path, setPath] = useState(currentPath);
+  const [location, setLocation] = useState(() => ({
+    path: currentPath(),
+    search: window.location.search,
+  }));
+  const { path, search } = location;
 
   useEffect(() => {
     const onPopState = () => {
       const legacyTarget = legacyIntentTarget();
       if (legacyTarget) window.history.replaceState({}, "", legacyTarget);
-      setPath(relativePathname(window.location.pathname));
+      setLocation({
+        path: relativePathname(window.location.pathname),
+        search: window.location.search,
+      });
     };
 
     onPopState();
@@ -60,11 +91,16 @@ function AppContent() {
       "/app": "Accueil — Parkventory",
       "/app/partager": "Partager ma place — Parkventory",
       "/app/trouver": "Trouver une place — Parkventory",
+      "/admin": "Vue d’ensemble — Administration Parkventory",
+      "/admin/tenants": "Tenants — Administration Parkventory",
+      "/admin/users": "Utilisateurs — Administration Parkventory",
+      "/admin/operations": "Opérations — Administration Parkventory",
       "/auth/callback": "Connexion — Parkventory",
       "/confidentialite": "Confidentialité — Parkventory",
       "/mentions-legales": "Mentions légales — Parkventory",
     };
-    document.title = titles[path] ?? "Page introuvable — Parkventory";
+    document.title = titles[path]
+      ?? (path.startsWith("/admin/tenants/") ? "Tenant — Administration Parkventory" : "Page introuvable — Parkventory");
   }, [path]);
 
   if (path === "/") return <LandingPage />;
@@ -72,13 +108,27 @@ function AppContent() {
   if (path === "/confidentialite") return <PrivacyPage />;
   if (path === "/mentions-legales") return <LegalNoticePage />;
   if (applicationRoutes[path]) {
-    return <AuthenticatedApplication route={applicationRoutes[path]} />;
+    return <AuthenticatedApplication key="application" area="application" route={applicationRoutes[path]} search={search} />;
+  }
+  const matchedAdminRoute = adminRoute(path);
+  if (matchedAdminRoute) {
+    return <AuthenticatedApplication key="admin" area="admin" route={matchedAdminRoute.route} tenantId={matchedAdminRoute.tenantId} search={search} />;
   }
   return <NotFoundPage />;
 }
 
-function AuthenticatedApplication({ route }: { route: ApplicationRoute }) {
-  const [state, setState] = useState<"checking" | "authenticated" | "anonymous">(
+function AuthenticatedApplication({
+  area,
+  route,
+  search,
+  tenantId,
+}: {
+  area: "application" | "admin";
+  route: ApplicationRoute | AdminRoute;
+  search: string;
+  tenantId?: string;
+}) {
+  const [state, setState] = useState<"checking" | "authenticated" | "anonymous" | "forbidden">(
     "checking",
   );
   const [session, setSession] = useState<SessionData | null>(null);
@@ -87,6 +137,7 @@ function AuthenticatedApplication({ route }: { route: ApplicationRoute }) {
     setSession(null);
     setState("anonymous");
   }, []);
+  const handleForbidden = useCallback(() => setState("forbidden"), []);
 
   useEffect(() => {
     let active = true;
@@ -115,19 +166,42 @@ function AuthenticatedApplication({ route }: { route: ApplicationRoute }) {
 
   if (state === "checking") {
     return (
-      <main className="auth-page">
+      <main className={`auth-page ${area === "admin" ? "auth-page-admin" : ""}`.trim()}>
         <div className="auth-backdrop" aria-hidden="true" />
         <ThemeToggle className="auth-theme-toggle" />
         <p className="auth-loading" role="status">
-          Vérification de la connexion…
+          {area === "admin" ? "Vérification de l’accès opérateur…" : "Vérification de la connexion…"}
         </p>
       </main>
     );
   }
-  if (state === "anonymous") return <SignInPage reason={reason} />;
+  if (state === "anonymous") return <SignInPage reason={reason} mode={area} />;
+  if (state === "forbidden") return <NotFoundPage />;
+  if (area === "admin") {
+    if (!session?.godmode) return <NotFoundPage />;
+    return (
+      <Suspense fallback={
+        <main className="dashboard-state">
+          <Logo />
+          <h1>Ouverture de la console…</h1>
+          <p role="status">Chargement du poste de contrôle Parkventory.</p>
+        </main>
+      }>
+        <AdminApplicationPage
+          route={route as AdminRoute}
+          search={search}
+          session={session}
+          tenantId={tenantId}
+          onSessionExpired={handleSessionExpired}
+          onForbidden={handleForbidden}
+        />
+      </Suspense>
+    );
+  }
+  if (session?.godmode) return <NotFoundPage />;
   return (
     <ApplicationPage
-      route={route}
+      route={route as ApplicationRoute}
       initialBranding={session?.branding ?? null}
       onSessionExpired={handleSessionExpired}
     />

@@ -33,7 +33,10 @@ async function seedMember({
   const sessionId = `session-${crypto.randomUUID()}`;
   const sessionToken = `${token}-${crypto.randomUUID()}`;
   await testEnv.DB.batch([
-    testEnv.DB.prepare("INSERT OR IGNORE INTO organization VALUES (?1, ?2, ?3, ?4)")
+    testEnv.DB.prepare(`
+      INSERT OR IGNORE INTO organization (id, normalized_domain, display_name, created_at)
+      VALUES (?1, ?2, ?3, ?4)
+    `)
       .bind(orgId, domain, organizationName(domain), now),
     testEnv.DB.prepare("INSERT INTO user_account VALUES (?1, ?2, ?3, ?4)")
       .bind(userId, email, displayName(email), now),
@@ -51,7 +54,7 @@ async function seedMember({
       ) VALUES (?1, ?2, ?3, ?4, ?5, ?6)
     `).bind(sessionId, await sha256(sessionToken), linkId, membershipId, now + 3600, now),
   ]);
-  return { orgId, membershipId, token: sessionToken };
+  return { orgId, userId, membershipId, token: sessionToken };
 }
 
 async function seedOffer(orgId: string, membershipId: string) {
@@ -169,6 +172,44 @@ describe("contrat Cloudflare MVP", () => {
       WHERE availability_offer_id = ?1 AND status = 'CONFIRMED'
     `).bind(offerId).first<{ count: number }>();
     expect(row?.count).toBe(1);
+    const conflict = await testEnv.DB.prepare(`
+      SELECT
+        severity, outcome, organization_id, user_id, membership_id,
+        entity_type, entity_id, route, error_code
+      FROM activity_event
+      WHERE event_type = 'BUSINESS_RULE_REJECTED'
+        AND membership_id = ?1
+        AND route = '/api/v1/availability/:id/reservations'
+      ORDER BY occurred_at DESC, id DESC
+      LIMIT 1
+    `).bind(reserver.membershipId).first<Record<string, unknown>>();
+    expect(conflict).toMatchObject({
+      severity: "WARNING",
+      outcome: "DENIED",
+      organization_id: reserver.orgId,
+      user_id: reserver.userId,
+      membership_id: reserver.membershipId,
+      entity_type: "AVAILABILITY_OFFER",
+      entity_id: null,
+      route: "/api/v1/availability/:id/reservations",
+      error_code: expect.stringMatching(/^RESERVATION_(UNAVAILABLE|WRITE_CONFLICT)$/),
+    });
+
+    for (const attemptedId of [`token-${crypto.randomUUID()}`, `secret-${crypto.randomUUID()}`]) {
+      const rejected = await SELF.fetch(`https://parkventory.test/api/v1/reservations/${attemptedId}`, {
+        method: "DELETE",
+        headers,
+      });
+      expect(rejected.status).toBe(409);
+    }
+    const rejectedCancellation = await testEnv.DB.prepare(`
+      SELECT COUNT(*) AS count, MAX(entity_id) AS entity_id
+      FROM activity_event
+      WHERE event_type = 'BUSINESS_RULE_REJECTED'
+        AND membership_id = ?1
+        AND error_code = 'RESERVATION_CANCELLATION_REJECTED'
+    `).bind(reserver.membershipId).first<{ count: number; entity_id: string | null }>();
+    expect(rejectedCancellation).toEqual({ count: 1, entity_id: null });
   });
 
   it("refuse deux disponibilités qui se chevauchent pour la même place", async () => {

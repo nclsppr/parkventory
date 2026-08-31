@@ -1,5 +1,12 @@
 import type {
   ActionResponse,
+  AdminActivityData,
+  AdminActivitySeverity,
+  AdminDiagnosticsData,
+  AdminOverviewData,
+  AdminTenantDetailData,
+  AdminTenantsData,
+  AdminUsersData,
   DashboardData,
   SessionData,
   ShareRequest,
@@ -42,6 +49,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     const problem = await response.json().catch(() => null);
     const serverDetail = problem && typeof problem.detail === "string" ? problem.detail : null;
+    const incidentReference = response.status >= 500 && serverDetail
+      ? serverDetail.match(/Référence : ([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\.?$/i)?.[1]
+      : undefined;
     const retryAfterHeader = response.headers.get("Retry-After");
     const retryAfter = retryAfterHeader && /^\d+$/.test(retryAfterHeader)
       ? Number(retryAfterHeader)
@@ -58,7 +68,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
         ? `Trop de demandes. Réessayez dans ${retryAfter} secondes.`
         : "Trop de demandes. Patientez avant de réessayer.";
     } else if (response.status >= 500) {
-      message = "Le service rencontre un problème. Réessayez dans un instant.";
+      message = incidentReference
+        ? `Le service rencontre un problème. Référence : ${incidentReference}.`
+        : "Le service rencontre un problème. Réessayez dans un instant.";
     }
     throw new ApiError(message, response.status, retryAfter);
   }
@@ -66,10 +78,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export function requestMagicLink(email: string, turnstileToken: string): Promise<ActionResponse> {
+export function requestMagicLink(
+  email: string,
+  turnstileToken: string,
+  purpose: "tenant" | "admin",
+): Promise<ActionResponse> {
   return request<ActionResponse>("/auth/requests", {
     method: "POST",
-    body: JSON.stringify({ email, turnstileToken }),
+    body: JSON.stringify({ email, turnstileToken, purpose }),
   });
 }
 
@@ -90,6 +106,77 @@ export function logout(): Promise<ActionResponse> {
 
 export function loadDashboard(): Promise<DashboardData> {
   return request<DashboardData>("/dashboard");
+}
+
+function queryPath(path: string, values: Record<string, string | number | undefined>) {
+  const query = new URLSearchParams();
+  Object.entries(values).forEach(([key, value]) => {
+    if (value !== undefined && value !== "") query.set(key, String(value));
+  });
+  const serialized = query.toString();
+  return serialized ? `${path}?${serialized}` : path;
+}
+
+export function loadAdminOverview(): Promise<AdminOverviewData> {
+  return request<AdminOverviewData>("/admin/overview");
+}
+
+export function loadAdminTenants({
+  limit = 25,
+  cursor,
+  q,
+}: { limit?: number; cursor?: string; q?: string } = {}): Promise<AdminTenantsData> {
+  return request<AdminTenantsData>(queryPath("/admin/tenants", { limit, cursor, q }));
+}
+
+export function loadAdminTenant(id: string): Promise<AdminTenantDetailData> {
+  return request<AdminTenantDetailData>(`/admin/tenants/${encodeURIComponent(id)}`);
+}
+
+export function loadAdminUsers({
+  limit = 25,
+  cursor,
+  q,
+  tenantId,
+}: {
+  limit?: number;
+  cursor?: string;
+  q?: string;
+  tenantId?: string;
+} = {}): Promise<AdminUsersData> {
+  return request<AdminUsersData>(queryPath("/admin/users", { limit, cursor, q, tenantId }));
+}
+
+export function loadAdminActivity({
+  limit = 50,
+  cursor,
+  tenantId,
+  userId,
+  type,
+  severity,
+  reference,
+}: {
+  limit?: number;
+  cursor?: string;
+  tenantId?: string;
+  userId?: string;
+  type?: string;
+  severity?: AdminActivitySeverity;
+  reference?: string;
+} = {}): Promise<AdminActivityData> {
+  return request<AdminActivityData>(queryPath("/admin/activity", {
+    limit,
+    cursor,
+    tenantId,
+    userId,
+    type,
+    severity,
+    reference,
+  }));
+}
+
+export function loadAdminDiagnostics(): Promise<AdminDiagnosticsData> {
+  return request<AdminDiagnosticsData>("/admin/diagnostics");
 }
 
 export function declareSpot(payload: SpotRequest): Promise<ActionResponse> {

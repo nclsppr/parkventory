@@ -39,6 +39,11 @@ la recherche, la réservation, l’annulation et le retrait. Invitations,
 administration, outbox et statistiques sociales sont supprimées jusqu’à preuve
 d’un besoin réel.
 
+L’ADR-0018 ajoute ultérieurement une console globale d’exploitation en lecture
+seule après demande explicite du propriétaire. Cette exception observe le MVP ;
+elle ne réintroduit ni administration autonome des tenants, ni statistiques
+sociales, ni mutation métier dans leur parcours.
+
 ## Intégrité et sécurité
 
 - le domaine professionnel est la frontière communautaire initiale ;

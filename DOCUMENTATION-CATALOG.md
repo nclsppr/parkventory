@@ -1,4 +1,4 @@
-<!-- Généré par scripts/documentation_catalog.py. Ne pas modifier à la main. -->
+<!-- Réconcilié manuellement le 31 août 2026 : le générateur référencé est absent de ce checkout. -->
 
 # Catalogue documentaire
 
@@ -6,14 +6,17 @@ Tous les fichiers Markdown maintenus par le projet sont classés ici depuis `doc
 
 Moteur déclaré : `nimbus`.
 
+Ce catalogue correspond à `documentation.json`, mais sa mise à jour ne constitue
+pas une exécution de `scripts/documentation_catalog.py`, absent du candidat.
+
 | Collection | Visibilité | Fichiers |
 | --- | --- | ---: |
-| Contrat du projet | `internal` | 12 |
+| Contrat du projet | `internal` | 13 |
 | Produit | `public` | 4 |
 | Architecture et sécurité | `internal` | 3 |
 | Questions de travail | `internal` | 1 |
 | Configuration des skills | `internal` | 3 |
-| Décisions | `internal` | 16 |
+| Décisions | `internal` | 18 |
 | Références visuelles | `reference` | 1 |
 | Socle vendorisé | `reference` | 9 |
 | Maintenance Nimbus | `reference` | 1 |
@@ -32,6 +35,7 @@ Moteur déclaré : `nimbus`.
 - [ROADMAP.md](ROADMAP.md)
 - [RUNBOOK.md](RUNBOOK.md)
 - [STATUS.md](STATUS.md)
+- [frontend/PRODUCT.md](frontend/PRODUCT.md)
 
 ## Produit
 
@@ -74,6 +78,8 @@ Moteur déclaré : `nimbus`.
 - [docs/decisions/adr-0014-resend-email-beta-publique.md](docs/decisions/adr-0014-resend-email-beta-publique.md)
 - [docs/decisions/adr-0015-postgresql-17-atlas-beta-publique.md](docs/decisions/adr-0015-postgresql-17-atlas-beta-publique.md)
 - [docs/decisions/adr-0016-registre-canonique-secrets-atlas.md](docs/decisions/adr-0016-registre-canonique-secrets-atlas.md)
+- [docs/decisions/adr-0017-cloudflare-native.md](docs/decisions/adr-0017-cloudflare-native.md)
+- [docs/decisions/adr-0018-godmode-global-observation.md](docs/decisions/adr-0018-godmode-global-observation.md)
 
 ## Références visuelles
 

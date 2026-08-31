@@ -9,3 +9,8 @@ parcours réalisé par deux vrais collègues avec une réservation sans collisio
 
 Le MVP ne promet ni optimisation immobilière, ni statistiques d’impact, ni
 intégration au contrôle d’accès. Ces capacités attendent un usage réel.
+
+Parkventory possède en revanche une console privée d’exploitation : elle suit
+les comptes, l’activité et les incidents réels pour comprendre l’adoption et
+diagnostiquer le service. Ces métriques internes ne sont ni une promesse faite
+aux organisations, ni des statistiques d’impact inventées.

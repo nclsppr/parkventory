@@ -6,6 +6,7 @@ import {
   Menu,
   Search,
   X,
+  type LucideIcon,
 } from "lucide-react";
 import { ApiError, logout } from "../api/client";
 import {
@@ -14,7 +15,6 @@ import {
   findUrl,
   shareUrl,
 } from "../config";
-import type { DashboardData } from "../types";
 import { AppLink } from "./AppLink";
 import { ApplicationBrand, useOrganizationBranding } from "./OrganizationBranding";
 import { ThemeToggle } from "./Theme";
@@ -22,21 +22,43 @@ import { ThemeToggle } from "./Theme";
 export type ApplicationRoute = "dashboard" | "share" | "find";
 export type NoticeTone = "success" | "error";
 
+export interface ShellNavigationItem {
+  route: string;
+  label: string;
+  mobileLabel: string;
+  href: string;
+  icon: LucideIcon;
+}
+
+export interface ShellProfile {
+  initials: string;
+  primary: string;
+  secondary: string;
+}
+
 interface AppShellProps {
-  activeRoute: ApplicationRoute;
+  activeRoute: string;
   children: ReactNode;
-  data: DashboardData;
+  profile: ShellProfile;
   loading: boolean;
   loadError: string | null;
+  navigationItems?: readonly ShellNavigationItem[];
+  homeHref?: string;
+  homeLabel?: string;
+  sidebarLabel?: string;
+  navigationLabel?: string;
+  quickNavigationLabel?: string;
+  contentId?: string;
+  shellClassName?: string;
   onNotify: (message: string, tone?: NoticeTone) => void;
   onRetry: () => void;
   onSessionExpired: () => void;
 }
 
-const navigation = [
-  { route: "dashboard" as const, label: "Accueil", href: appUrl, icon: Home },
-  { route: "share" as const, label: "Partager ma place", href: shareUrl, icon: CalendarDays },
-  { route: "find" as const, label: "Trouver une place", href: findUrl, icon: Search },
+export const applicationNavigation: readonly ShellNavigationItem[] = [
+  { route: "dashboard", label: "Accueil", mobileLabel: "Accueil", href: appUrl, icon: Home },
+  { route: "share", label: "Partager ma place", mobileLabel: "Partager", href: shareUrl, icon: CalendarDays },
+  { route: "find", label: "Trouver une place", mobileLabel: "Trouver", href: findUrl, icon: Search },
 ];
 
 export function EnvironmentStatus({ loading }: { loading: boolean }) {
@@ -53,9 +75,17 @@ export function EnvironmentStatus({ loading }: { loading: boolean }) {
 export function AppShell({
   activeRoute,
   children,
-  data,
+  profile,
   loading,
   loadError,
+  navigationItems = applicationNavigation,
+  homeHref = appUrl,
+  homeLabel,
+  sidebarLabel = "Navigation de l’application",
+  navigationLabel = "Navigation principale de l’application",
+  quickNavigationLabel = "Navigation rapide",
+  contentId = "dashboard-content",
+  shellClassName = "",
   onNotify,
   onRetry,
   onSessionExpired,
@@ -127,19 +157,20 @@ export function AppShell({
   const applicationHomeLabel = branding
     ? `Accueil de l’application ${branding.companyName} sur Parkventory`
     : "Accueil de l’application Parkventory";
+  const resolvedHomeLabel = homeLabel ?? applicationHomeLabel;
 
   return (
-    <div className="app-shell">
-      <a className="skip-link" href="#dashboard-content">Aller au contenu</a>
+    <div className={`app-shell ${shellClassName}`.trim()}>
+      <a className="skip-link" href={`#${contentId}`}>Aller au contenu</a>
       <aside
         ref={sidebar}
         className={`app-sidebar ${sidebarOpen ? "app-sidebar-open" : ""}`}
-        aria-label="Navigation de l’application"
+        aria-label={sidebarLabel}
       >
         <div className="sidebar-heading">
           <AppLink
-            href={appUrl}
-            aria-label={applicationHomeLabel}
+            href={homeHref}
+            aria-label={resolvedHomeLabel}
             onNavigate={() => closeSidebar()}
           >
             <ApplicationBrand />
@@ -154,8 +185,8 @@ export function AppShell({
             <X aria-hidden="true" />
           </button>
         </div>
-        <nav aria-label="Navigation principale de l’application">
-          {navigation.map(({ route, label, href, icon: Icon }) => (
+        <nav aria-label={navigationLabel}>
+          {navigationItems.map(({ route, label, href, icon: Icon }) => (
             <AppLink
               className={activeRoute === route ? "active" : undefined}
               aria-current={activeRoute === route ? "page" : undefined}
@@ -171,8 +202,8 @@ export function AppShell({
           <LogOut aria-hidden="true" /> {logoutBusy ? "Déconnexion…" : "Se déconnecter"}
         </button>
         <div className="sidebar-profile">
-          <span className="avatar">{data.user.initials}</span>
-          <div><strong>{data.user.fullName}</strong><small>{data.organization.name}</small></div>
+          <span className="avatar">{profile.initials}</span>
+          <div><strong>{profile.primary}</strong><small>{profile.secondary}</small></div>
         </div>
       </aside>
 
@@ -185,12 +216,12 @@ export function AppShell({
         />
       )}
 
-      <main className="app-main" id="dashboard-content">
+      <main className="app-main" id={contentId}>
         <div className="app-topbar">
           <AppLink
             className={`mobile-app-logo ${branding ? "mobile-organization-logo" : ""}`.trim()}
-            href={appUrl}
-            aria-label={applicationHomeLabel}
+            href={homeHref}
+            aria-label={resolvedHomeLabel}
           >
             <ApplicationBrand compact />
           </AppLink>
@@ -220,14 +251,14 @@ export function AppShell({
         {children}
       </main>
 
-      <nav className="mobile-app-nav" aria-label="Navigation rapide">
-        {navigation.map(({ route, label, href, icon: Icon }) => (
+      <nav className="mobile-app-nav" aria-label={quickNavigationLabel}>
+        {navigationItems.map(({ route, mobileLabel, href, icon: Icon }) => (
           <AppLink
             aria-current={activeRoute === route ? "page" : undefined}
             href={href}
             key={route}
           >
-            <Icon aria-hidden="true" /><span>{label === "Partager ma place" ? "Partager" : label === "Trouver une place" ? "Trouver" : label}</span>
+            <Icon aria-hidden="true" /><span>{mobileLabel}</span>
           </AppLink>
         ))}
       </nav>

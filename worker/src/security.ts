@@ -33,13 +33,33 @@ export async function sha256(value: string): Promise<string> {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-export function parseProfessionalEmail(value: unknown): { email: string; domain: string } | null {
+export function parseEmail(value: unknown): { email: string; domain: string } | null {
   if (typeof value !== "string") return null;
   const email = value.trim().toLowerCase();
   if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
   const domain = email.slice(email.lastIndexOf("@") + 1);
+  return { email, domain };
+}
+
+export function parseProfessionalEmail(value: unknown): { email: string; domain: string } | null {
+  const parsed = parseEmail(value);
+  if (!parsed) return null;
+  const { email, domain } = parsed;
   if (personalDomains.has(domain)) return null;
   return { email, domain };
+}
+
+export async function isGodmodeEmail(email: string, expectedDigest: string | undefined): Promise<boolean> {
+  const normalizedDigest = expectedDigest?.trim().toLowerCase() ?? "";
+  if (!/^[0-9a-f]{64}$/.test(normalizedDigest)) return false;
+  const actualDigest = await sha256(email.trim().toLowerCase());
+  const subtle = crypto.subtle as SubtleCrypto & {
+    timingSafeEqual(a: ArrayBufferView, b: ArrayBufferView): boolean;
+  };
+  return subtle.timingSafeEqual(
+    encoder.encode(actualDigest),
+    encoder.encode(normalizedDigest),
+  );
 }
 
 export function cookieValue(header: string | undefined, name: string): string | null {

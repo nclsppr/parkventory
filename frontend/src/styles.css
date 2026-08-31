@@ -1670,6 +1670,23 @@ svg {
   mask-image: linear-gradient(to bottom, black, rgba(0, 0, 0, 0.3));
 }
 
+.auth-page-admin .auth-backdrop {
+  opacity: 1;
+  background: var(--bg);
+  mask-image: none;
+}
+
+.auth-page-admin .auth-panel {
+  border-radius: var(--radius-small);
+  background: var(--surface);
+  box-shadow: none;
+}
+
+.auth-page-admin .auth-panel h1 {
+  font-size: clamp(34px, 5vw, 48px);
+  line-height: 1.02;
+}
+
 .auth-brand {
   position: absolute;
   z-index: 2;
@@ -1838,8 +1855,14 @@ svg {
   margin-inline: auto;
 }
 
-.auth-callback-panel > .button {
+.auth-callback-panel > .button,
+.auth-callback-actions {
   margin-top: 28px;
+}
+
+.auth-callback-actions {
+  display: grid;
+  gap: var(--space-2);
 }
 
 .auth-home-link {
@@ -4657,6 +4680,17 @@ svg {
 :root[data-theme="light"] .auth-panel {
   background: var(--surface);
   box-shadow: 0 26px 70px rgba(8, 10, 8, 0.14);
+}
+
+:root[data-theme="light"] .auth-page-admin .auth-backdrop {
+  opacity: 1;
+  background: var(--bg);
+  mask-image: none;
+  mix-blend-mode: normal;
+}
+
+:root[data-theme="light"] .auth-page-admin .auth-panel {
+  box-shadow: none;
 }
 
 :root[data-theme="light"] .auth-icon {

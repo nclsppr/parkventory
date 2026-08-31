@@ -25,6 +25,15 @@
     "EMAIL_FROM": "Parkventory <noreply@parkventory.com>",
     "PUBLIC_ORIGIN": ""
   },
+  "send_email": [
+    {
+      "name": "EMAIL",
+      "allowed_sender_addresses": ["noreply@parkventory.com"]
+    }
+  ],
+  "secrets": {
+    "required": ["APP_SECRET", "TURNSTILE_SECRET_KEY", "GODMODE_ADMIN_EMAIL_SHA256"]
+  },
   "env": {
     "production": {
       "name": "parkventory-production",
@@ -66,7 +75,7 @@
         }
       ],
       "secrets": {
-        "required": ["APP_SECRET", "TURNSTILE_SECRET_KEY"]
+        "required": ["APP_SECRET", "TURNSTILE_SECRET_KEY", "GODMODE_ADMIN_EMAIL_SHA256"]
       }
     }
   },
@@ -74,7 +83,7 @@
     "enabled": true,
     "logs": {
       "enabled": true,
-      "invocation_logs": true
+      "invocation_logs": false
     }
   }
 }
