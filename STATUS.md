@@ -1,63 +1,46 @@
 # État vérifié — 31 août 2026
 
-## Candidat SEO et i18n — non fusionné, non déployé
+## Release SEO et i18n — fusionnée et déployée
 
-- La branche `codex/seo-i18n-four-locales`, créée sur
-  `origin/main@938c3a40aef5e65affaf19d6a1c546cbfa5a78f1`, porte le candidat français,
-  anglais, allemand et luxembourgeois. Elle n’a encore modifié ni `main`, ni la
-  base D1 distante, ni le Worker public.
-- Douze pages publiques ont des URLs stables, un canonical auto-référent, cinq
-  alternates (`fr`, `en`, `de`, `lb`, `x-default`) et un contenu visible dans
-  le HTML initial. Les routes privées et 404 restent hors index.
-- La racine négocie le cookie puis `Accept-Language`; un choix explicite dans
-  l’URL reste prioritaire avant connexion. Dès qu’une session connectée est
-  reconnue, la langue enregistrée dans le profil restaure la route équivalente,
-  y compris depuis une surface publique. L’API, les
-  erreurs, les dates, les e-mails et les routes de callback suivent la locale
-  choisie.
-- Le sélecteur reste disponible sur la landing et les autres surfaces avant
-  connexion. Une session reconnue le retire aussi de ces surfaces ; dans le
-  shell authentifié, il a été retiré de la topbar et apparaît uniquement dans
-  le profil. La migration additive `0006_user_locale.sql` et
-  la mutation de profil sont vérifiées localement ; aucune base D1 distante n’a
-  été migrée et la migration doit précéder tout Worker qui lit la colonne.
-- La fenêtre de partage et la date proposée utilisent le fuseau du parking. Les
-  valeurs temporelles brutes restent dans le contrat API et les libellés sont
-  formatés côté client avec `Intl`.
-- La gate `npm run verify` réussit avec 6 tests de marque, 1 test d’upgrade de
-  migration, 102 tests Worker/D1, 100 tests React, le typecheck Worker, le build
-  Vite et le dry-run Wrangler. La
-  matrice Worker traverse réellement le binding Assets pour les douze pages,
-  les `HEAD`, 404 conditionnelles, fichiers SEO, manifestes et images.
-- Les assets raster et le favicon carré ont été contrôlés. Une revue locale
-  dans Chrome a couvert les douze pages publiques, les écrans connectés, la
-  connexion, les callbacks, les pages introuvables et les menus mobiles à
-  320 × 568 et 1 440 × 900, complétée par des vues à 390 × 844. Elle a permis
-  de confirmer la correction du repli anglais observé sur les dates, heures et
-  fuseaux `lb-LU`, de deux débordements allemands et des cibles réelles d’au
-  moins 44 px. Une passe supplémentaire a vérifié le profil connecté à
-  1 440 × 900, 390 × 844 et 320 × 568 : un seul sélecteur 64 × 44 px dans le
-  profil, aucun dans la topbar, persistance D1 puis restauration de `de`, sans
-  débordement, image cassée ni erreur console. Safari, Firefox, Edge et un
-  iPhone réel restent requis par la matrice avant le pilote.
-- Les tests DOM couvrent aussi une session reconnue sur la landing, les pages
-  légales, le callback et une 404 : aucun sélecteur public n’y subsiste, la
-  locale du profil remplace l’URL sans entrée d’historique supplémentaire et
-  une session créée par callback ne peut pas être écrasée par le contrôle initial.
-- Les migrations d’administration désormais présentes sur `main` occupent
-  `0003` à `0005`; la préférence utilisateur utilise donc `0006` et doit être
-  appliquée après elles.
+- La [PR #29](https://github.com/nclsppr/parkventory/pull/29) a intégré
+  `origin/main@45796acab60dbae79f406994074d3e8d8fab8824`, y compris les nouvelles
+  interfaces godmode et administration d’organisation, puis a été fusionnée
+  sur `main` au SHA `0d991742bf42dc9fc5d4ced0a0cedbb3652f10d7`.
+- Les surfaces publiques, applicatives et administratives sont proposées en
+  français, anglais, allemand et luxembourgeois. Les douze pages publiques ont
+  des URLs stables, un canonical auto-référent, les alternates `fr`, `en`, `de`,
+  `lb` et `x-default`, ainsi qu’un contenu localisé dans le HTML initial. Les
+  routes privées, les callbacks et les 404 restent hors index.
+- La racine négocie le cookie puis `Accept-Language`. Avant connexion, le choix
+  de langue reste disponible sur les surfaces publiques. Dès qu’une session est
+  reconnue, la préférence enregistrée du compte restaure la route équivalente et
+  le seul sélecteur restant se trouve dans le profil.
+- La migration additive `0006_user_locale.sql` a été appliquée puis vérifiée
+  d’abord sur `parkventory-preview`, ensuite sur `parkventory-production`, avant
+  le déploiement. Les deux bases enregistrent `0001` à `0006`, sans migration en
+  attente. En production, les deux comptes existants ont été conservés et
+  aucune préférence invalide n’a été observée ; aucune donnée personnelle n’a
+  été lue pendant ces contrôles.
+- La gate locale complète a réussi avec 6 tests de marque, 1 test d’upgrade de
+  migration, 191 tests Worker/D1 et 148 tests frontend, les typechecks, le build
+  Vite, le contrôle des types Cloudflare et les dry-runs des deux environnements.
+  La gate de PR `33404908642` et la gate post-fusion `33405080390` ont réussi sur
+  leurs SHA exacts.
+- Workers Builds a publié le déploiement
+  `3264784b-09af-47d9-8782-6d68c5388a2f`, version
+  `1f17485d-4a69-4b30-a96a-f28cf54ff061`, à 100 % du trafic. La santé répond
+  `200`, `www` redirige en `308`, les douze URLs sont dans le sitemap, une route
+  inexistante répond réellement `404`, et sept routes privées sondées exposent
+  `X-Robots-Tag: noindex, nofollow` sans `hreflang`.
+- Les SHA-256 des bundles principal, CSS et administration servis publiquement
+  correspondent exactement au build validé. Le parcours authentifié réel et
+  l’envoi d’un lien magique n’ont pas été actionnés pendant cette livraison.
+- Le navigateur intégré reste refusé par une politique administrateur qui n’a
+  pas été contournée. La preuve visuelle reste la matrice Chrome locale
+  antérieure, complétée par les tests DOM automatisés ; aucune nouvelle preuve
+  perceptive n’est revendiquée pour la production.
 
-## Production publique observée le 31 août 2026
-
-- `https://parkventory.com/en/` répond encore avec le titre français ;
-  `sitemap.xml` ne contient encore que `/`, `/confidentialite` et
-  `/mentions-legales`.
-- `manifest-lb.webmanifest` et un asset JavaScript inexistant répondent encore
-  `200 text/html`. Ces sondes confirment que le contrat multilingue et les vraies
-  404 de ce candidat ne sont pas encore en production.
-
-## Production Cloudflare active — snapshot historique du 26 août 2026
+## Socle Cloudflare — snapshot historique du 26 août 2026
 
 - La réécriture Cloudflare-native et les interfaces d'administration générale
   et de tenant sont sur `origin/main`. La PR #31 est fusionnée au SHA
