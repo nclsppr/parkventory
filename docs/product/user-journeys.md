@@ -28,6 +28,20 @@ Le réservataire peut annuler avant le début, ce qui rend l’offre à nouveau
 disponible. Le propriétaire peut retirer une offre avant le début uniquement si
 elle n’est pas réservée.
 
+## 5. Observer et diagnostiquer le service
+
+1. L’opérateur ouvre `/admin`, saisit son identité privée et passe Turnstile.
+2. Le Worker envoie un magic link seulement si le digest normalisé correspond au
+   secret configuré ; la réponse publique ne révèle jamais cette correspondance.
+3. Après consommation du lien, le Worker exige une session `SYSTEM` avec rôle
+   `ADMIN` et revalide le digest pour chaque lecture godmode.
+4. La console présente la synthèse globale, puis les listes paginées des tenants,
+   des comptes et des événements ainsi que les diagnostics classifiés.
+5. L’opérateur remonte des faits et des identifiants internes pour investiguer ;
+   il ne modifie ni compte, ni adhésion, ni donnée métier depuis la console.
+
 ## Navigation
 
-Les seules destinations applicatives du MVP sont Accueil, Partager et Trouver.
+Les seules destinations du membre restent Accueil, Partager et Trouver. La
+navigation opérateur séparée contient Vue d’ensemble, Tenants, Utilisateurs et
+Opérations ; elle n’est jamais affichée aux membres.

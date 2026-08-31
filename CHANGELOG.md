@@ -5,6 +5,52 @@ la source du diff technique et les ADR expliquent les décisions importantes.
 
 ## Non publié
 
+### Administration globale — candidat local non publié
+
+- préparation d’une console `/admin` en lecture seule avec synthèse à 30 jours,
+  tenants, comptes enregistrés, activité paginée et diagnostics, sans donnée de
+  démonstration ni action de correction ;
+- séparation de l’opérateur global et des administrateurs de tenants : accès
+  conditionné à une session valide, au digest secret exact, à l’organisation
+  `SYSTEM` et au rôle `ADMIN`, tandis que les routes métier exigent `TENANT` ;
+- séparation des demandes de connexion `admin` et `tenant` : une adresse non
+  autorisée saisie dans la console garde une réponse non énumérante, sans e-mail,
+  demande D1 ni création accidentelle de tenant ;
+- application atomique dans D1 des plafonds horaires de magic links, y compris
+  sous rafale concurrente ;
+- ajout candidat de la migration D1 `0004_godmode_admin.sql`, avec
+  `organization.kind`, organisation système, index de lecture, registre
+  `activity_event`, backfill explicitement dérivé et triggers atomiques ;
+- journal d’activité limité aux identifiants internes et codes classifiés, sans
+  adresse, token, cookie, hash d’authentification, IP, corps ou erreur brute ;
+- journalisation dédupliquée des conflits métier `409` avec acteur, tenant,
+  entité déjà résolue et code, puis empreinte causale stable des erreurs `500`
+  et conservation côté client de leur seul UUID sûr ;
+- recherche exacte d’incident, requête ou entité, références métier visibles et
+  liens depuis les diagnostics, avec déduplication sur cinq minutes des refus
+  godmode identiques ;
+- ajout d’un détail paginé pour chacun des neuf contrôles d’intégrité, limité aux
+  identifiants internes et relié aux tenants et au journal, ainsi que d’un filtre
+  exact par code d’erreur pour regrouper les occurrences d’une même cause ;
+- distinction stricte entre contraintes D1 métier attendues et erreurs
+  inattendues : seules les premières deviennent un `409`, les secondes conservent
+  un incident `500` corrélé ; les réservations concurrentes portant la même clé
+  d’idempotence convergent vers un unique succès ;
+- renforcement D1 des frontières métier : les triggers refusent les écritures dans
+  `SYSTEM` et les discordances tenant/membre/place/offre/réservation ;
+- déplacement du jeton de connexion vers le fragment URL, invisible pour la
+  requête de navigation et nettoyé immédiatement par la SPA, puis désactivation
+  des logs d’invocation Cloudflare ; les logs applicatifs structurés continuent de
+  journaliser uniquement une route canonique, et le traitement D1/e-mail admin
+  sort du chemin de réponse pour supprimer aussi l’oracle de panne ou de latence ;
+- définition des métriques, de la pagination et des gates dans l’ADR-0018 et le
+  runbook ; aucune application de migration distante, création de secret,
+  fusion, publication ou authentification réelle n’est revendiquée ici ;
+- extension de la gate CI aux types Wrangler et aux deux dry-runs, afin qu’un
+  candidat ne puisse plus valider uniquement la configuration de préversion ;
+- exclusion Git de toutes les variantes racine `.env*` et `.dev.vars*`, tout en
+  conservant les fichiers d’exemple versionnés.
+
 ### Indexation publique
 
 - ajout d’un sitemap canonique limité à l’accueil, la confidentialité et les

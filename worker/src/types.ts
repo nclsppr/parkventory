@@ -28,16 +28,19 @@ export interface AuthenticatedMember {
   sessionId: string;
   membershipId: string;
   organizationId: string;
+  organizationKind: "TENANT" | "SYSTEM";
   organizationName: string;
   userId: string;
   email: string;
   displayName: string;
   role: "MEMBER" | "ADMIN";
+  godmode: boolean;
   branding: OrganizationBranding | null;
 }
 
 export interface Variables {
   member: AuthenticatedMember;
+  requestId: string;
 }
 
 export type AppEnvironment = {

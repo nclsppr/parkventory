@@ -9,7 +9,7 @@
       "id": "project",
       "title": "Contrat du projet",
       "visibility": "internal",
-      "include": ["*.md"]
+      "include": ["*.md", "frontend/PRODUCT.md"]
     },
     {
       "id": "product",

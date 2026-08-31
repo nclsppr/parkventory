@@ -70,7 +70,11 @@ export function ApplicationPage({
     <OrganizationBrandingProvider branding={effectiveBranding}>
       <AppShell
         activeRoute={route}
-        data={data}
+        profile={{
+          initials: data.user.initials,
+          primary: data.user.fullName,
+          secondary: data.organization.name,
+        }}
         loading={loading}
         loadError={loadError}
         onNotify={notify}
